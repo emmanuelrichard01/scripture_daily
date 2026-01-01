@@ -5,6 +5,7 @@ import { TodayProgress } from "@/components/TodayProgress";
 import { ReadingCard } from "@/components/ReadingCard";
 import { StatsCard } from "@/components/StatsCard";
 import { CalendarView } from "@/components/CalendarView";
+import { BottomNav } from "@/components/BottomNav";
 import { useReadingProgress } from "@/hooks/useReadingProgress";
 import {
   getTodaysReadings,
@@ -45,10 +46,10 @@ const Index = () => {
   const avgPerDay = (totalChaptersRead / daysSinceStart).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       <Header formattedDate={formattedDate} />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-lg mx-auto px-6 py-6">
         {/* Hero section with today's progress */}
         <div className="mb-8 animate-fade-in">
           <TodayProgress completedCount={completedToday} totalCount={10} />
@@ -94,55 +95,53 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-8">
-          {/* Today's readings list */}
-          <div className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold font-serif text-foreground">
-                Today's Chapters
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                Day {dayOfYear} of the Horner Plan
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {todaysReadings.map((reading, index) => (
-                <div
-                  key={reading.listId}
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${300 + index * 50}ms` }}
-                >
-                  <ReadingCard
-                    reading={reading}
-                    onToggle={() => toggleComplete(dayOfYear, reading.listId)}
-                    index={index}
-                  />
-                </div>
-              ))}
-            </div>
+        {/* Today's readings list */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold font-serif text-foreground">
+              Today's Chapters
+            </h2>
+            <span className="text-sm text-muted-foreground">
+              Day {dayOfYear}
+            </span>
           </div>
 
-          {/* Calendar sidebar */}
-          <div className="lg:col-span-2">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold font-serif text-foreground">
-                Reading Calendar
-              </h2>
-            </div>
-            <div className="animate-scale-in" style={{ animationDelay: "400ms" }}>
-              <CalendarView
-                getCompletedForDay={getCompletedForDay}
-                isDayComplete={isDayComplete}
-              />
-            </div>
+          <div className="space-y-3">
+            {todaysReadings.map((reading, index) => (
+              <div
+                key={reading.listId}
+                className="animate-slide-up"
+                style={{ animationDelay: `${300 + index * 50}ms` }}
+              >
+                <ReadingCard
+                  reading={reading}
+                  onToggle={() => toggleComplete(dayOfYear, reading.listId)}
+                  index={index}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Calendar */}
+        <div className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold font-serif text-foreground">
+              Reading Calendar
+            </h2>
+          </div>
+          <div className="animate-scale-in" style={{ animationDelay: "400ms" }}>
+            <CalendarView
+              getCompletedForDay={getCompletedForDay}
+              isDayComplete={isDayComplete}
+            />
           </div>
         </div>
 
         {/* Footer quote */}
-        <footer className="mt-16 mb-8 text-center animate-fade-in" style={{ animationDelay: "600ms" }}>
-          <blockquote className="max-w-2xl mx-auto">
-            <p className="text-lg text-muted-foreground italic font-serif">
+        <footer className="text-center animate-fade-in" style={{ animationDelay: "600ms" }}>
+          <blockquote className="max-w-sm mx-auto">
+            <p className="text-base text-muted-foreground italic font-serif">
               "I have more wisdom than all my teachers, for thy testimonies are
               my meditation."
             </p>
@@ -152,6 +151,8 @@ const Index = () => {
           </blockquote>
         </footer>
       </main>
+
+      <BottomNav />
     </div>
   );
 };
