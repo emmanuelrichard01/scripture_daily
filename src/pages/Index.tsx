@@ -6,7 +6,9 @@ import { ReadingCard } from "@/components/ReadingCard";
 import { StatsCard } from "@/components/StatsCard";
 import { CalendarView } from "@/components/CalendarView";
 import { BottomNav } from "@/components/BottomNav";
-import { useReadingProgress } from "@/hooks/useReadingProgress";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { SyncIndicator } from "@/components/SyncIndicator";
+import { useCloudProgress } from "@/hooks/useCloudProgress";
 import {
   getTodaysReadings,
   getDayOfYear,
@@ -26,7 +28,9 @@ const Index = () => {
     toggleComplete,
     getCompletedForDay,
     isDayComplete,
-  } = useReadingProgress();
+    isSyncing,
+    isAuthenticated,
+  } = useCloudProgress();
 
   const todaysReadings = useMemo(
     () => getTodaysReadings(dayOfYear, completedSet),
@@ -49,17 +53,22 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-24">
       <Header formattedDate={formattedDate} />
 
-      <main className="max-w-lg mx-auto px-6 py-6">
+      <main className="max-w-lg mx-auto px-5 py-6">
+        {/* Sync indicator */}
+        <div className="flex justify-end mb-4">
+          <SyncIndicator isSyncing={isSyncing} isAuthenticated={isAuthenticated} />
+        </div>
+
         {/* Hero section with today's progress */}
         <div className="mb-8 animate-fade-in">
           <TodayProgress completedCount={completedToday} totalCount={10} />
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-8">
           <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
             <StatsCard
-              icon={<Flame className="w-6 h-6" />}
+              icon={<Flame className="w-5 h-5" />}
               label="Current Streak"
               value={streakCount}
               sublabel={streakCount === 1 ? "day" : "days"}
@@ -68,7 +77,7 @@ const Index = () => {
           </div>
           <div className="animate-slide-up" style={{ animationDelay: "150ms" }}>
             <StatsCard
-              icon={<BookOpen className="w-6 h-6" />}
+              icon={<BookOpen className="w-5 h-5" />}
               label="Chapters Read"
               value={totalChaptersRead}
               sublabel="total"
@@ -77,7 +86,7 @@ const Index = () => {
           </div>
           <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
             <StatsCard
-              icon={<Calendar className="w-6 h-6" />}
+              icon={<Calendar className="w-5 h-5" />}
               label="Day of Year"
               value={dayOfYear}
               sublabel={`of 365`}
@@ -86,7 +95,7 @@ const Index = () => {
           </div>
           <div className="animate-slide-up" style={{ animationDelay: "250ms" }}>
             <StatsCard
-              icon={<TrendingUp className="w-6 h-6" />}
+              icon={<TrendingUp className="w-5 h-5" />}
               label="Daily Average"
               value={avgPerDay}
               sublabel="chapters"
@@ -96,22 +105,22 @@ const Index = () => {
         </div>
 
         {/* Today's readings list */}
-        <div className="mb-6">
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold font-serif text-foreground">
               Today's Chapters
             </h2>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground font-medium">
               Day {dayOfYear}
             </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {todaysReadings.map((reading, index) => (
               <div
                 key={reading.listId}
                 className="animate-slide-up"
-                style={{ animationDelay: `${300 + index * 50}ms` }}
+                style={{ animationDelay: `${300 + index * 40}ms` }}
               >
                 <ReadingCard
                   reading={reading}
@@ -141,17 +150,18 @@ const Index = () => {
         {/* Footer quote */}
         <footer className="text-center animate-fade-in" style={{ animationDelay: "600ms" }}>
           <blockquote className="max-w-sm mx-auto">
-            <p className="text-base text-muted-foreground italic font-serif">
+            <p className="text-base text-muted-foreground italic font-serif leading-relaxed">
               "I have more wisdom than all my teachers, for thy testimonies are
               my meditation."
             </p>
-            <cite className="text-sm text-muted-foreground mt-2 block">
+            <cite className="text-sm text-muted-foreground/70 mt-2 block">
               — Psalm 119:99
             </cite>
           </blockquote>
         </footer>
       </main>
 
+      <InstallPrompt />
       <BottomNav />
     </div>
   );

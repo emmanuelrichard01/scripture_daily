@@ -14,7 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reading_progress: {
+        Row: {
+          completed_readings: string[]
+          created_at: string
+          id: string
+          last_read_date: string | null
+          start_date: string
+          streak_count: number
+          total_chapters_read: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_readings?: string[]
+          created_at?: string
+          id?: string
+          last_read_date?: string | null
+          start_date?: string
+          streak_count?: number
+          total_chapters_read?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_readings?: string[]
+          created_at?: string
+          id?: string
+          last_read_date?: string | null
+          start_date?: string
+          streak_count?: number
+          total_chapters_read?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          haptic_feedback: boolean
+          id: string
+          reminder_days: string[]
+          reminder_time: string
+          reminders_enabled: boolean
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          haptic_feedback?: boolean
+          id?: string
+          reminder_days?: string[]
+          reminder_time?: string
+          reminders_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          haptic_feedback?: boolean
+          id?: string
+          reminder_days?: string[]
+          reminder_time?: string
+          reminders_enabled?: boolean
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
