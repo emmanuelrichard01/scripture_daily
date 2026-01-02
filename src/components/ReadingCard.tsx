@@ -12,46 +12,43 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
   return (
     <div
       className={cn(
-        "group relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer hover-lift",
+        "group relative flex items-center gap-3 p-3.5 rounded-xl border transition-all duration-200 cursor-pointer",
         reading.completed
-          ? "bg-success/5 border-success/30"
-          : "bg-card border-border hover:border-primary/30"
+          ? "bg-success/5 border-success/20"
+          : "bg-card border-border hover:border-primary/20 hover:shadow-sm active:scale-[0.99]"
       )}
       onClick={onToggle}
-      style={{
-        animationDelay: `${index * 50}ms`,
-      }}
     >
       {/* Completion indicator */}
       <div
         className={cn(
-          "flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
+          "flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0",
           reading.completed
-            ? "bg-success text-success-foreground animate-check"
+            ? "bg-success text-success-foreground"
             : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
         )}
       >
         {reading.completed ? (
-          <Check className="w-5 h-5" />
+          <Check className="w-4 h-4" />
         ) : (
-          <Book className="w-5 h-5" />
+          <Book className="w-4 h-4" />
         )}
       </div>
 
       {/* Reading details */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-1.5 mb-0.5">
           <span
-            className="inline-block w-2 h-2 rounded-full"
+            className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: reading.color }}
           />
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            List {reading.listId} · {reading.listName}
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate">
+            {reading.listName}
           </span>
         </div>
         <h3
           className={cn(
-            "font-medium text-foreground transition-colors",
+            "font-medium text-sm text-foreground transition-colors truncate",
             reading.completed && "text-success"
           )}
         >
@@ -62,7 +59,7 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
       {/* Chapter number badge */}
       <div
         className={cn(
-          "flex items-center justify-center w-8 h-8 rounded-lg text-sm font-semibold transition-colors",
+          "flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold transition-colors flex-shrink-0",
           reading.completed
             ? "bg-success/10 text-success"
             : "bg-secondary text-muted-foreground"

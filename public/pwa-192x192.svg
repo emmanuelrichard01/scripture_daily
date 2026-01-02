@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#3730a3"/>
+  <g transform="translate(48, 32)">
+    <path d="M48 0C48 0 96 16 96 64C96 112 48 128 48 128C48 128 0 112 0 64C0 16 48 0 48 0Z" fill="white" opacity="0.9"/>
+    <path d="M48 16C48 16 80 28 80 64C80 100 48 112 48 112C48 112 16 100 16 64C16 28 48 16 48 16Z" fill="#3730a3" opacity="0.2"/>
+    <line x1="48" y1="24" x2="48" y2="108" stroke="white" stroke-width="2" opacity="0.5"/>
+    <line x1="24" y1="48" x2="72" y2="48" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <line x1="28" y1="64" x2="68" y2="64" stroke="white" stroke-width="1.5" opacity="0.3"/>
+    <line x1="32" y1="80" x2="64" y2="80" stroke="white" stroke-width="1.5" opacity="0.3"/>
+  </g>
+</svg>

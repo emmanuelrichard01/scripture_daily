@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsSection, SettingsRow } from "@/components/SettingsSection";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { useSettings } from "@/hooks/useSettings";
-import { useReadingProgress } from "@/hooks/useReadingProgress";
+import { useCloudProgress } from "@/hooks/useCloudProgress";
+import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -22,7 +24,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Moon, Sun, Monitor, Trash2, Download, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Moon,
+  Sun,
+  Monitor,
+  Trash2,
+  Download,
+  Info,
+  User,
+  LogOut,
+  LogIn,
+  Cloud,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -32,8 +46,9 @@ const Settings = () => {
     updateReminders,
     requestNotificationPermission,
   } = useSettings();
-  
-  const { totalChaptersRead, streakCount } = useReadingProgress();
+
+  const { totalChaptersRead, streakCount, resetProgress } = useCloudProgress();
+  const { user, signOut } = useAuth();
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   const handleExportData = () => {
@@ -42,7 +57,7 @@ const Settings = () => {
       settings: localStorage.getItem("horner-settings"),
       exportedAt: new Date().toISOString(),
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
@@ -52,14 +67,20 @@ const Settings = () => {
     a.download = `scripture-daily-backup-${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast.success("Data exported successfully");
   };
 
   const handleResetData = () => {
-    localStorage.removeItem("horner-reading-progress");
+    resetProgress();
     localStorage.removeItem("horner-settings");
-    window.location.reload();
+    setShowResetDialog(false);
+    toast.success("All data has been reset");
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
   };
 
   const themeIcons = {
@@ -73,15 +94,66 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-lg mx-auto px-6 h-16 flex items-center">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
           <h1 className="text-xl font-semibold font-serif text-foreground">
             Settings
           </h1>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-6 py-6 space-y-6">
+      <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
+        {/* Account Section */}
+        <SettingsSection
+          title="Account"
+          description={user ? "Manage your account" : "Sign in to sync across devices"}
+        >
+          {user ? (
+            <>
+              <SettingsRow
+                label="Email"
+                description={user.email || "No email"}
+                action={
+                  <div className="flex items-center gap-2 text-success">
+                    <Cloud className="w-4 h-4" />
+                    <span className="text-xs font-medium">Synced</span>
+                  </div>
+                }
+              />
+              <SettingsRow
+                label="Sign Out"
+                description="Sign out of your account"
+                action={
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                }
+              />
+            </>
+          ) : (
+            <SettingsRow
+              label="Sign In"
+              description="Sync your progress across devices"
+              action={
+                <Link to="/auth">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Sign In
+                  </Button>
+                </Link>
+              }
+            />
+          )}
+        </SettingsSection>
+
         {/* Reminders */}
         <SettingsSection
           title="Reminders"
@@ -107,7 +179,7 @@ const Settings = () => {
                   updateSettings({ theme: value })
                 }
               >
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-28 h-9">
                   <div className="flex items-center gap-2">
                     <ThemeIcon className="w-4 h-4" />
                     <SelectValue />
@@ -158,7 +230,7 @@ const Settings = () => {
             action={
               <button
                 onClick={handleExportData}
-                className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/15 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -171,7 +243,7 @@ const Settings = () => {
             action={
               <button
                 onClick={() => setShowResetDialog(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg font-medium hover:bg-destructive/20 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/15 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 Reset
@@ -181,20 +253,20 @@ const Settings = () => {
         </SettingsSection>
 
         {/* Stats Summary */}
-        <div className="bg-muted/50 rounded-2xl p-4 border border-border">
+        <div className="bg-muted/30 rounded-2xl p-4 border border-border/50">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-4 h-4 text-muted-foreground" />
             <p className="text-sm font-medium text-foreground">Your Stats</p>
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Total Chapters</p>
+              <p className="text-muted-foreground text-xs">Total Chapters</p>
               <p className="text-lg font-semibold text-foreground">
                 {totalChaptersRead}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Current Streak</p>
+              <p className="text-muted-foreground text-xs">Current Streak</p>
               <p className="text-lg font-semibold text-foreground">
                 {streakCount} days
               </p>
@@ -205,7 +277,7 @@ const Settings = () => {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-sm text-muted-foreground">Scripture Daily v1.0</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground/70 mt-1">
             Based on the Horner Bible Reading Plan
           </p>
         </div>
@@ -213,7 +285,7 @@ const Settings = () => {
 
       {/* Reset Confirmation Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-sm mx-4">
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all data?</AlertDialogTitle>
             <AlertDialogDescription>

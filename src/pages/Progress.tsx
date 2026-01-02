@@ -1,12 +1,13 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { ListProgressCard } from "@/components/ListProgressCard";
-import { useReadingProgress } from "@/hooks/useReadingProgress";
+import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { readingLists, getDayOfYear } from "@/lib/readingPlan";
-import { BookOpen, Award, Target } from "lucide-react";
+import { BookOpen, Award, Target, ChevronRight } from "lucide-react";
 
 const Progress = () => {
-  const { completedSet, totalChaptersRead } = useReadingProgress();
+  const { completedSet, totalChaptersRead } = useCloudProgress();
   const dayOfYear = getDayOfYear(new Date());
 
   // Calculate progress for each list
@@ -14,15 +15,15 @@ const Progress = () => {
     return readingLists.map((list) => {
       const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
       const dayInCycle = ((dayOfYear - 1) % totalChapters) + 1;
-      
+
       // Count completed chapters in current cycle
       const completedInCycle = Array.from(completedSet).filter((key) => {
         const [dayStr, listIdStr] = key.split("-");
         const day = parseInt(dayStr);
         const listId = parseInt(listIdStr);
-        
+
         if (listId !== list.id) return false;
-        
+
         // Check if this day is in the current cycle
         const cycleStart = dayOfYear - dayInCycle + 1;
         return day >= cycleStart && day <= dayOfYear;
@@ -38,7 +39,7 @@ const Progress = () => {
       let chapterCount = 0;
       let currentBook = list.books[0].name;
       let currentChapter = 1;
-      
+
       for (const book of list.books) {
         if (chapterCount + book.chapters >= dayInCycle) {
           currentBook = book.name;
@@ -71,47 +72,58 @@ const Progress = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-lg mx-auto px-6 h-16 flex items-center">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
           <h1 className="text-xl font-semibold font-serif text-foreground">
             Reading Progress
           </h1>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-6 py-6">
+      <main className="max-w-lg mx-auto px-5 py-6">
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-3 gap-2.5 mb-8">
           <div className="bg-card rounded-2xl p-4 border border-border text-center">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
               <BookOpen className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-2xl font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {totalChaptersRead}
             </p>
-            <p className="text-xs text-muted-foreground">Chapters Read</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Chapters</p>
           </div>
-          
+
           <div className="bg-card rounded-2xl p-4 border border-border text-center">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-2">
+            <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-2">
               <Target className="w-5 h-5 text-accent-foreground" />
             </div>
-            <p className="text-2xl font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {Math.round(totalCycleProgress)}%
             </p>
-            <p className="text-xs text-muted-foreground">Avg Progress</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Avg Progress</p>
           </div>
-          
+
           <div className="bg-card rounded-2xl p-4 border border-border text-center">
             <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center mx-auto mb-2">
               <Award className="w-5 h-5 text-success" />
             </div>
-            <p className="text-2xl font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {totalCompletedCycles}
             </p>
-            <p className="text-xs text-muted-foreground">Cycles Done</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Cycles Done</p>
           </div>
         </div>
+
+        {/* View all lists link */}
+        <Link
+          to="/lists"
+          className="flex items-center justify-between bg-primary/5 hover:bg-primary/10 rounded-xl px-4 py-3 mb-6 transition-colors group"
+        >
+          <span className="text-sm font-medium text-foreground">
+            View all books & chapters
+          </span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+        </Link>
 
         {/* List Progress */}
         <div className="mb-4">
@@ -123,13 +135,14 @@ const Progress = () => {
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {listProgress.map(
             ({ list, cycleProgress, timesCompleted, currentBook, currentChapter }, index) => (
-              <div
+              <Link
+                to="/lists"
                 key={list.id}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="block animate-slide-up"
+                style={{ animationDelay: `${index * 40}ms` }}
               >
                 <ListProgressCard
                   list={list}
@@ -138,7 +151,7 @@ const Progress = () => {
                   currentBook={currentBook}
                   currentChapter={currentChapter}
                 />
-              </div>
+              </Link>
             )
           )}
         </div>
