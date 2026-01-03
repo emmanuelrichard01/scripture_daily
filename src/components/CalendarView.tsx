@@ -59,28 +59,28 @@ export function CalendarView({
   };
 
   return (
-    <div className="card-elevated p-6">
+    <div className="card-elevated p-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold font-serif text-foreground">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-sm font-semibold text-foreground">
           {monthName}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+            className="px-2.5 py-1 text-2xs font-medium text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
           >
             Today
           </button>
           <button
             onClick={prevMonth}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
           >
             <ChevronLeft className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
             onClick={nextMonth}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+            className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
           >
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -88,11 +88,11 @@ export function CalendarView({
       </div>
 
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+      <div className="grid grid-cols-7 gap-1 mb-1.5">
+        {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
           <div
-            key={day}
-            className="text-center text-xs font-medium text-muted-foreground py-2"
+            key={`${day}-${i}`}
+            className="text-center text-2xs font-medium text-muted-foreground py-1.5"
           >
             {day}
           </div>
@@ -111,9 +111,9 @@ export function CalendarView({
           <div
             key={day.date}
             className={cn(
-              "aspect-square flex flex-col items-center justify-center rounded-lg text-sm relative transition-all",
-              day.isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-              day.isComplete && "bg-success/10",
+              "aspect-square flex flex-col items-center justify-center rounded-xl text-xs relative transition-all",
+              day.isToday && "bg-foreground text-background",
+              day.isComplete && !day.isToday && "bg-success/10",
               day.isPast && !day.isComplete && day.completed === 0 && "bg-destructive/5",
               day.isFuture && "opacity-40"
             )}
@@ -121,30 +121,21 @@ export function CalendarView({
             <span
               className={cn(
                 "font-medium",
-                day.isToday && "text-primary font-semibold",
-                day.isComplete && "text-success"
+                day.isComplete && !day.isToday && "text-success"
               )}
             >
               {day.date}
             </span>
             
             {/* Progress indicator */}
-            {day.completed > 0 && !day.isFuture && (
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: Math.min(day.completed, 5) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "w-1 h-1 rounded-full",
-                      day.isComplete ? "bg-success" : "bg-primary/60"
-                    )}
-                  />
-                ))}
-                {day.completed > 5 && (
-                  <span className="text-[8px] text-muted-foreground ml-0.5">
-                    +{day.completed - 5}
-                  </span>
-                )}
+            {day.completed > 0 && !day.isFuture && !day.isToday && (
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
+                <div
+                  className={cn(
+                    "w-1 h-1 rounded-full",
+                    day.isComplete ? "bg-success" : "bg-muted-foreground"
+                  )}
+                />
               </div>
             )}
           </div>
@@ -152,18 +143,14 @@ export function CalendarView({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-success/30" />
-          <span className="text-xs text-muted-foreground">Complete</span>
+      <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-border">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-success/30" />
+          <span className="text-2xs text-muted-foreground">Complete</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-primary/30" />
-          <span className="text-xs text-muted-foreground">Partial</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-destructive/20" />
-          <span className="text-xs text-muted-foreground">Missed</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
+          <span className="text-2xs text-muted-foreground">Partial</span>
         </div>
       </div>
     </div>

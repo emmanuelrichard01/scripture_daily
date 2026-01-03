@@ -10,8 +10,8 @@ interface ProgressRingProps {
 
 export function ProgressRing({
   progress,
-  size = 120,
-  strokeWidth = 8,
+  size = 80,
+  strokeWidth = 6,
   className,
   children,
 }: ProgressRingProps) {
@@ -40,31 +40,14 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="hsl(var(--primary))"
+          stroke={progress === 100 ? "hsl(var(--success))" : "hsl(var(--foreground))"}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           className="transition-all duration-500 ease-out"
-          style={{
-            filter: progress === 100 ? "drop-shadow(0 0 8px hsl(var(--success) / 0.5))" : undefined,
-          }}
         />
-        {progress === 100 && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="hsl(var(--success))"
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={0}
-            className="animate-pulse"
-          />
-        )}
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         {children}

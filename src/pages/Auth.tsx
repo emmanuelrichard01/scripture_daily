@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const emailSchema = z.string().email("Please enter a valid email address");
+const emailSchema = z.string().email("Please enter a valid email");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const Auth = () => {
@@ -63,7 +63,7 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Welcome back!");
+          toast.success("Welcome back");
         }
       } else {
         const { error } = await signUp(email, password, displayName);
@@ -74,7 +74,7 @@ const Auth = () => {
             toast.error(error.message);
           }
         } else {
-          toast.success("Account created successfully!");
+          toast.success("Account created");
         }
       }
     } finally {
@@ -85,30 +85,29 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="pt-safe-area-top">
-        <div className="max-w-lg mx-auto px-6 py-8">
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold font-serif text-foreground">
-              Scripture Daily
-            </h1>
-          </div>
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+        <div className="max-w-lg mx-auto px-5 h-14 flex items-center">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" strokeWidth={1.5} />
+            <span className="text-sm">Back</span>
+          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-6 pb-8">
-        <div className="w-full max-w-sm">
+      <main className="flex-1 flex flex-col justify-center px-5 pb-8">
+        <div className="w-full max-w-sm mx-auto">
           {/* Title */}
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold font-serif text-foreground mb-2">
-              {isLogin ? "Welcome Back" : "Create Account"}
-            </h2>
-            <p className="text-muted-foreground">
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold text-foreground mb-1">
+              {isLogin ? "Welcome back" : "Create account"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
               {isLogin
-                ? "Sign in to sync your reading progress"
+                ? "Sign in to sync your progress"
                 : "Start your Bible reading journey"}
             </p>
           </div>
@@ -116,30 +115,30 @@ const Auth = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="displayName" className="text-sm font-medium">
-                  Display Name
+                  Name
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                   <Input
                     id="displayName"
                     type="text"
                     placeholder="Your name"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="pl-10 h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary"
+                    className="pl-10 h-12 bg-secondary border-0 rounded-xl focus-visible:ring-1 focus-visible:ring-foreground"
                   />
                 </div>
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-medium">
                 Email
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                 <Input
                   id="email"
                   type="email"
@@ -149,8 +148,8 @@ const Auth = () => {
                     setEmail(e.target.value);
                     setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
-                  className={`pl-10 h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary ${
-                    errors.email ? "border-destructive" : ""
+                  className={`pl-10 h-12 bg-secondary border-0 rounded-xl focus-visible:ring-1 focus-visible:ring-foreground ${
+                    errors.email ? "ring-1 ring-destructive" : ""
                   }`}
                 />
               </div>
@@ -159,12 +158,12 @@ const Auth = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-medium">
                 Password
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -174,19 +173,19 @@ const Auth = () => {
                     setPassword(e.target.value);
                     setErrors((prev) => ({ ...prev, password: undefined }));
                   }}
-                  className={`pl-10 pr-10 h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary ${
-                    errors.password ? "border-destructive" : ""
+                  className={`pl-10 pr-10 h-12 bg-secondary border-0 rounded-xl focus-visible:ring-1 focus-visible:ring-foreground ${
+                    errors.password ? "ring-1 ring-destructive" : ""
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" strokeWidth={1.5} />
                   )}
                 </button>
               </div>
@@ -198,10 +197,10 @@ const Auth = () => {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 text-base font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="w-full h-12 text-sm font-medium bg-foreground hover:bg-foreground/90 text-background rounded-xl mt-2"
             >
               {isSubmitting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : isLogin ? (
                 "Sign In"
               ) : (
@@ -220,22 +219,11 @@ const Auth = () => {
                   setIsLogin(!isLogin);
                   setErrors({});
                 }}
-                className="font-medium text-primary hover:underline"
+                className="font-medium text-foreground hover:underline"
               >
                 {isLogin ? "Sign Up" : "Sign In"}
               </button>
             </p>
-          </div>
-
-          {/* Skip for now */}
-          <div className="mt-8 text-center">
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Continue without account →
-            </button>
           </div>
         </div>
       </main>

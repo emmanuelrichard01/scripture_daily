@@ -85,35 +85,35 @@ export function InstallPrompt() {
   if (isStandalone || !showPrompt) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-50 animate-slide-up">
-      <div className="max-w-lg mx-auto bg-card border border-border rounded-2xl p-4 shadow-elevated">
+    <div className="fixed bottom-16 left-4 right-4 z-50 animate-slide-up">
+      <div className="max-w-lg mx-auto card-elevated p-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
-            <Download className="w-5 h-5 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center flex-shrink-0">
+            <Download className="w-5 h-5 text-background" strokeWidth={1.5} />
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1">
+            <h3 className="font-semibold text-sm text-foreground mb-0.5">
               Install Scripture Daily
             </h3>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-2xs text-muted-foreground mb-3">
               {isIOS
-                ? "Add to your home screen for quick access and offline reading."
-                : "Install for a better experience with offline support."}
+                ? "Add to home screen for quick access."
+                : "Install for offline support."}
             </p>
 
             {isIOS ? (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-2xs text-muted-foreground">
                 Tap{" "}
-                <Share className="w-4 h-4 inline-block mx-1 text-primary" />{" "}
+                <Share className="w-3.5 h-3.5 inline-block mx-0.5 text-foreground" />{" "}
                 then "Add to Home Screen"
               </div>
             ) : (
               <Button
                 onClick={handleInstall}
-                className="h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="h-8 px-3 text-xs bg-foreground hover:bg-foreground/90 text-background rounded-lg"
               >
-                Install App
+                Install
               </Button>
             )}
           </div>
@@ -122,7 +122,7 @@ export function InstallPrompt() {
             onClick={handleDismiss}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
       </div>
