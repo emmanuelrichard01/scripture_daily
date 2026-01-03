@@ -11,8 +11,22 @@ export interface ReadingList {
   description: string;
   books: Book[];
   cycleDays: number;
-  color: string;
+  colorVar: string;
 }
+
+// Track colors mapped to CSS variables
+export const trackColors: Record<number, string> = {
+  1: "var(--track-blue)",
+  2: "var(--track-green)",
+  3: "var(--track-red)",
+  4: "var(--track-purple)",
+  5: "var(--track-yellow)",
+  6: "var(--track-pink)",
+  7: "var(--track-orange)",
+  8: "var(--track-teal)",
+  9: "var(--track-indigo)",
+  10: "var(--track-cyan)",
+};
 
 // All 10 reading lists from the Horner system
 export const readingLists: ReadingList[] = [
@@ -27,7 +41,7 @@ export const readingLists: ReadingList[] = [
       { name: "John", chapters: 21 },
     ],
     cycleDays: 89,
-    color: "hsl(235 45% 30%)",
+    colorVar: "--track-blue",
   },
   {
     id: 2,
@@ -41,7 +55,7 @@ export const readingLists: ReadingList[] = [
       { name: "Deuteronomy", chapters: 34 },
     ],
     cycleDays: 187,
-    color: "hsl(150 45% 40%)",
+    colorVar: "--track-green",
   },
   {
     id: 3,
@@ -58,7 +72,7 @@ export const readingLists: ReadingList[] = [
       { name: "Hebrews", chapters: 13 },
     ],
     cycleDays: 78,
-    color: "hsl(200 50% 45%)",
+    colorVar: "--track-red",
   },
   {
     id: 4,
@@ -81,11 +95,11 @@ export const readingLists: ReadingList[] = [
       { name: "Revelation", chapters: 22 },
     ],
     cycleDays: 65,
-    color: "hsl(280 40% 50%)",
+    colorVar: "--track-purple",
   },
   {
     id: 5,
-    name: "Wisdom Literature",
+    name: "Wisdom",
     description: "Job, Ecclesiastes, Song of Solomon",
     books: [
       { name: "Job", chapters: 42 },
@@ -93,7 +107,7 @@ export const readingLists: ReadingList[] = [
       { name: "Song of Solomon", chapters: 8 },
     ],
     cycleDays: 62,
-    color: "hsl(40 85% 50%)",
+    colorVar: "--track-yellow",
   },
   {
     id: 6,
@@ -101,7 +115,7 @@ export const readingLists: ReadingList[] = [
     description: "All 150 Psalms",
     books: [{ name: "Psalms", chapters: 150 }],
     cycleDays: 150,
-    color: "hsl(340 50% 50%)",
+    colorVar: "--track-pink",
   },
   {
     id: 7,
@@ -109,7 +123,7 @@ export const readingLists: ReadingList[] = [
     description: "A proverb for each day",
     books: [{ name: "Proverbs", chapters: 31 }],
     cycleDays: 31,
-    color: "hsl(20 70% 50%)",
+    colorVar: "--track-orange",
   },
   {
     id: 8,
@@ -130,7 +144,7 @@ export const readingLists: ReadingList[] = [
       { name: "Esther", chapters: 10 },
     ],
     cycleDays: 249,
-    color: "hsl(100 40% 45%)",
+    colorVar: "--track-teal",
   },
   {
     id: 9,
@@ -156,7 +170,7 @@ export const readingLists: ReadingList[] = [
       { name: "Malachi", chapters: 4 },
     ],
     cycleDays: 250,
-    color: "hsl(260 45% 55%)",
+    colorVar: "--track-indigo",
   },
   {
     id: 10,
@@ -164,7 +178,7 @@ export const readingLists: ReadingList[] = [
     description: "The Acts of the Apostles",
     books: [{ name: "Acts", chapters: 28 }],
     cycleDays: 28,
-    color: "hsl(180 45% 45%)",
+    colorVar: "--track-cyan",
   },
 ];
 
@@ -173,7 +187,7 @@ export interface TodayReading {
   listName: string;
   book: string;
   chapter: number;
-  color: string;
+  colorVar: string;
   completed: boolean;
 }
 
@@ -196,7 +210,7 @@ export function getTodaysReadings(
           listName: list.name,
           book: book.name,
           chapter,
-          color: list.color,
+          colorVar: list.colorVar,
           completed: completedReadings.has(readingKey),
         };
       }
@@ -209,7 +223,7 @@ export function getTodaysReadings(
       listName: list.name,
       book: list.books[0].name,
       chapter: 1,
-      color: list.color,
+      colorVar: list.colorVar,
       completed: false,
     };
   });
@@ -223,12 +237,54 @@ export function getDayOfYear(date: Date): number {
   return Math.floor(diff / oneDay);
 }
 
-// Format date for display
+// Format date for display - Apple style
 export function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
+  const options: Intl.DateTimeFormatOptions = {
     weekday: "long",
-    year: "numeric",
-    month: "long",
+    month: "short",
+    day: "numeric",
+  };
+  return date.toLocaleDateString("en-US", options);
+}
+
+// Format short date
+export function formatShortDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
     day: "numeric",
   });
 }
+
+// Horner's System Facts
+export const hornerFacts = [
+  {
+    title: "Never the Same Combination",
+    description: "Due to the varying cycle lengths (28-250 days), the daily combination of 10 chapters won't repeat for many years, ensuring fresh insights each day.",
+  },
+  {
+    title: "Read the Entire Bible",
+    description: "With this system, you'll read the Gospels and Acts 4 times a year, the Epistles twice, and complete the entire Old Testament annually.",
+  },
+  {
+    title: "Pattern Recognition",
+    description: "By reading from multiple sections daily, you'll begin to see connections between books, themes, and passages you never noticed before.",
+  },
+  {
+    title: "20-30 Minutes Daily",
+    description: "Ten chapters sounds like a lot, but most chapters are brief. The average reading takes just 20-30 minutes of focused time.",
+  },
+  {
+    title: "Compound Effect",
+    description: "Professor Horner observed that after 3-4 years, readers develop an intuitive understanding of Scripture that transforms their spiritual life.",
+  },
+];
+
+// Reading Tips
+export const readingTips = [
+  "Read at the same time each day to build a lasting habit.",
+  "Don't worry about perfect comprehension—let Scripture wash over you.",
+  "If you miss a day, simply continue where you left off.",
+  "Consider reading aloud to engage more of your senses.",
+  "Keep a simple journal to note recurring themes you observe.",
+  "The goal is consistency, not speed. Take your time.",
+];

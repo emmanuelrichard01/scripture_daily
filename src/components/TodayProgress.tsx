@@ -1,4 +1,5 @@
 import { ProgressRing } from "./ProgressRing";
+import { Check } from "lucide-react";
 
 interface TodayProgressProps {
   completedCount: number;
@@ -10,37 +11,43 @@ export function TodayProgress({ completedCount, totalCount }: TodayProgressProps
   const isComplete = completedCount === totalCount;
 
   return (
-    <div className="card-elevated p-6 flex items-center gap-6">
-      <ProgressRing progress={progress} size={100} strokeWidth={8}>
+    <div className="card-elevated p-5 flex items-center gap-5">
+      <ProgressRing progress={progress} size={80} strokeWidth={6}>
         <div className="text-center">
-          <span className="text-2xl font-bold font-serif text-foreground">
-            {completedCount}
-          </span>
-          <span className="text-muted-foreground text-lg">/{totalCount}</span>
+          {isComplete ? (
+            <Check className="w-6 h-6 text-success" />
+          ) : (
+            <>
+              <span className="text-xl font-semibold text-foreground">
+                {completedCount}
+              </span>
+              <span className="text-muted-foreground text-sm">/{totalCount}</span>
+            </>
+          )}
         </div>
       </ProgressRing>
 
       <div className="flex-1">
-        <h2 className="text-xl font-semibold font-serif text-foreground mb-1">
-          {isComplete ? "Today's reading complete! 🎉" : "Today's Reading"}
+        <h2 className="text-base font-semibold text-foreground mb-0.5">
+          {isComplete ? "Today's reading complete" : "Today's Reading"}
         </h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-muted-foreground">
           {isComplete
-            ? "Well done! You've completed all 10 chapters for today."
+            ? "Well done. All 10 chapters finished."
             : `${totalCount - completedCount} chapter${
                 totalCount - completedCount !== 1 ? "s" : ""
-              } remaining to complete today's reading.`}
+              } remaining`}
         </p>
         
         {/* Progress bar */}
-        <div className="mt-4 h-2 bg-secondary rounded-full overflow-hidden">
+        <div className="mt-3 h-1.5 bg-secondary rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500 ease-out"
             style={{
               width: `${progress}%`,
-              background: isComplete
+              backgroundColor: isComplete
                 ? "hsl(var(--success))"
-                : "hsl(var(--primary))",
+                : "hsl(var(--foreground))",
             }}
           />
         </div>

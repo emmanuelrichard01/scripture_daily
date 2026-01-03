@@ -31,11 +31,10 @@ import {
   Monitor,
   Trash2,
   Download,
-  Info,
-  User,
   LogOut,
   LogIn,
   Cloud,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,7 +79,7 @@ const Settings = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    toast.success("Signed out successfully");
+    toast.success("Signed out");
   };
 
   const themeIcons = {
@@ -92,21 +91,21 @@ const Settings = () => {
   const ThemeIcon = themeIcons[settings.theme];
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
-          <h1 className="text-xl font-semibold font-serif text-foreground">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+        <div className="max-w-lg mx-auto px-5 h-14 flex items-center">
+          <h1 className="text-lg font-semibold text-foreground">
             Settings
           </h1>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
+      <main className="max-w-lg mx-auto px-5 py-6 space-y-5">
         {/* Account Section */}
         <SettingsSection
           title="Account"
-          description={user ? "Manage your account" : "Sign in to sync across devices"}
+          description={user ? "Signed in" : "Sync across devices"}
         >
           {user ? (
             <>
@@ -114,22 +113,20 @@ const Settings = () => {
                 label="Email"
                 description={user.email || "No email"}
                 action={
-                  <div className="flex items-center gap-2 text-success">
-                    <Cloud className="w-4 h-4" />
-                    <span className="text-xs font-medium">Synced</span>
+                  <div className="flex items-center gap-1.5 text-success">
+                    <Cloud className="w-3.5 h-3.5" />
+                    <span className="text-2xs font-medium">Synced</span>
                   </div>
                 }
               />
               <SettingsRow
                 label="Sign Out"
-                description="Sign out of your account"
                 action={
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
                   </button>
                 }
               />
@@ -137,16 +134,16 @@ const Settings = () => {
           ) : (
             <SettingsRow
               label="Sign In"
-              description="Sync your progress across devices"
+              description="Sync your progress"
               action={
                 <Link to="/auth">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5 text-muted-foreground"
                   >
                     <LogIn className="w-4 h-4" />
-                    Sign In
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </Link>
               }
@@ -157,7 +154,6 @@ const Settings = () => {
         {/* Reminders */}
         <SettingsSection
           title="Reminders"
-          description="Set daily reading reminders"
         >
           <ReminderPicker
             reminders={settings.reminders}
@@ -171,7 +167,6 @@ const Settings = () => {
         <SettingsSection title="Appearance">
           <SettingsRow
             label="Theme"
-            description="Choose your preferred theme"
             action={
               <Select
                 value={settings.theme}
@@ -179,38 +174,22 @@ const Settings = () => {
                   updateSettings({ theme: value })
                 }
               >
-                <SelectTrigger className="w-28 h-9">
+                <SelectTrigger className="w-28 h-9 border-0 bg-secondary">
                   <div className="flex items-center gap-2">
-                    <ThemeIcon className="w-4 h-4" />
+                    <ThemeIcon className="w-4 h-4" strokeWidth={1.5} />
                     <SelectValue />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">
-                    <div className="flex items-center gap-2">
-                      <Sun className="w-4 h-4" />
-                      Light
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="dark">
-                    <div className="flex items-center gap-2">
-                      <Moon className="w-4 h-4" />
-                      Dark
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="system">
-                    <div className="flex items-center gap-2">
-                      <Monitor className="w-4 h-4" />
-                      System
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
                 </SelectContent>
               </Select>
             }
           />
           <SettingsRow
             label="Haptic Feedback"
-            description="Vibrate on actions (mobile)"
             action={
               <Switch
                 checked={settings.hapticFeedback}
@@ -226,80 +205,74 @@ const Settings = () => {
         <SettingsSection title="Data">
           <SettingsRow
             label="Export Data"
-            description="Download your reading progress"
             action={
               <button
                 onClick={handleExportData}
-                className="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/15 transition-colors"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Download className="w-4 h-4" />
-                Export
+                <Download className="w-4 h-4" strokeWidth={1.5} />
               </button>
             }
           />
           <SettingsRow
             label="Reset All Data"
-            description="Clear all progress and settings"
             action={
               <button
                 onClick={() => setShowResetDialog(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium hover:bg-destructive/15 transition-colors"
+                className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors"
               >
-                <Trash2 className="w-4 h-4" />
-                Reset
+                <Trash2 className="w-4 h-4" strokeWidth={1.5} />
               </button>
             }
           />
         </SettingsSection>
 
         {/* Stats Summary */}
-        <div className="bg-muted/30 rounded-2xl p-4 border border-border/50">
-          <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">Your Stats</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="card-elevated p-4">
+          <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+            Your Progress
+          </p>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-muted-foreground text-xs">Total Chapters</p>
-              <p className="text-lg font-semibold text-foreground">
+              <p className="text-xl font-semibold text-foreground">
                 {totalChaptersRead}
               </p>
+              <p className="text-2xs text-muted-foreground">chapters read</p>
             </div>
             <div>
-              <p className="text-muted-foreground text-xs">Current Streak</p>
-              <p className="text-lg font-semibold text-foreground">
-                {streakCount} days
+              <p className="text-xl font-semibold text-foreground">
+                {streakCount}
               </p>
+              <p className="text-2xs text-muted-foreground">day streak</p>
             </div>
           </div>
         </div>
 
         {/* App Info */}
         <div className="text-center pt-4">
-          <p className="text-sm text-muted-foreground">Scripture Daily v1.0</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
-            Based on the Horner Bible Reading Plan
+          <p className="text-xs text-muted-foreground">Scripture Daily v1.0</p>
+          <p className="text-2xs text-muted-foreground/70 mt-0.5">
+            Horner Bible Reading System
           </p>
         </div>
       </main>
 
       {/* Reset Confirmation Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent className="max-w-sm mx-4">
+        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all data?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all your reading progress and
-              settings. This action cannot be undone.
+              This will permanently delete all your reading progress. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleResetData}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
             >
-              Reset Everything
+              Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

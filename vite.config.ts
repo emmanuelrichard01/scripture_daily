@@ -15,31 +15,31 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "placeholder.svg"],
+      includeAssets: ["favicon.png", "apple-touch-icon.png"],
       manifest: {
-        name: "Scripture Daily - Bible Reading Tracker",
+        name: "Scripture Daily",
         short_name: "Scripture Daily",
-        description:
-          "Track your daily Bible reading with the Horner Reading Plan. Read through the entire Bible systematically.",
-        theme_color: "#3730a3",
-        background_color: "#faf9f7",
+        description: "A quiet companion for disciplined, lifelong engagement with God's Word using Professor Horner's 10-list Bible reading system.",
+        theme_color: "#FAFAFA",
+        background_color: "#FAFAFA",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
         start_url: "/",
+        categories: ["books", "education", "lifestyle"],
         icons: [
           {
-            src: "/pwa-192x192.png",
+            src: "/favicon.png",
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "/pwa-512x512.png",
+            src: "/favicon.png",
             sizes: "512x512",
             type: "image/png",
           },
           {
-            src: "/pwa-512x512.png",
+            src: "/favicon.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: "google-fonts-cache",
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365,
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => ({
               cacheName: "gstatic-fonts-cache",
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365,
               },
               cacheableResponse: {
                 statuses: [0, 200],

@@ -6,7 +6,6 @@ interface StatsCardProps {
   label: string;
   value: string | number;
   sublabel?: string;
-  variant?: "default" | "primary" | "success" | "accent";
 }
 
 export function StatsCard({
@@ -14,32 +13,25 @@ export function StatsCard({
   label,
   value,
   sublabel,
-  variant = "default",
 }: StatsCardProps) {
   return (
-    <div className="card-elevated p-5 hover-lift transition-all duration-300">
-      <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-xl",
-            variant === "primary" && "bg-primary/10 text-primary",
-            variant === "success" && "bg-success/10 text-success",
-            variant === "accent" && "bg-accent/20 text-accent-foreground",
-            variant === "default" && "bg-secondary text-secondary-foreground"
-          )}
-        >
+    <div className="card-elevated p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-secondary text-muted-foreground">
           {icon}
         </div>
-        <div className="flex-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+        <div className="flex-1 min-w-0">
+          <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
             {label}
           </p>
-          <p className="text-2xl font-semibold text-foreground font-serif">
-            {value}
-          </p>
-          {sublabel && (
-            <p className="text-xs text-muted-foreground mt-0.5">{sublabel}</p>
-          )}
+          <div className="flex items-baseline gap-1">
+            <p className="text-xl font-semibold text-foreground">
+              {value}
+            </p>
+            {sublabel && (
+              <p className="text-xs text-muted-foreground">{sublabel}</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

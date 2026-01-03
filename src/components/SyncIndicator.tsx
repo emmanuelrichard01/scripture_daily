@@ -16,12 +16,12 @@ export function SyncIndicator({
     return (
       <div
         className={cn(
-          "flex items-center gap-1.5 text-xs text-muted-foreground",
+          "flex items-center gap-1 text-2xs text-muted-foreground",
           className
         )}
       >
-        <CloudOff className="w-3.5 h-3.5" />
-        <span>Local only</span>
+        <CloudOff className="w-3 h-3" strokeWidth={1.5} />
+        <span>Local</span>
       </div>
     );
   }
@@ -29,19 +29,19 @@ export function SyncIndicator({
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 text-xs transition-colors",
-        isSyncing ? "text-primary" : "text-success",
+        "flex items-center gap-1 text-2xs transition-colors",
+        isSyncing ? "text-muted-foreground" : "text-success",
         className
       )}
     >
       {isSyncing ? (
         <>
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          <span>Syncing...</span>
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Syncing</span>
         </>
       ) : (
         <>
-          <Cloud className="w-3.5 h-3.5" />
+          <Cloud className="w-3 h-3" strokeWidth={1.5} />
           <span>Synced</span>
         </>
       )}

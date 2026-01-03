@@ -14,8 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['Playfair Display', 'Georgia', 'serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -65,11 +64,29 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Semantic track colors
+        track: {
+          blue: "hsl(var(--track-blue))",
+          red: "hsl(var(--track-red))",
+          green: "hsl(var(--track-green))",
+          yellow: "hsl(var(--track-yellow))",
+          purple: "hsl(var(--track-purple))",
+          orange: "hsl(var(--track-orange))",
+          teal: "hsl(var(--track-teal))",
+          pink: "hsl(var(--track-pink))",
+          indigo: "hsl(var(--track-indigo))",
+          cyan: "hsl(var(--track-cyan))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "2xl": "1rem",
+        "3xl": "1.25rem",
+      },
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       keyframes: {
         "accordion-down": {

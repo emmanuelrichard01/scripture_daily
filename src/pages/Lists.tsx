@@ -68,26 +68,25 @@ const Lists = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-lg mx-auto px-6 h-16 flex items-center">
-          <h1 className="text-xl font-semibold font-serif text-foreground">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+        <div className="max-w-lg mx-auto px-5 h-14 flex items-center">
+          <h1 className="text-lg font-semibold text-foreground">
             Reading Lists
           </h1>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-6 py-6">
+      <main className="max-w-lg mx-auto px-5 py-6">
         <p className="text-sm text-muted-foreground mb-6">
-          Explore all 10 reading lists. Tap a list to see books and chapters.
+          Explore all 10 reading lists in the Horner system.
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {listData.map(
             ({
               list,
               currentBookIndex,
               currentChapterInBook,
-              completedDays,
               isTodayComplete,
             }) => {
               const isExpanded = expandedLists.has(list.id);
@@ -103,15 +102,15 @@ const Lists = () => {
                       className={cn(
                         "w-full bg-card rounded-2xl p-4 border transition-all duration-200 text-left",
                         isExpanded
-                          ? "border-primary/30 shadow-md"
-                          : "border-border hover:border-primary/20 hover:shadow-sm"
+                          ? "border-border shadow-sm"
+                          : "border-border hover:bg-secondary/30"
                       )}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         {/* Color indicator */}
                         <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                          style={{ backgroundColor: list.color }}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
+                          style={{ backgroundColor: `hsl(${list.colorVar})` }}
                         >
                           {list.id}
                         </div>
@@ -119,7 +118,7 @@ const Lists = () => {
                         {/* List info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground">
+                            <h3 className="font-medium text-foreground">
                               {list.name}
                             </h3>
                             {isTodayComplete && (
@@ -128,12 +127,8 @@ const Lists = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {list.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {list.cycleDays} chapters · {list.books.length} book
-                            {list.books.length > 1 ? "s" : ""}
+                          <p className="text-sm text-muted-foreground">
+                            {list.books.length} book{list.books.length > 1 ? "s" : ""} · {list.cycleDays} day cycle
                           </p>
                         </div>
 
@@ -159,17 +154,17 @@ const Lists = () => {
                             {/* Book header */}
                             <div
                               className={cn(
-                                "flex items-center gap-2 px-3 py-2 rounded-lg mb-2",
+                                "flex items-center gap-2 px-3 py-2 rounded-xl mb-2",
                                 isCurrentBook
-                                  ? "bg-primary/10"
-                                  : "bg-secondary/50"
+                                  ? "bg-secondary"
+                                  : "bg-transparent"
                               )}
                             >
                               <BookOpen
                                 className={cn(
                                   "w-4 h-4",
                                   isCurrentBook
-                                    ? "text-primary"
+                                    ? "text-foreground"
                                     : "text-muted-foreground"
                                 )}
                               />
@@ -177,14 +172,14 @@ const Lists = () => {
                                 className={cn(
                                   "font-medium text-sm",
                                   isCurrentBook
-                                    ? "text-primary"
-                                    : "text-foreground"
+                                    ? "text-foreground"
+                                    : "text-muted-foreground"
                                 )}
                               >
                                 {book.name}
                               </span>
                               <span className="text-xs text-muted-foreground ml-auto">
-                                {book.chapters} chapters
+                                {book.chapters} ch.
                               </span>
                             </div>
 
@@ -202,10 +197,10 @@ const Lists = () => {
                                   <button
                                     key={chapter}
                                     className={cn(
-                                      "aspect-square rounded-md text-xs font-medium flex items-center justify-center transition-all duration-150",
+                                      "aspect-square rounded-lg text-xs font-medium flex items-center justify-center transition-all duration-150",
                                       isCurrentChapter
-                                        ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                                        : "bg-secondary/70 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                                        ? "bg-foreground text-background"
+                                        : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
                                     )}
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -216,7 +211,7 @@ const Lists = () => {
                                     disabled={!isCurrentChapter}
                                     title={
                                       isCurrentChapter
-                                        ? "Today's reading - tap to toggle"
+                                        ? "Today's reading"
                                         : `${book.name} ${chapter}`
                                     }
                                   >
