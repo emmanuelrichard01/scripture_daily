@@ -9,7 +9,7 @@ export interface ReminderSettings {
 }
 
 export interface Settings {
-  theme: "light" | "dark" | "system";
+  theme: "light" | "dark" | "system" | "auto";
   reminders: ReminderSettings;
   hapticFeedback: boolean;
   notificationPermission: NotificationPermission | "default";
@@ -44,11 +44,14 @@ export function useSettings() {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
 
-  // Apply theme
+  // Apply theme (auto theme handled separately in useAutoTheme)
   useEffect(() => {
     const root = document.documentElement;
     
-    if (settings.theme === "system") {
+    if (settings.theme === "auto") {
+      // Auto theme is handled by useAutoTheme hook
+      return;
+    } else if (settings.theme === "system") {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       root.classList.toggle("dark", prefersDark);
     } else {

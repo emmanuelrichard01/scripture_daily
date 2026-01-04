@@ -3,9 +3,12 @@ import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsSection, SettingsRow } from "@/components/SettingsSection";
 import { ReminderPicker } from "@/components/ReminderPicker";
+import { StartDatePicker } from "@/components/StartDatePicker";
+import { UserProfile } from "@/components/UserProfile";
 import { useSettings } from "@/hooks/useSettings";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAutoTheme } from "@/hooks/useAutoTheme";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -29,6 +32,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Sunrise,
   Trash2,
   Download,
   LogOut,
@@ -46,8 +50,9 @@ const Settings = () => {
     requestNotificationPermission,
   } = useSettings();
 
-  const { totalChaptersRead, streakCount, resetProgress } = useCloudProgress();
+  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate } = useCloudProgress();
   const { user, signOut } = useAuth();
+  const { isDarkNow } = useAutoTheme();
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   const handleExportData = () => {
@@ -86,6 +91,7 @@ const Settings = () => {
     light: Sun,
     dark: Moon,
     system: Monitor,
+    auto: Sunrise,
   };
 
   const ThemeIcon = themeIcons[settings.theme];
@@ -102,39 +108,40 @@ const Settings = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-5">
+        {/* User Profile Card */}
+        {user && (
+          <div className="card-elevated p-4">
+            <div className="flex items-center justify-between">
+              <UserProfile size="lg" showGreeting={true} />
+              <div className="flex items-center gap-1.5 text-track-green">
+                <Cloud className="w-4 h-4" />
+                <span className="text-2xs font-medium">Synced</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Account Section */}
         <SettingsSection
           title="Account"
-          description={user ? "Signed in" : "Sync across devices"}
+          description={user ? user.email || "Signed in" : "Sync across devices"}
         >
           {user ? (
-            <>
-              <SettingsRow
-                label="Email"
-                description={user.email || "No email"}
-                action={
-                  <div className="flex items-center gap-1.5 text-success">
-                    <Cloud className="w-3.5 h-3.5" />
-                    <span className="text-2xs font-medium">Synced</span>
-                  </div>
-                }
-              />
-              <SettingsRow
-                label="Sign Out"
-                action={
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                }
-              />
-            </>
+            <SettingsRow
+              label="Sign Out"
+              action={
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              }
+            />
           ) : (
             <SettingsRow
               label="Sign In"
-              description="Sync your progress"
+              description="Sync your progress across devices"
               action={
                 <Link to="/auth">
                   <Button
@@ -151,10 +158,16 @@ const Settings = () => {
           )}
         </SettingsSection>
 
+        {/* Reading Settings */}
+        <SettingsSection title="Reading">
+          <StartDatePicker 
+            currentStartDate={startDate}
+            onUpdateStartDate={updateStartDate}
+          />
+        </SettingsSection>
+
         {/* Reminders */}
-        <SettingsSection
-          title="Reminders"
-        >
+        <SettingsSection title="Reminders">
           <ReminderPicker
             reminders={settings.reminders}
             notificationPermission={settings.notificationPermission}
@@ -167,14 +180,15 @@ const Settings = () => {
         <SettingsSection title="Appearance">
           <SettingsRow
             label="Theme"
+            description={settings.theme === "auto" ? (isDarkNow ? "Dark until sunrise" : "Light until sunset") : undefined}
             action={
               <Select
                 value={settings.theme}
-                onValueChange={(value: "light" | "dark" | "system") =>
+                onValueChange={(value: "light" | "dark" | "system" | "auto") =>
                   updateSettings({ theme: value })
                 }
               >
-                <SelectTrigger className="w-28 h-9 border-0 bg-secondary">
+                <SelectTrigger className="w-32 h-9 border-0 bg-secondary">
                   <div className="flex items-center gap-2">
                     <ThemeIcon className="w-4 h-4" strokeWidth={1.5} />
                     <SelectValue />
@@ -184,12 +198,14 @@ const Settings = () => {
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
                   <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="auto">Auto (Sun)</SelectItem>
                 </SelectContent>
               </Select>
             }
           />
           <SettingsRow
             label="Haptic Feedback"
+            description="Vibration on interactions"
             action={
               <Switch
                 checked={settings.hapticFeedback}
@@ -205,6 +221,7 @@ const Settings = () => {
         <SettingsSection title="Data">
           <SettingsRow
             label="Export Data"
+            description="Download backup file"
             action={
               <button
                 onClick={handleExportData}
@@ -216,6 +233,7 @@ const Settings = () => {
           />
           <SettingsRow
             label="Reset All Data"
+            description="Delete all progress"
             action={
               <button
                 onClick={() => setShowResetDialog(true)}
@@ -228,19 +246,19 @@ const Settings = () => {
         </SettingsSection>
 
         {/* Stats Summary */}
-        <div className="card-elevated p-4">
+        <div className="card-elevated p-4 bg-gradient-to-br from-track-blue/5 to-track-purple/5">
           <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Your Progress
           </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xl font-semibold text-foreground">
+              <p className="text-2xl font-semibold text-foreground">
                 {totalChaptersRead}
               </p>
               <p className="text-2xs text-muted-foreground">chapters read</p>
             </div>
             <div>
-              <p className="text-xl font-semibold text-foreground">
+              <p className="text-2xl font-semibold text-foreground">
                 {streakCount}
               </p>
               <p className="text-2xs text-muted-foreground">day streak</p>

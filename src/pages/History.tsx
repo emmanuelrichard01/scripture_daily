@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
+import { ShareableProgressCard } from "@/components/ShareableProgressCard";
 import {
   getDayOfYear,
   readingLists,
@@ -15,6 +17,8 @@ import {
   Calendar,
   Lightbulb,
   Info,
+  Share2,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,19 +39,19 @@ const History = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [weekOffset, setWeekOffset] = useState(0);
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
+  const [showShareCard, setShowShareCard] = useState(false);
+  const [expandedTrack, setExpandedTrack] = useState<number | null>(null);
 
   // Calculate weekly/monthly data
   const chartData = useMemo(() => {
     const data: { label: string; chapters: number; fullDate: string }[] = [];
 
     if (viewMode === "week") {
-      // Get 7 days ending at today + weekOffset
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i + weekOffset * 7);
         const dayOfYear = getDayOfYear(date);
 
-        // Count completed readings for this day
         let completedCount = 0;
         for (let listId = 1; listId <= 10; listId++) {
           if (completedSet.has(`${dayOfYear}-${listId}`)) {
@@ -65,7 +69,6 @@ const History = () => {
         });
       }
     } else {
-      // Get last 4 weeks
       for (let week = 3; week >= 0; week--) {
         let weekTotal = 0;
         const weekStart = new Date(today);
@@ -108,7 +111,6 @@ const History = () => {
       ? ((totalThisWeek / 70) * 100).toFixed(0)
       : ((totalThisWeek / 280) * 100).toFixed(0);
 
-    // Days since start
     const start = new Date(startDate);
     const daysSinceStart = Math.max(
       1,
@@ -146,12 +148,41 @@ const History = () => {
     return readingTips[dayOfYear % readingTips.length];
   }, [today]);
 
+  // Track progress with more detail
+  const trackProgress = useMemo(() => {
+    return readingLists.map((list) => {
+      const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
+      let completedCount = 0;
+      completedSet.forEach((key) => {
+        if (key.endsWith(`-${list.id}`)) completedCount++;
+      });
+      const cyclesCompleted = Math.floor(completedCount / totalChapters);
+      const currentCycleProgress = completedCount % totalChapters;
+      const progressPercent = (currentCycleProgress / totalChapters) * 100;
+
+      return {
+        ...list,
+        totalChapters,
+        completedCount,
+        cyclesCompleted,
+        currentCycleProgress,
+        progressPercent,
+      };
+    });
+  }, [completedSet]);
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center">
+        <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-foreground">History</h1>
+          <button
+            onClick={() => setShowShareCard(true)}
+            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+          >
+            <Share2 className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
+          </button>
         </div>
       </header>
 
@@ -237,12 +268,12 @@ const History = () => {
                   <linearGradient id="colorChapters" x1="0" y1="0" x2="0" y2="1">
                     <stop
                       offset="5%"
-                      stopColor="hsl(var(--foreground))"
-                      stopOpacity={0.15}
+                      stopColor="hsl(var(--track-blue))"
+                      stopOpacity={0.2}
                     />
                     <stop
                       offset="95%"
-                      stopColor="hsl(var(--foreground))"
+                      stopColor="hsl(var(--track-blue))"
                       stopOpacity={0}
                     />
                   </linearGradient>
@@ -275,7 +306,7 @@ const History = () => {
                 <Area
                   type="monotone"
                   dataKey="chapters"
-                  stroke="hsl(var(--foreground))"
+                  stroke="hsl(var(--track-blue))"
                   strokeWidth={2}
                   fill="url(#colorChapters)"
                 />
@@ -287,19 +318,25 @@ const History = () => {
         {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="card-elevated p-4 text-center">
-            <TrendingUp className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+            <div className="w-8 h-8 rounded-lg bg-track-orange/10 flex items-center justify-center mx-auto mb-2">
+              <TrendingUp className="w-4 h-4 text-track-orange" />
+            </div>
             <p className="text-lg font-semibold text-foreground">{streakCount}</p>
             <p className="text-2xs text-muted-foreground">Day Streak</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <BookOpen className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+            <div className="w-8 h-8 rounded-lg bg-track-blue/10 flex items-center justify-center mx-auto mb-2">
+              <BookOpen className="w-4 h-4 text-track-blue" />
+            </div>
             <p className="text-lg font-semibold text-foreground">
               {totalChaptersRead}
             </p>
             <p className="text-2xs text-muted-foreground">Total Read</p>
           </div>
           <div className="card-elevated p-4 text-center">
-            <Calendar className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+            <div className="w-8 h-8 rounded-lg bg-track-green/10 flex items-center justify-center mx-auto mb-2">
+              <Calendar className="w-4 h-4 text-track-green" />
+            </div>
             <p className="text-lg font-semibold text-foreground">
               {stats.daysSinceStart}
             </p>
@@ -307,11 +344,95 @@ const History = () => {
           </div>
         </div>
 
+        {/* Track Progress - Redesigned for mobile */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Track Progress
+            </h2>
+            <Link
+              to="/lists"
+              className="text-2xs text-track-blue font-medium"
+            >
+              View all →
+            </Link>
+          </div>
+          
+          <div className="space-y-2">
+            {trackProgress.map((track) => (
+              <button
+                key={track.id}
+                onClick={() => setExpandedTrack(expandedTrack === track.id ? null : track.id)}
+                className="w-full card-interactive p-3"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Color indicator */}
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
+                    style={{ backgroundColor: `hsl(${track.colorVar})` }}
+                  >
+                    {track.cyclesCompleted > 0 ? `${track.cyclesCompleted}×` : track.id}
+                  </div>
+                  
+                  {/* Track info */}
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {track.name}
+                      </p>
+                      <ChevronDown 
+                        className={cn(
+                          "w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ml-2",
+                          expandedTrack === track.id && "rotate-180"
+                        )}
+                      />
+                    </div>
+                    
+                    {/* Progress bar */}
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${track.progressPercent}%`,
+                          backgroundColor: `hsl(${track.colorVar})`,
+                        }}
+                      />
+                    </div>
+                    
+                    <p className="text-2xs text-muted-foreground mt-1">
+                      {track.currentCycleProgress} / {track.totalChapters} chapters
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Expanded content */}
+                {expandedTrack === track.id && (
+                  <div className="mt-3 pt-3 border-t border-border/50 animate-fade-in">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {track.description}
+                    </p>
+                    <div className="flex gap-4 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Cycles: </span>
+                        <span className="font-medium text-foreground">{track.cyclesCompleted}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Total read: </span>
+                        <span className="font-medium text-foreground">{track.completedCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Daily Tip */}
-        <div className="card-elevated p-4 bg-secondary/30">
+        <div className="card-elevated p-4 bg-track-yellow/5 border-track-yellow/10">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-              <Lightbulb className="w-4 h-4 text-muted-foreground" />
+            <div className="w-8 h-8 rounded-full bg-track-yellow/10 flex items-center justify-center flex-shrink-0">
+              <Lightbulb className="w-4 h-4 text-track-yellow" />
             </div>
             <div>
               <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
@@ -364,46 +485,12 @@ const History = () => {
             ))}
           </div>
         </div>
-
-        {/* List Progress Summary */}
-        <div>
-          <h2 className="text-sm font-semibold text-foreground mb-3">
-            Track Progress
-          </h2>
-          <div className="grid grid-cols-5 gap-2">
-            {readingLists.map((list) => {
-              const totalChapters = list.books.reduce(
-                (sum, b) => sum + b.chapters,
-                0
-              );
-              // Count completed for this list
-              let completedCount = 0;
-              completedSet.forEach((key) => {
-                if (key.endsWith(`-${list.id}`)) completedCount++;
-              });
-              const cyclesCompleted = Math.floor(completedCount / totalChapters);
-
-              return (
-                <div
-                  key={list.id}
-                  className="card-elevated p-3 text-center"
-                  title={`${list.name}: ${cyclesCompleted} cycles completed`}
-                >
-                  <div
-                    className="w-6 h-6 rounded-lg mx-auto mb-1.5 flex items-center justify-center text-xs font-semibold text-white"
-                    style={{ backgroundColor: `hsl(${list.colorVar})` }}
-                  >
-                    {list.id}
-                  </div>
-                  <p className="text-2xs text-muted-foreground truncate">
-                    {cyclesCompleted}×
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </main>
+
+      <ShareableProgressCard
+        isOpen={showShareCard}
+        onClose={() => setShowShareCard(false)}
+      />
 
       <BottomNav />
     </div>
