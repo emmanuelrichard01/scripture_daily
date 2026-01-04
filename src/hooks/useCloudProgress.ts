@@ -227,6 +227,13 @@ export function useCloudProgress() {
     }
   }, [user, syncToCloud]);
 
+  const updateStartDate = useCallback((newStartDate: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      startDate: newStartDate,
+    }));
+  }, []);
+
   return {
     completedSet,
     streakCount: progress.streakCount,
@@ -238,5 +245,6 @@ export function useCloudProgress() {
     isSyncing,
     isAuthenticated: !!user,
     resetProgress,
+    updateStartDate,
   };
 }
