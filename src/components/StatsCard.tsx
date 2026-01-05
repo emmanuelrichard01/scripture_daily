@@ -6,6 +6,7 @@ interface StatsCardProps {
   label: string;
   value: string | number;
   sublabel?: string;
+  accentColor?: string;
 }
 
 export function StatsCard({
@@ -13,11 +14,17 @@ export function StatsCard({
   label,
   value,
   sublabel,
+  accentColor,
 }: StatsCardProps) {
   return (
     <div className="card-elevated p-4">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-secondary text-muted-foreground">
+        <div 
+          className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-xl",
+            accentColor ? accentColor : "bg-secondary text-muted-foreground"
+          )}
+        >
           {icon}
         </div>
         <div className="flex-1 min-w-0">
