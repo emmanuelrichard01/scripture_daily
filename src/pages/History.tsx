@@ -358,18 +358,21 @@ const History = () => {
             </Link>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-2" role="list" aria-label="Reading track progress">
             {trackProgress.map((track) => (
               <button
                 key={track.id}
                 onClick={() => setExpandedTrack(expandedTrack === track.id ? null : track.id)}
-                className="w-full card-interactive p-3"
+                className="w-full card-interactive p-3 min-h-[72px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-expanded={expandedTrack === track.id}
+                aria-label={`${track.name}: ${track.currentCycleProgress} of ${track.totalChapters} chapters, ${track.cyclesCompleted} cycles completed`}
               >
                 <div className="flex items-center gap-3">
                   {/* Color indicator */}
                   <div
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
-                    style={{ backgroundColor: `hsl(${track.colorVar})` }}
+                    style={{ backgroundColor: `hsl(var(${track.colorVar}))` }}
+                    aria-hidden="true"
                   >
                     {track.cyclesCompleted > 0 ? `${track.cyclesCompleted}×` : track.id}
                   </div>
@@ -391,10 +394,10 @@ const History = () => {
                     {/* Progress bar */}
                     <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all duration-500"
+                        className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none"
                         style={{
                           width: `${track.progressPercent}%`,
-                          backgroundColor: `hsl(${track.colorVar})`,
+                          backgroundColor: `hsl(var(${track.colorVar}))`,
                         }}
                       />
                     </div>

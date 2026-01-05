@@ -1,8 +1,9 @@
 import { useRef, useState } from "react";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCycleMilestones } from "@/hooks/useCycleMilestones";
 import { readingLists, getDayOfYear } from "@/lib/readingPlan";
-import { Download, Share2, X, BookOpen, Flame, Calendar, Trophy } from "lucide-react";
+import { Download, Share2, X, Flame, Calendar, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
   const [isGenerating, setIsGenerating] = useState(false);
   const { completedSet, totalChaptersRead, streakCount, startDate } = useCloudProgress();
   const { user } = useAuth();
+  const { cycleStats, totalStats } = useCycleMilestones(completedSet);
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -26,21 +28,6 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
                       user?.user_metadata?.display_name || 
                       "Scripture Reader";
 
-  // Calculate cycles completed per list
-  const listStats = readingLists.map((list) => {
-    const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
-    let completedCount = 0;
-    completedSet.forEach((key) => {
-      if (key.endsWith(`-${list.id}`)) completedCount++;
-    });
-    return {
-      name: list.name,
-      cycles: Math.floor(completedCount / totalChapters),
-      colorVar: list.colorVar,
-    };
-  });
-
-  const totalCycles = listStats.reduce((sum, s) => sum + s.cycles, 0);
   const daysActive = Math.max(1, Math.floor((today.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
 
   const handleDownload = async () => {
@@ -139,13 +126,15 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
             ref={cardRef}
             className="bg-gradient-to-br from-background via-background to-secondary/30 rounded-2xl p-5 border border-border"
           >
-            {/* Logo area */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-foreground/10 flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-foreground" strokeWidth={1.5} />
-              </div>
+            {/* Logo area - using app logo */}
+            <div className="flex items-center gap-2.5 mb-4">
+              <img 
+                src="/pwa-192x192.svg" 
+                alt="Scripture Daily logo" 
+                className="w-10 h-10 rounded-xl"
+              />
               <div>
-                <p className="text-xs font-semibold text-foreground">Scripture Daily</p>
+                <p className="text-sm font-semibold text-foreground">Scripture Daily</p>
                 <p className="text-2xs text-muted-foreground">{currentYear} Progress</p>
               </div>
             </div>
@@ -157,7 +146,7 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className="bg-card/50 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <BookOpen className="w-3.5 h-3.5 text-track-blue" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-track-blue" />
                   <span className="text-2xs text-muted-foreground">Chapters</span>
                 </div>
                 <p className="text-xl font-bold text-foreground">{totalChaptersRead}</p>
@@ -181,22 +170,22 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
                   <Trophy className="w-3.5 h-3.5 text-track-yellow" />
                   <span className="text-2xs text-muted-foreground">Cycles</span>
                 </div>
-                <p className="text-xl font-bold text-foreground">{totalCycles}</p>
+                <p className="text-xl font-bold text-foreground">{totalStats.totalCycles}</p>
               </div>
             </div>
 
             {/* Track indicators */}
             <div className="flex gap-1">
-              {listStats.map((stat, i) => (
+              {cycleStats.map((stat, i) => (
                 <div
                   key={i}
                   className="flex-1 h-1.5 rounded-full"
                   style={{ 
-                    backgroundColor: stat.cycles > 0 
-                      ? `hsl(${stat.colorVar})` 
+                    backgroundColor: stat.completedCycles > 0 
+                      ? `hsl(var(${stat.colorVar}))` 
                       : "hsl(var(--secondary))" 
                   }}
-                  title={`${stat.name}: ${stat.cycles} cycles`}
+                  title={`${stat.listName}: ${stat.completedCycles} cycles`}
                 />
               ))}
             </div>

@@ -12,27 +12,31 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
   return (
     <button
       className={cn(
-        "w-full group relative flex items-center gap-3 p-4 rounded-2xl border transition-all duration-200 text-left",
+        "w-full group relative flex items-center gap-3 p-4 rounded-2xl border transition-all duration-200 text-left min-h-[64px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none motion-reduce:transition-none",
         reading.completed
           ? "bg-success/5 border-success/20"
-          : "bg-card border-border hover:border-border active:scale-[0.99]"
+          : "bg-card border-border hover:border-border active:scale-[0.99] motion-reduce:active:scale-100"
       )}
       onClick={onToggle}
+      aria-pressed={reading.completed}
+      aria-label={`${reading.book} chapter ${reading.chapter} from ${reading.listName}. ${reading.completed ? "Completed" : "Not completed"}. Tap to ${reading.completed ? "unmark" : "mark as read"}.`}
     >
       {/* Track color indicator - thin left border */}
       <div
         className="absolute left-0 top-3 bottom-3 w-1 rounded-full"
-        style={{ backgroundColor: `hsl(${reading.colorVar})` }}
+        style={{ backgroundColor: `hsl(var(${reading.colorVar}))` }}
+        aria-hidden="true"
       />
 
       {/* Completion indicator */}
       <div
         className={cn(
-          "flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 flex-shrink-0 ml-2",
+          "flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0 ml-2 motion-reduce:transition-none",
           reading.completed
             ? "bg-success text-success-foreground"
             : "bg-secondary text-muted-foreground"
         )}
+        aria-hidden="true"
       >
         {reading.completed ? (
           <Check className="w-4 h-4" />
@@ -62,6 +66,7 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
           "text-xs font-medium transition-colors",
           reading.completed ? "text-success" : "text-muted-foreground"
         )}
+        aria-hidden="true"
       >
         {reading.completed ? "Done" : "Mark read"}
       </span>

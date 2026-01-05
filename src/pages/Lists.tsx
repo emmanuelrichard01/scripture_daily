@@ -107,10 +107,11 @@ const Lists = () => {
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        {/* Color indicator */}
+                        {/* Color indicator - improved contrast */}
                         <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm"
-                          style={{ backgroundColor: `hsl(${list.colorVar})` }}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm text-white"
+                          style={{ backgroundColor: `hsl(var(${list.colorVar}))` }}
+                          aria-label={`List ${list.id}`}
                         >
                           {list.id}
                         </div>
@@ -183,7 +184,7 @@ const Lists = () => {
                               </span>
                             </div>
 
-                            {/* Chapters grid */}
+                            {/* Chapters grid - improved contrast and touch targets */}
                             <div className="grid grid-cols-8 gap-1.5 px-2">
                               {Array.from(
                                 { length: book.chapters },
@@ -197,10 +198,10 @@ const Lists = () => {
                                   <button
                                     key={chapter}
                                     className={cn(
-                                      "aspect-square rounded-lg text-xs font-medium flex items-center justify-center transition-all duration-150",
+                                      "aspect-square min-h-[36px] rounded-lg text-xs font-medium flex items-center justify-center transition-all duration-150",
                                       isCurrentChapter
-                                        ? "bg-foreground text-background"
-                                        : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+                                        ? "bg-foreground text-background shadow-sm"
+                                        : "bg-secondary text-foreground/70 hover:bg-secondary/80"
                                     )}
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -209,10 +210,10 @@ const Lists = () => {
                                       }
                                     }}
                                     disabled={!isCurrentChapter}
-                                    title={
+                                    aria-label={
                                       isCurrentChapter
-                                        ? "Today's reading"
-                                        : `${book.name} ${chapter}`
+                                        ? `Today's reading: ${book.name} chapter ${chapter}`
+                                        : `${book.name} chapter ${chapter}`
                                     }
                                   >
                                     {chapter}
