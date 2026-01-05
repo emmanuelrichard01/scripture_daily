@@ -75,62 +75,62 @@
   }
 
   .dark {
-    --background: 220 16% 10%;
-    --foreground: 220 9% 94%;
+    --background: 220 16% 8%;
+    --foreground: 220 9% 96%;
 
-    --card: 220 14% 12%;
-    --card-foreground: 220 9% 94%;
+    --card: 220 14% 11%;
+    --card-foreground: 220 9% 96%;
 
-    --popover: 220 14% 12%;
-    --popover-foreground: 220 9% 94%;
+    --popover: 220 14% 11%;
+    --popover-foreground: 220 9% 96%;
 
-    --primary: 220 9% 85%;
-    --primary-foreground: 220 16% 10%;
+    --primary: 220 9% 90%;
+    --primary-foreground: 220 16% 8%;
 
-    --secondary: 220 14% 16%;
-    --secondary-foreground: 220 9% 85%;
+    --secondary: 220 14% 15%;
+    --secondary-foreground: 220 9% 90%;
 
-    --muted: 220 14% 16%;
-    --muted-foreground: 220 9% 55%;
+    --muted: 220 14% 15%;
+    --muted-foreground: 220 9% 60%;
 
     --accent: 220 14% 18%;
-    --accent-foreground: 220 9% 85%;
+    --accent-foreground: 220 9% 90%;
 
-    --success: 142 40% 48%;
-    --success-foreground: 220 16% 10%;
+    --success: 142 45% 50%;
+    --success-foreground: 220 16% 8%;
 
-    --destructive: 0 55% 50%;
-    --destructive-foreground: 220 9% 94%;
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 220 9% 96%;
 
     --border: 220 14% 18%;
     --input: 220 14% 18%;
-    --ring: 220 9% 85%;
+    --ring: 220 9% 90%;
 
-    /* Slightly muted track colors for dark mode */
-    --track-blue: 209 65% 55%;
-    --track-red: 0 60% 55%;
-    --track-green: 142 45% 50%;
-    --track-yellow: 43 80% 55%;
-    --track-purple: 280 45% 55%;
-    --track-orange: 24 75% 55%;
-    --track-teal: 180 45% 50%;
-    --track-pink: 340 55% 58%;
-    --track-indigo: 235 45% 60%;
-    --track-cyan: 195 55% 55%;
+    /* Improved track colors for dark mode - better contrast */
+    --track-blue: 209 70% 60%;
+    --track-red: 0 65% 60%;
+    --track-green: 142 50% 55%;
+    --track-yellow: 43 85% 58%;
+    --track-purple: 280 55% 60%;
+    --track-orange: 24 80% 58%;
+    --track-teal: 180 50% 55%;
+    --track-pink: 340 60% 62%;
+    --track-indigo: 235 55% 65%;
+    --track-cyan: 195 60% 58%;
 
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.15);
-    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.25), 0 2px 4px -2px hsl(0 0% 0% / 0.25);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.25), 0 1px 2px -1px hsl(0 0% 0% / 0.25);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.35), 0 4px 6px -4px hsl(0 0% 0% / 0.35);
 
-    --sidebar-background: 220 14% 10%;
-    --sidebar-foreground: 220 9% 85%;
-    --sidebar-primary: 220 9% 85%;
-    --sidebar-primary-foreground: 220 16% 10%;
+    --sidebar-background: 220 14% 8%;
+    --sidebar-foreground: 220 9% 90%;
+    --sidebar-primary: 220 9% 90%;
+    --sidebar-primary-foreground: 220 16% 8%;
     --sidebar-accent: 220 14% 18%;
-    --sidebar-accent-foreground: 220 9% 85%;
+    --sidebar-accent-foreground: 220 9% 90%;
     --sidebar-border: 220 14% 18%;
-    --sidebar-ring: 220 9% 85%;
+    --sidebar-ring: 220 9% 90%;
   }
 }
 
@@ -206,6 +206,15 @@
     animation: scale-in 0.2s ease-out;
   }
 
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-scale-in {
+      animation: none;
+    }
+  }
+
   @keyframes fade-in {
     from {
       opacity: 0;
@@ -237,7 +246,7 @@
     }
   }
 
-  /* Subtle hover effect */
+  /* Subtle hover effect with reduced motion support */
   .hover-lift {
     @apply transition-all duration-200;
   }
@@ -247,6 +256,12 @@
     box-shadow: var(--shadow-md);
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .hover-lift:hover {
+      transform: none;
+    }
+  }
+
   /* Text styles */
   .text-caption {
     @apply text-xs font-medium text-muted-foreground;
@@ -254,5 +269,16 @@
 
   .text-label {
     @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+  }
+
+  /* Custom font size for very small text */
+  .text-2xs {
+    font-size: 0.65rem;
+    line-height: 1rem;
+  }
+
+  /* Focus visible styles for accessibility */
+  .focus-ring {
+    @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none;
   }
 }

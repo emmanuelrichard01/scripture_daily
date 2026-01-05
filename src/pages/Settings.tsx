@@ -7,9 +7,12 @@ import { StartDatePicker } from "@/components/StartDatePicker";
 import { UserProfile } from "@/components/UserProfile";
 import { useSettings } from "@/hooks/useSettings";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
+import { useCycleMilestones } from "@/hooks/useCycleMilestones";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAutoTheme } from "@/hooks/useAutoTheme";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -27,7 +30,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import {
   Moon,
   Sun,
@@ -39,6 +41,10 @@ import {
   LogIn,
   Cloud,
   ChevronRight,
+  Bell,
+  BellOff,
+  User,
+  Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,9 +56,11 @@ const Settings = () => {
     requestNotificationPermission,
   } = useSettings();
 
-  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate } = useCloudProgress();
+  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate, completedSet } = useCloudProgress();
+  const { cycleStats, totalStats } = useCycleMilestones(completedSet);
   const { user, signOut } = useAuth();
   const { isDarkNow } = useAutoTheme();
+  const { isSupported: pushSupported, permission: pushPermission, requestPermission: requestPushPermission, sendTestNotification } = usePushNotifications();
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   const handleExportData = () => {
@@ -87,6 +95,21 @@ const Settings = () => {
     toast.success("Signed out");
   };
 
+  const handleEnableNotifications = async () => {
+    if (!pushSupported) {
+      toast.error("Notifications not supported on this device");
+      return;
+    }
+
+    const result = await requestPushPermission();
+    if (result.success) {
+      toast.success("Notifications enabled!");
+      sendTestNotification();
+    } else {
+      toast.error(result.error || "Could not enable notifications");
+    }
+  };
+
   const themeIcons = {
     light: Sun,
     dark: Moon,
@@ -95,6 +118,9 @@ const Settings = () => {
   };
 
   const ThemeIcon = themeIcons[settings.theme];
+
+  // Get lists with completed cycles for milestones display
+  const completedCycleLists = cycleStats.filter(s => s.completedCycles > 0);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -107,18 +133,25 @@ const Settings = () => {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-5 py-6 space-y-5">
+      <main className="max-w-lg mx-auto px-5 py-6 space-y-5" role="main" aria-label="Settings">
         {/* User Profile Card */}
         {user && (
-          <div className="card-elevated p-4">
+          <Link 
+            to="/profile" 
+            className="card-elevated p-4 block hover:bg-secondary/30 transition-colors"
+            aria-label="Edit profile"
+          >
             <div className="flex items-center justify-between">
               <UserProfile size="lg" showGreeting={true} />
-              <div className="flex items-center gap-1.5 text-track-green">
-                <Cloud className="w-4 h-4" />
-                <span className="text-2xs font-medium">Synced</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-track-green">
+                  <Cloud className="w-4 h-4" aria-hidden="true" />
+                  <span className="text-2xs font-medium">Synced</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Account Section */}
@@ -127,17 +160,37 @@ const Settings = () => {
           description={user ? user.email || "Signed in" : "Sync across devices"}
         >
           {user ? (
-            <SettingsRow
-              label="Sign Out"
-              action={
-                <button
-                  onClick={handleSignOut}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              }
-            />
+            <>
+              <SettingsRow
+                label="Edit Profile"
+                description="Name, avatar, preferences"
+                action={
+                  <Link to="/profile">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-muted-foreground min-h-[44px]"
+                      aria-label="Edit profile"
+                    >
+                      <User className="w-4 h-4" aria-hidden="true" />
+                      <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                    </Button>
+                  </Link>
+                }
+              />
+              <SettingsRow
+                label="Sign Out"
+                action={
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                }
+              />
+            </>
           ) : (
             <SettingsRow
               label="Sign In"
@@ -147,10 +200,11 @@ const Settings = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-1.5 text-muted-foreground"
+                    className="gap-1.5 text-muted-foreground min-h-[44px]"
+                    aria-label="Sign in"
                   >
-                    <LogIn className="w-4 h-4" />
-                    <ChevronRight className="w-4 h-4" />
+                    <LogIn className="w-4 h-4" aria-hidden="true" />
+                    <ChevronRight className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </Link>
               }
@@ -166,14 +220,55 @@ const Settings = () => {
           />
         </SettingsSection>
 
-        {/* Reminders */}
-        <SettingsSection title="Reminders">
-          <ReminderPicker
-            reminders={settings.reminders}
-            notificationPermission={settings.notificationPermission}
-            onUpdate={updateReminders}
-            onRequestPermission={requestNotificationPermission}
-          />
+        {/* Notifications */}
+        <SettingsSection title="Notifications">
+          {pushSupported ? (
+            <>
+              <SettingsRow
+                label="Push Notifications"
+                description={
+                  pushPermission === "granted" 
+                    ? "Daily reminders enabled" 
+                    : "Get gentle daily reminders"
+                }
+                action={
+                  pushPermission === "granted" ? (
+                    <div className="flex items-center gap-2 text-track-green">
+                      <Bell className="w-4 h-4" aria-hidden="true" />
+                      <span className="text-xs font-medium">Enabled</span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleEnableNotifications}
+                      className="gap-1.5 min-h-[44px]"
+                      aria-label="Enable notifications"
+                    >
+                      <Bell className="w-4 h-4" aria-hidden="true" />
+                      Enable
+                    </Button>
+                  )
+                }
+              />
+              {pushPermission === "granted" && (
+                <ReminderPicker
+                  reminders={settings.reminders}
+                  notificationPermission={settings.notificationPermission}
+                  onUpdate={updateReminders}
+                  onRequestPermission={requestNotificationPermission}
+                />
+              )}
+            </>
+          ) : (
+            <SettingsRow
+              label="Push Notifications"
+              description="Not supported on this device"
+              action={
+                <BellOff className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              }
+            />
+          )}
         </SettingsSection>
 
         {/* Appearance */}
@@ -188,9 +283,9 @@ const Settings = () => {
                   updateSettings({ theme: value })
                 }
               >
-                <SelectTrigger className="w-32 h-9 border-0 bg-secondary">
+                <SelectTrigger className="w-32 h-11 border-0 bg-secondary" aria-label="Select theme">
                   <div className="flex items-center gap-2">
-                    <ThemeIcon className="w-4 h-4" strokeWidth={1.5} />
+                    <ThemeIcon className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
                     <SelectValue />
                   </div>
                 </SelectTrigger>
@@ -212,10 +307,45 @@ const Settings = () => {
                 onCheckedChange={(checked) =>
                   updateSettings({ hapticFeedback: checked })
                 }
+                aria-label="Toggle haptic feedback"
               />
             }
           />
         </SettingsSection>
+
+        {/* Milestones */}
+        {completedCycleLists.length > 0 && (
+          <SettingsSection title="Milestones">
+            <div className="px-4 py-3 space-y-2">
+              {completedCycleLists.map((stat) => (
+                <div 
+                  key={stat.listId} 
+                  className="flex items-center gap-3 py-2"
+                  role="listitem"
+                >
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: `hsl(var(${stat.colorVar}) / 0.15)` }}
+                    aria-hidden="true"
+                  >
+                    <Trophy 
+                      className="w-4 h-4" 
+                      style={{ color: `hsl(var(${stat.colorVar}))` }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {stat.listName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Read {stat.completedCycles} {stat.completedCycles === 1 ? "time" : "times"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SettingsSection>
+        )}
 
         {/* Data */}
         <SettingsSection title="Data">
@@ -225,9 +355,10 @@ const Settings = () => {
             action={
               <button
                 onClick={handleExportData}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2"
+                aria-label="Export data"
               >
-                <Download className="w-4 h-4" strokeWidth={1.5} />
+                <Download className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
               </button>
             }
           />
@@ -237,31 +368,38 @@ const Settings = () => {
             action={
               <button
                 onClick={() => setShowResetDialog(true)}
-                className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors min-h-[44px] px-2"
+                aria-label="Reset all data"
               >
-                <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                <Trash2 className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
               </button>
             }
           />
         </SettingsSection>
 
         {/* Stats Summary */}
-        <div className="card-elevated p-4 bg-gradient-to-br from-track-blue/5 to-track-purple/5">
+        <div className="card-elevated p-4 bg-gradient-to-br from-track-blue/5 to-track-purple/5" role="region" aria-label="Your progress summary">
           <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Your Progress
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-2xl font-semibold text-foreground">
                 {totalChaptersRead}
               </p>
-              <p className="text-2xs text-muted-foreground">chapters read</p>
+              <p className="text-2xs text-muted-foreground">chapters</p>
             </div>
             <div>
               <p className="text-2xl font-semibold text-foreground">
                 {streakCount}
               </p>
               <p className="text-2xs text-muted-foreground">day streak</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold text-foreground">
+                {totalStats.totalCycles}
+              </p>
+              <p className="text-2xs text-muted-foreground">cycles</p>
             </div>
           </div>
         </div>
@@ -285,10 +423,10 @@ const Settings = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl min-h-[44px]">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleResetData}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl min-h-[44px]"
             >
               Reset
             </AlertDialogAction>
