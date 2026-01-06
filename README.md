@@ -1,73 +1,52 @@
-# Welcome to your Lovable project
+# Scripture Daily
 
-## Project info
+A calm, reverent PWA for tracking Professor Grant Horner’s Bible reading system: 10 daily chapters across 10 parallel reading lists.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What this app does
 
-## How can I edit this code?
+- **Today**: shows your 10 chapters for the day and lets you mark each one complete.
+- **Progress**: tracks streaks, total chapters read, and quiet milestones over time.
+- **History / Calendar**: review past completion.
+- **Shareable progress card**: generate an image for sharing.
+- **Profile**: manage display name and avatar.
+- **Settings**: reminders, theme, and preferences.
 
-There are several ways of editing your application.
+## How Horner’s system works (quick overview)
 
-**Use Lovable**
+- Scripture is divided into **10 lists** (Gospels, Epistles, Psalms, Proverbs, etc.).
+- Each day you read **one chapter from each list**.
+- Since lists have different lengths, the combinations stay fresh for a long time.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Authentication
 
-Changes made via Lovable will be committed automatically to this repo.
+This app supports:
+- Email + password
+- Google sign-in
 
-**Use your preferred IDE**
+### Google sign-in setup (backend)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If Google sign-in returns an error like “Unable to exchange external code”, it almost always means the Google OAuth credentials or redirect URLs are not configured correctly.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Open the backend and verify:
+- **Google provider is enabled** and has the correct **Client ID** + **Client Secret**
+- The **Authorized redirect URL** shown in the backend is added to your Google Cloud OAuth client
+- Your deployed domain (and preview domain, if used) is present in allowed **Site / Redirect URLs**
 
-Follow these steps:
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Tech stack
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
+- React + TypeScript
 - Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Tailwind + shadcn-ui
+- Backend (auth + database) provided via Lovable Cloud
 
-## How can I deploy this project?
+## Deploy
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Publish via Lovable → **Share → Publish**.
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
