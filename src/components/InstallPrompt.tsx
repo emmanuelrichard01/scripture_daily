@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Download, Share } from "lucide-react";
+import { X, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHaptics } from "@/hooks/useHaptics";
 
@@ -107,8 +107,13 @@ export function InstallPrompt() {
       <div className="fixed bottom-20 left-4 right-4 z-50 animate-slide-up">
         <div className="max-w-lg mx-auto card-elevated p-4 border-track-blue/20">
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-track-blue/20 to-track-purple/20 flex items-center justify-center flex-shrink-0">
-              <Download className="w-6 h-6 text-foreground" strokeWidth={1.5} />
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-track-blue/20 to-track-purple/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img
+                src="/apple-touch-icon.png"
+                alt="Scripture Daily"
+                className="w-9 h-9 rounded-lg"
+                loading="lazy"
+              />
             </div>
 
             <div className="flex-1 min-w-0">

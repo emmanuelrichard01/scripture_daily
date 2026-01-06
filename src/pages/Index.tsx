@@ -11,6 +11,7 @@ import { SyncIndicator } from "@/components/SyncIndicator";
 import { UserProfile } from "@/components/UserProfile";
 import { OnboardingFlow, useOnboarding } from "@/components/onboarding/OnboardingFlow";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
+import { useMilestoneAcknowledgements } from "@/hooks/useMilestoneAcknowledgements";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -38,6 +39,8 @@ const Index = () => {
     isSyncing,
     isAuthenticated,
   } = useCloudProgress();
+
+  useMilestoneAcknowledgements(completedSet);
 
   const handleToggle = (listId: number) => {
     triggerHaptic("light");

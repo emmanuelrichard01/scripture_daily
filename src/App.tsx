@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import History from "./pages/History";
 import Lists from "./pages/Lists";
 import Settings from "./pages/Settings";
+import Milestones from "./pages/Milestones";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/history" element={<History />} />
             <Route path="/lists" element={<Lists />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/milestones" element={<Milestones />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
