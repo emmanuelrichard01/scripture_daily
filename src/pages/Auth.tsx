@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -140,8 +140,13 @@ const Auth = () => {
       <main className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full px-6 py-8">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto mb-4 border border-border/50">
-            <BookOpen className="w-8 h-8 text-foreground" strokeWidth={1.5} />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center mx-auto mb-4 border border-border/50 overflow-hidden">
+            <img
+              src="/apple-touch-icon.png"
+              alt="Scripture Daily logo"
+              className="w-10 h-10 rounded-xl"
+              loading="eager"
+            />
           </div>
           <h1 className="text-2xl font-semibold text-foreground mb-1">
             {mode === "signin" ? "Welcome back" : "Create account"}

@@ -103,7 +103,7 @@ export function usePushNotifications() {
         try {
           new Notification(title, {
             ...options,
-            icon: "/pwa-192x192.svg",
+            icon: "/apple-touch-icon.png",
             badge: "/favicon.png",
           });
         } catch (error) {
@@ -169,7 +169,7 @@ export function usePushNotifications() {
     try {
       new Notification("Scripture Daily", {
         body: "Notifications are working! Your daily reminders are set.",
-        icon: "/pwa-192x192.svg",
+        icon: "/apple-touch-icon.png",
         badge: "/favicon.png",
         tag: "test-notification",
       });

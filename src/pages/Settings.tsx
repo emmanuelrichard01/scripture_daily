@@ -314,29 +314,49 @@ const Settings = () => {
         </SettingsSection>
 
         {/* Milestones */}
-        {completedCycleLists.length > 0 && (
-          <SettingsSection title="Milestones">
-            <div className="px-4 py-3 space-y-2">
+        <SettingsSection
+          title="Milestones"
+          description="Cycle counts across the 10 tracks"
+        >
+          <SettingsRow
+            label="View Milestones"
+            description="Per-track cycles and quiet progress"
+            action={
+              <Link to="/milestones">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground min-h-[44px]"
+                  aria-label="View milestones"
+                >
+                  <Trophy className="w-4 h-4" aria-hidden="true" />
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            }
+          />
+
+          {completedCycleLists.length > 0 && (
+            <div className="px-4 py-3 space-y-2" role="list" aria-label="Completed cycles">
               {completedCycleLists.map((stat) => (
-                <div 
-                  key={stat.listId} 
+                <div
+                  key={stat.listId}
                   className="flex items-center gap-3 py-2"
                   role="listitem"
                 >
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `hsl(var(${stat.colorVar}) / 0.15)` }}
                     aria-hidden="true"
                   >
-                    <Trophy 
-                      className="w-4 h-4" 
+                    <Trophy
+                      className="w-4 h-4"
                       style={{ color: `hsl(var(${stat.colorVar}))` }}
+                      aria-hidden="true"
                     />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {stat.listName}
-                    </p>
+                    <p className="text-sm font-medium text-foreground">{stat.listName}</p>
                     <p className="text-xs text-muted-foreground">
                       Read {stat.completedCycles} {stat.completedCycles === 1 ? "time" : "times"}
                     </p>
@@ -344,8 +364,8 @@ const Settings = () => {
                 </div>
               ))}
             </div>
-          </SettingsSection>
-        )}
+          )}
+        </SettingsSection>
 
         {/* Data */}
         <SettingsSection title="Data">
