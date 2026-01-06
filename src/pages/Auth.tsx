@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,17 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 
 type AuthMode = "signin" | "signup";
 
+const getParamFromSearchOrHash = (
+  loc: { search: string; hash: string },
+  key: string
+) => {
+  const fromSearch = new URLSearchParams(loc.search).get(key);
+  if (fromSearch) return fromSearch;
+
+  const hash = loc.hash.startsWith("#") ? loc.hash.slice(1) : loc.hash;
+  return new URLSearchParams(hash).get(key);
+};
+
 const Auth = () => {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
@@ -22,6 +33,18 @@ const Auth = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const error = getParamFromSearchOrHash(location, "error");
+    const errorDescription = getParamFromSearchOrHash(location, "error_description");
+
+    if (error) {
+      toast.error(errorDescription || "Google sign-in failed. Please try again.");
+      // Clean up URL so the error doesn't persist across navigations.
+      navigate("/auth", { replace: true });
+    }
+  }, [location, navigate]);
 
   const validateForm = () => {
     try {

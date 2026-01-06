@@ -129,7 +129,7 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
             {/* Logo area - using app logo */}
             <div className="flex items-center gap-2.5 mb-4">
               <img 
-                src="/favicon.png" 
+                src="/apple-touch-icon.png" 
                 alt="Scripture Daily logo" 
                 className="w-10 h-10 rounded-xl"
               />
