@@ -63,6 +63,27 @@
     --shadow-md: 0 4px 6px -1px hsl(220 15% 16% / 0.05), 0 2px 4px -2px hsl(220 15% 16% / 0.05);
     --shadow-lg: 0 10px 15px -3px hsl(220 15% 16% / 0.05), 0 4px 6px -4px hsl(220 15% 16% / 0.05);
 
+    /* Surfaces & gradients */
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: 220 16% 95%;
+    --gradient-hero: linear-gradient(
+      145deg,
+      hsl(220 14% 98%) 0%,
+      hsl(220 16% 95%) 100%
+    );
+    --gradient-quiet: linear-gradient(
+      180deg,
+      hsl(0 0% 100% / 0.9) 0%,
+      hsl(220 16% 96% / 0.6) 100%
+    );
+
+    /* Motion */
+    --ease-quiet: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-fast: 160ms;
+    --duration-base: 240ms;
+    --duration-slow: 420ms;
+
+
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 220 13% 26%;
@@ -123,6 +144,20 @@
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.35), 0 4px 6px -4px hsl(0 0% 0% / 0.35);
 
+    --surface-raised: 220 14% 11%;
+    --surface-sunken: 220 16% 6%;
+    --gradient-hero: linear-gradient(
+      145deg,
+      hsl(220 14% 13%) 0%,
+      hsl(220 16% 9%) 100%
+    );
+    --gradient-quiet: linear-gradient(
+      180deg,
+      hsl(220 14% 13% / 0.9) 0%,
+      hsl(220 16% 9% / 0.6) 100%
+    );
+
+
     --sidebar-background: 220 14% 8%;
     --sidebar-foreground: 220 9% 90%;
     --sidebar-primary: 220 9% 90%;
@@ -152,7 +187,30 @@
     @apply tracking-tight;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+
+  /* Consistent, visible keyboard focus everywhere */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
+
 
 @layer components {
   .card-elevated {
@@ -191,7 +249,25 @@
   .track-dot {
     @apply w-2 h-2 rounded-full;
   }
+
+  /* Quiet hero surface used for primary progress panels */
+  .surface-hero {
+    @apply rounded-2xl border border-border;
+    background: var(--gradient-hero);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Minimum comfortable tap target */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Skeleton placeholder */
+  .skeleton {
+    @apply rounded-xl bg-muted animate-pulse motion-reduce:animate-none;
+  }
 }
+
 
 @layer utilities {
   .animate-fade-in {
@@ -280,5 +356,13 @@
   /* Focus visible styles for accessibility */
   .focus-ring {
     @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none;
+  }
+}
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

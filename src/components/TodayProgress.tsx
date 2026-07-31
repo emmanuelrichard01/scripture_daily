@@ -9,40 +9,48 @@ interface TodayProgressProps {
 export function TodayProgress({ completedCount, totalCount }: TodayProgressProps) {
   const progress = Math.round((completedCount / totalCount) * 100);
   const isComplete = completedCount === totalCount;
+  const remaining = totalCount - completedCount;
 
   return (
-    <div className="card-elevated p-5 flex items-center gap-5">
-      <ProgressRing progress={progress} size={80} strokeWidth={6}>
-        <div className="text-center">
+    <div className="surface-hero p-5 flex items-center gap-5">
+      <ProgressRing progress={progress} size={92} strokeWidth={7}>
+        <div className="text-center leading-none">
           {isComplete ? (
-            <Check className="w-6 h-6 text-success" />
+            <Check className="w-7 h-7 text-success" aria-hidden="true" />
           ) : (
-            <>
-              <span className="text-xl font-semibold text-foreground">
+            <div className="flex items-baseline justify-center">
+              <span className="text-2xl font-semibold tabular-nums text-foreground">
                 {completedCount}
               </span>
-              <span className="text-muted-foreground text-sm">/{totalCount}</span>
-            </>
+              <span className="text-muted-foreground text-sm tabular-nums">
+                /{totalCount}
+              </span>
+            </div>
           )}
         </div>
       </ProgressRing>
 
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <h2 className="text-base font-semibold text-foreground mb-0.5">
           {isComplete ? "Today's reading complete" : "Today's Reading"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {isComplete
             ? "Well done. All 10 chapters finished."
-            : `${totalCount - completedCount} chapter${
-                totalCount - completedCount !== 1 ? "s" : ""
-              } remaining`}
+            : `${remaining} chapter${remaining !== 1 ? "s" : ""} remaining`}
         </p>
-        
+
         {/* Progress bar */}
-        <div className="mt-3 h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div
+          className="mt-3 h-1.5 bg-secondary rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={completedCount}
+          aria-valuemin={0}
+          aria-valuemax={totalCount}
+          aria-label="Chapters completed today"
+        >
           <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
+            className="h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
             style={{
               width: `${progress}%`,
               backgroundColor: isComplete

@@ -39,10 +39,22 @@ export function useSettings() {
     return getDefaultSettings();
   });
 
+  // Keep the stored permission in step with the browser's real value
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    const actual = Notification.permission;
+    setSettings((prev) =>
+      prev.notificationPermission === actual
+        ? prev
+        : { ...prev, notificationPermission: actual }
+    );
+  }, []);
+
   // Save to localStorage whenever settings change
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
+
 
   // Apply theme (auto theme handled separately in useAutoTheme)
   useEffect(() => {

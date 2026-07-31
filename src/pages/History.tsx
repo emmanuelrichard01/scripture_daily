@@ -38,30 +38,37 @@ const History = () => {
   const today = new Date();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [trackFilter, setTrackFilter] = useState<number | null>(null);
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
   const [showShareCard, setShowShareCard] = useState(false);
   const [expandedTrack, setExpandedTrack] = useState<number | null>(null);
+
+  const trackIds = useMemo(
+    () => (trackFilter === null ? readingLists.map((l) => l.id) : [trackFilter]),
+    [trackFilter]
+  );
+
+  const maxPerDay = trackIds.length;
 
   // Calculate weekly/monthly data
   const chartData = useMemo(() => {
     const data: { label: string; chapters: number; fullDate: string }[] = [];
 
+    const countForDay = (dayOfYear: number) =>
+      trackIds.reduce(
+        (sum, listId) =>
+          sum + (completedSet.has(`${dayOfYear}-${listId}`) ? 1 : 0),
+        0
+      );
+
     if (viewMode === "week") {
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i + weekOffset * 7);
-        const dayOfYear = getDayOfYear(date);
-
-        let completedCount = 0;
-        for (let listId = 1; listId <= 10; listId++) {
-          if (completedSet.has(`${dayOfYear}-${listId}`)) {
-            completedCount++;
-          }
-        }
 
         data.push({
           label: date.toLocaleDateString("en-US", { weekday: "short" }),
-          chapters: completedCount,
+          chapters: countForDay(getDayOfYear(date)),
           fullDate: date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -77,13 +84,7 @@ const History = () => {
         for (let day = 0; day < 7; day++) {
           const date = new Date(weekStart);
           date.setDate(date.getDate() + day);
-          const dayOfYear = getDayOfYear(date);
-
-          for (let listId = 1; listId <= 10; listId++) {
-            if (completedSet.has(`${dayOfYear}-${listId}`)) {
-              weekTotal++;
-            }
-          }
+          weekTotal += countForDay(getDayOfYear(date));
         }
 
         data.push({
@@ -98,18 +99,56 @@ const History = () => {
     }
 
     return data;
-  }, [completedSet, viewMode, weekOffset, today]);
+  }, [completedSet, viewMode, weekOffset, today, trackIds]);
+
+  // Lifetime summary: best streak and chapters this calendar month
+  const lifetime = useMemo(() => {
+    const days = new Set<number>();
+    let monthChapters = 0;
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthDays = new Set<number>();
+    for (
+      let d = new Date(monthStart);
+      d <= today;
+      d.setDate(d.getDate() + 1)
+    ) {
+      monthDays.add(getDayOfYear(new Date(d)));
+    }
+
+    completedSet.forEach((key) => {
+      const [dayStr, listStr] = key.split("-");
+      const day = parseInt(dayStr, 10);
+      const listId = parseInt(listStr, 10);
+      if (Number.isNaN(day)) return;
+      if (trackFilter !== null && listId !== trackFilter) return;
+      days.add(day);
+      if (monthDays.has(day)) monthChapters++;
+    });
+
+    const sorted = Array.from(days).sort((a, b) => a - b);
+    let best = 0;
+    let run = 0;
+    let previous: number | null = null;
+    for (const day of sorted) {
+      run = previous !== null && day === previous + 1 ? run + 1 : 1;
+      best = Math.max(best, run);
+      previous = day;
+    }
+
+    return { bestStreak: best, monthChapters, activeDays: days.size };
+  }, [completedSet, today, trackFilter]);
+
 
   // Calculate summary stats
   const stats = useMemo(() => {
     const totalThisWeek = chartData.reduce((sum, d) => sum + d.chapters, 0);
-    const avgPerDay =
-      viewMode === "week"
-        ? (totalThisWeek / 7).toFixed(1)
-        : (totalThisWeek / 28).toFixed(1);
-    const completionRate = viewMode === "week" 
-      ? ((totalThisWeek / 70) * 100).toFixed(0)
-      : ((totalThisWeek / 280) * 100).toFixed(0);
+    const days = viewMode === "week" ? 7 : 28;
+    const avgPerDay = (totalThisWeek / days).toFixed(1);
+    const completionRate = (
+      (totalThisWeek / (days * maxPerDay)) *
+      100
+    ).toFixed(0);
 
     const start = new Date(startDate);
     const daysSinceStart = Math.max(
@@ -123,7 +162,8 @@ const History = () => {
       completionRate,
       daysSinceStart,
     };
-  }, [chartData, viewMode, startDate, today]);
+  }, [chartData, viewMode, startDate, today, maxPerDay]);
+
 
   // Get current week date range
   const weekDateRange = useMemo(() => {
@@ -172,7 +212,7 @@ const History = () => {
   }, [completedSet]);
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-dvh bg-background pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
         <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
@@ -187,6 +227,73 @@ const History = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
+        {/* Lifetime summary strip */}
+        <section
+          className="surface-hero p-4 grid grid-cols-3 gap-3"
+          aria-label="Lifetime summary"
+        >
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.bestStreak}
+            </p>
+            <p className="text-2xs text-muted-foreground">best streak</p>
+          </div>
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.activeDays}
+            </p>
+            <p className="text-2xs text-muted-foreground">active days</p>
+          </div>
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.monthChapters}
+            </p>
+            <p className="text-2xs text-muted-foreground">this month</p>
+          </div>
+        </section>
+
+        {/* Track filter */}
+        <div
+          className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-none"
+          role="group"
+          aria-label="Filter by track"
+        >
+          <button
+            onClick={() => setTrackFilter(null)}
+            aria-pressed={trackFilter === null}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
+              trackFilter === null
+                ? "bg-foreground text-background border-transparent"
+                : "bg-card text-muted-foreground border-border hover:bg-secondary"
+            )}
+          >
+            All tracks
+          </button>
+          {readingLists.map((list) => (
+            <button
+              key={list.id}
+              onClick={() =>
+                setTrackFilter((cur) => (cur === list.id ? null : list.id))
+              }
+              aria-pressed={trackFilter === list.id}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
+                trackFilter === list.id
+                  ? "text-background border-transparent"
+                  : "bg-card text-muted-foreground border-border hover:bg-secondary"
+              )}
+              style={
+                trackFilter === list.id
+                  ? { backgroundColor: `hsl(var(${list.colorVar}))` }
+                  : undefined
+              }
+            >
+              {list.name}
+            </button>
+          ))}
+        </div>
+
         {/* View toggle */}
         <div className="flex items-center gap-2 p-1 bg-secondary rounded-xl">
           <button
