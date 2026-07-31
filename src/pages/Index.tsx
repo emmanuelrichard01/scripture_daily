@@ -82,19 +82,29 @@ const Index = () => {
 
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-dvh bg-background pb-20">
       <Header formattedDate={formattedDate} />
 
-      <main className="max-w-lg mx-auto px-5 py-5" role="main" aria-label="Today's readings">
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
+
+      <main className="max-w-lg mx-auto px-5 py-5" aria-label="Today's readings">
         {/* User greeting & sync */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3">
           {user ? (
             <UserProfile size="sm" showGreeting={true} />
           ) : (
             <div className="text-sm text-muted-foreground">Welcome</div>
           )}
-          <SyncIndicator isSyncing={isSyncing} isAuthenticated={isAuthenticated} />
+          <SyncIndicator
+            status={syncStatus}
+            lastSyncedAt={lastSyncedAt}
+            onRetry={retrySync}
+            isAuthenticated={isAuthenticated}
+          />
         </div>
+
 
         {/* Hero section with today's progress */}
         <div className="mb-6 animate-fade-in" role="region" aria-label="Today's progress">
