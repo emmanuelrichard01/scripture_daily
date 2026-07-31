@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { TrendingUp, BookOpen, Calendar, Flame } from "lucide-react";
 import { Header } from "@/components/Header";
 import { TodayProgress } from "@/components/TodayProgress";
@@ -27,6 +27,7 @@ const Index = () => {
   const { user } = useAuth();
   const { triggerHaptic } = useHaptics();
   const { showOnboarding, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const [announcement, setAnnouncement] = useState("");
 
   const {
     completedSet,
@@ -36,21 +37,31 @@ const Index = () => {
     toggleComplete,
     getCompletedForDay,
     isDayComplete,
-    isSyncing,
+    syncStatus,
+    lastSyncedAt,
+    retrySync,
     isAuthenticated,
   } = useCloudProgress();
 
   useMilestoneAcknowledgements(completedSet);
 
-  const handleToggle = (listId: number) => {
-    triggerHaptic("light");
-    toggleComplete(dayOfYear, listId);
-  };
-
   const todaysReadings = useMemo(
     () => getTodaysReadings(dayOfYear, completedSet),
     [dayOfYear, completedSet]
   );
+
+  const handleToggle = (listId: number) => {
+    triggerHaptic("light");
+    const reading = todaysReadings.find((r) => r.listId === listId);
+    if (reading) {
+      setAnnouncement(
+        `${reading.book} ${reading.chapter} ${
+          reading.completed ? "unmarked" : "marked as read"
+        }.`
+      );
+    }
+    toggleComplete(dayOfYear, listId);
+  };
 
   const completedToday = todaysReadings.filter((r) => r.completed).length;
 
@@ -68,6 +79,7 @@ const Index = () => {
   if (!onboardingLoading && showOnboarding) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
+
 
   return (
     <div className="min-h-screen bg-background pb-20">
