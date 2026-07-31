@@ -32,7 +32,7 @@ export default function AuthCallback() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="min-h-dvh bg-background flex items-center justify-center px-6">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6">
           <div className="flex items-start gap-3">
             <div className="mt-0.5">
@@ -63,7 +63,7 @@ export default function AuthCallback() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+    <div className="min-h-dvh bg-background flex items-center justify-center px-6">
       <div className="flex items-center gap-3 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
         <span className="text-sm">Finishing sign-in…</span>
