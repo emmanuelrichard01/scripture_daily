@@ -63,6 +63,27 @@
     --shadow-md: 0 4px 6px -1px hsl(220 15% 16% / 0.05), 0 2px 4px -2px hsl(220 15% 16% / 0.05);
     --shadow-lg: 0 10px 15px -3px hsl(220 15% 16% / 0.05), 0 4px 6px -4px hsl(220 15% 16% / 0.05);
 
+    /* Surfaces & gradients */
+    --surface-raised: 0 0% 100%;
+    --surface-sunken: 220 16% 95%;
+    --gradient-hero: linear-gradient(
+      145deg,
+      hsl(220 14% 98%) 0%,
+      hsl(220 16% 95%) 100%
+    );
+    --gradient-quiet: linear-gradient(
+      180deg,
+      hsl(0 0% 100% / 0.9) 0%,
+      hsl(220 16% 96% / 0.6) 100%
+    );
+
+    /* Motion */
+    --ease-quiet: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-fast: 160ms;
+    --duration-base: 240ms;
+    --duration-slow: 420ms;
+
+
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 220 13% 26%;
