@@ -38,30 +38,37 @@ const History = () => {
   const today = new Date();
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [trackFilter, setTrackFilter] = useState<number | null>(null);
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
   const [showShareCard, setShowShareCard] = useState(false);
   const [expandedTrack, setExpandedTrack] = useState<number | null>(null);
+
+  const trackIds = useMemo(
+    () => (trackFilter === null ? readingLists.map((l) => l.id) : [trackFilter]),
+    [trackFilter]
+  );
+
+  const maxPerDay = trackIds.length;
 
   // Calculate weekly/monthly data
   const chartData = useMemo(() => {
     const data: { label: string; chapters: number; fullDate: string }[] = [];
 
+    const countForDay = (dayOfYear: number) =>
+      trackIds.reduce(
+        (sum, listId) =>
+          sum + (completedSet.has(`${dayOfYear}-${listId}`) ? 1 : 0),
+        0
+      );
+
     if (viewMode === "week") {
       for (let i = 6; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i + weekOffset * 7);
-        const dayOfYear = getDayOfYear(date);
-
-        let completedCount = 0;
-        for (let listId = 1; listId <= 10; listId++) {
-          if (completedSet.has(`${dayOfYear}-${listId}`)) {
-            completedCount++;
-          }
-        }
 
         data.push({
           label: date.toLocaleDateString("en-US", { weekday: "short" }),
-          chapters: completedCount,
+          chapters: countForDay(getDayOfYear(date)),
           fullDate: date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -77,13 +84,7 @@ const History = () => {
         for (let day = 0; day < 7; day++) {
           const date = new Date(weekStart);
           date.setDate(date.getDate() + day);
-          const dayOfYear = getDayOfYear(date);
-
-          for (let listId = 1; listId <= 10; listId++) {
-            if (completedSet.has(`${dayOfYear}-${listId}`)) {
-              weekTotal++;
-            }
-          }
+          weekTotal += countForDay(getDayOfYear(date));
         }
 
         data.push({
@@ -98,7 +99,46 @@ const History = () => {
     }
 
     return data;
-  }, [completedSet, viewMode, weekOffset, today]);
+  }, [completedSet, viewMode, weekOffset, today, trackIds]);
+
+  // Lifetime summary: best streak and chapters this calendar month
+  const lifetime = useMemo(() => {
+    const days = new Set<number>();
+    let monthChapters = 0;
+
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthDays = new Set<number>();
+    for (
+      let d = new Date(monthStart);
+      d <= today;
+      d.setDate(d.getDate() + 1)
+    ) {
+      monthDays.add(getDayOfYear(new Date(d)));
+    }
+
+    completedSet.forEach((key) => {
+      const [dayStr, listStr] = key.split("-");
+      const day = parseInt(dayStr, 10);
+      const listId = parseInt(listStr, 10);
+      if (Number.isNaN(day)) return;
+      if (trackFilter !== null && listId !== trackFilter) return;
+      days.add(day);
+      if (monthDays.has(day)) monthChapters++;
+    });
+
+    const sorted = Array.from(days).sort((a, b) => a - b);
+    let best = 0;
+    let run = 0;
+    let previous: number | null = null;
+    for (const day of sorted) {
+      run = previous !== null && day === previous + 1 ? run + 1 : 1;
+      best = Math.max(best, run);
+      previous = day;
+    }
+
+    return { bestStreak: best, monthChapters, activeDays: days.size };
+  }, [completedSet, today, trackFilter]);
+
 
   // Calculate summary stats
   const stats = useMemo(() => {
