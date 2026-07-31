@@ -227,6 +227,73 @@ const History = () => {
       </header>
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
+        {/* Lifetime summary strip */}
+        <section
+          className="surface-hero p-4 grid grid-cols-3 gap-3"
+          aria-label="Lifetime summary"
+        >
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.bestStreak}
+            </p>
+            <p className="text-2xs text-muted-foreground">best streak</p>
+          </div>
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.activeDays}
+            </p>
+            <p className="text-2xs text-muted-foreground">active days</p>
+          </div>
+          <div>
+            <p className="text-xl font-semibold tabular-nums text-foreground">
+              {lifetime.monthChapters}
+            </p>
+            <p className="text-2xs text-muted-foreground">this month</p>
+          </div>
+        </section>
+
+        {/* Track filter */}
+        <div
+          className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-none"
+          role="group"
+          aria-label="Filter by track"
+        >
+          <button
+            onClick={() => setTrackFilter(null)}
+            aria-pressed={trackFilter === null}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
+              trackFilter === null
+                ? "bg-foreground text-background border-transparent"
+                : "bg-card text-muted-foreground border-border hover:bg-secondary"
+            )}
+          >
+            All tracks
+          </button>
+          {readingLists.map((list) => (
+            <button
+              key={list.id}
+              onClick={() =>
+                setTrackFilter((cur) => (cur === list.id ? null : list.id))
+              }
+              aria-pressed={trackFilter === list.id}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
+                trackFilter === list.id
+                  ? "text-background border-transparent"
+                  : "bg-card text-muted-foreground border-border hover:bg-secondary"
+              )}
+              style={
+                trackFilter === list.id
+                  ? { backgroundColor: `hsl(var(${list.colorVar}))` }
+                  : undefined
+              }
+            >
+              {list.name}
+            </button>
+          ))}
+        </div>
+
         {/* View toggle */}
         <div className="flex items-center gap-2 p-1 bg-secondary rounded-xl">
           <button
