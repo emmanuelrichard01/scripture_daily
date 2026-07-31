@@ -143,13 +143,12 @@ const History = () => {
   // Calculate summary stats
   const stats = useMemo(() => {
     const totalThisWeek = chartData.reduce((sum, d) => sum + d.chapters, 0);
-    const avgPerDay =
-      viewMode === "week"
-        ? (totalThisWeek / 7).toFixed(1)
-        : (totalThisWeek / 28).toFixed(1);
-    const completionRate = viewMode === "week" 
-      ? ((totalThisWeek / 70) * 100).toFixed(0)
-      : ((totalThisWeek / 280) * 100).toFixed(0);
+    const days = viewMode === "week" ? 7 : 28;
+    const avgPerDay = (totalThisWeek / days).toFixed(1);
+    const completionRate = (
+      (totalThisWeek / (days * maxPerDay)) *
+      100
+    ).toFixed(0);
 
     const start = new Date(startDate);
     const daysSinceStart = Math.max(
@@ -163,7 +162,8 @@ const History = () => {
       completionRate,
       daysSinceStart,
     };
-  }, [chartData, viewMode, startDate, today]);
+  }, [chartData, viewMode, startDate, today, maxPerDay]);
+
 
   // Get current week date range
   const weekDateRange = useMemo(() => {
