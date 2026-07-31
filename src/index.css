@@ -226,7 +226,25 @@
   .track-dot {
     @apply w-2 h-2 rounded-full;
   }
+
+  /* Quiet hero surface used for primary progress panels */
+  .surface-hero {
+    @apply rounded-2xl border border-border;
+    background: var(--gradient-hero);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Minimum comfortable tap target */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Skeleton placeholder */
+  .skeleton {
+    @apply rounded-xl bg-muted animate-pulse motion-reduce:animate-none;
+  }
 }
+
 
 @layer utilities {
   .animate-fade-in {
