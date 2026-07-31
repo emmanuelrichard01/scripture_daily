@@ -1,146 +1,128 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "./useSettings";
 
-const SW_PATH = "/sw.js";
-const VAPID_PUBLIC_KEY = ""; // Would be configured in production
-
 interface PushNotificationState {
   isSupported: boolean;
-  permission: NotificationPermission;
-  subscription: PushSubscription | null;
+  hasServiceWorker: boolean;
   isLoading: boolean;
 }
 
+/**
+ * Local (in-tab) reminder notifications.
+ *
+ * There is intentionally no push backend and no app-shell service worker in
+ * this project, so this hook degrades gracefully: it uses the Notification API
+ * directly and only touches a service worker if one already happens to be
+ * registered (e.g. a messaging worker).
+ */
 export function usePushNotifications() {
-  const { settings, updateReminders } = useSettings();
+  const { settings, requestNotificationPermission } = useSettings();
+  const permission = settings.notificationPermission;
+
   const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
-    permission: "default",
-    subscription: null,
+    hasServiceWorker: false,
     isLoading: false,
   });
 
-  // Check support and current state
   useEffect(() => {
-    const checkSupport = async () => {
-      const isSupported =
-        "Notification" in window &&
-        "serviceWorker" in navigator &&
-        "PushManager" in window;
+    let cancelled = false;
 
+    const check = async () => {
+      const isSupported = typeof window !== "undefined" && "Notification" in window;
       if (!isSupported) {
-        setState((prev) => ({ ...prev, isSupported: false }));
+        if (!cancelled) {
+          setState({ isSupported: false, hasServiceWorker: false, isLoading: false });
+        }
         return;
       }
 
-      const permission = Notification.permission;
+      let hasServiceWorker = false;
+      if ("serviceWorker" in navigator) {
+        try {
+          hasServiceWorker = !!(await navigator.serviceWorker.getRegistration());
+        } catch {
+          hasServiceWorker = false;
+        }
+      }
 
-      // Check for existing subscription
-      try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-        setState({
-          isSupported: true,
-          permission,
-          subscription,
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error("Error checking push subscription:", error);
-        setState((prev) => ({
-          ...prev,
-          isSupported: true,
-          permission,
-          isLoading: false,
-        }));
+      if (!cancelled) {
+        setState({ isSupported: true, hasServiceWorker, isLoading: false });
       }
     };
 
-    checkSupport();
+    check();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Request permission and subscribe
   const requestPermission = useCallback(async () => {
     if (!state.isSupported) {
-      return { success: false, error: "Push notifications not supported" };
+      return {
+        success: false,
+        error: "This browser doesn't support notifications",
+      };
     }
 
     setState((prev) => ({ ...prev, isLoading: true }));
-
     try {
-      const permission = await Notification.requestPermission();
-      setState((prev) => ({ ...prev, permission }));
-
-      if (permission !== "granted") {
-        setState((prev) => ({ ...prev, isLoading: false }));
-        return { success: false, error: "Permission denied" };
-      }
-
-      // Register service worker if not already
-      let registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) {
-        registration = await navigator.serviceWorker.register(SW_PATH);
-        await navigator.serviceWorker.ready;
-      }
-
-      // For now, we'll use local notifications scheduled via setTimeout
-      // Full push would require a backend service and VAPID keys
+      const result = await requestNotificationPermission();
       setState((prev) => ({ ...prev, isLoading: false }));
+
+      if (result !== "granted") {
+        return { success: false, error: "Notification permission was declined" };
+      }
       return { success: true };
     } catch (error) {
-      console.error("Error requesting push permission:", error);
+      console.error("Error requesting notification permission:", error);
       setState((prev) => ({ ...prev, isLoading: false }));
-      return { success: false, error: "Failed to enable notifications" };
+      return { success: false, error: "Couldn't enable notifications" };
     }
-  }, [state.isSupported]);
+  }, [state.isSupported, requestNotificationPermission]);
 
-  // Schedule a local notification (for PWA)
-  const scheduleNotification = useCallback(
-    (title: string, options: NotificationOptions, delay: number) => {
-      if (state.permission !== "granted") return null;
-
-      const timeoutId = setTimeout(() => {
-        try {
-          new Notification(title, {
-            ...options,
-            icon: "/apple-touch-icon.png",
-            badge: "/favicon.png",
-          });
-        } catch (error) {
-          console.error("Error showing notification:", error);
-        }
-      }, delay);
-
-      return timeoutId;
+  const showNotification = useCallback(
+    (title: string, options: NotificationOptions = {}) => {
+      if (permission !== "granted") return;
+      try {
+        new Notification(title, {
+          icon: "/apple-touch-icon.png",
+          badge: "/favicon.png",
+          ...options,
+        });
+      } catch (error) {
+        console.error("Error showing notification:", error);
+      }
     },
-    [state.permission]
+    [permission]
   );
 
-  // Schedule daily reminder based on settings
+  const scheduleNotification = useCallback(
+    (title: string, options: NotificationOptions, delay: number) => {
+      if (permission !== "granted") return null;
+      return setTimeout(() => showNotification(title, options), delay);
+    },
+    [permission, showNotification]
+  );
+
+  /**
+   * Schedules today's (or tomorrow's) reminder for as long as the tab stays
+   * open. Returns null when nothing was scheduled.
+   */
   const scheduleDailyReminder = useCallback(() => {
-    if (!settings.reminders.enabled || state.permission !== "granted") {
-      return;
-    }
+    if (!settings.reminders.enabled || permission !== "granted") return null;
 
     const now = new Date();
     const [hours, minutes] = settings.reminders.time.split(":").map(Number);
     const scheduledTime = new Date(now);
     scheduledTime.setHours(hours, minutes, 0, 0);
 
-    // If time has passed today, schedule for tomorrow
     if (scheduledTime <= now) {
       scheduledTime.setDate(scheduledTime.getDate() + 1);
     }
 
-    // Check if today is a reminder day
-    const dayOfWeek = scheduledTime.getDay();
-    if (!settings.reminders.days.includes(dayOfWeek)) {
-      return;
-    }
+    if (!settings.reminders.days.includes(scheduledTime.getDay())) return null;
 
-    const delay = scheduledTime.getTime() - now.getTime();
-
-    // Gentle notification copy aligned with reverent design
     const messages = [
       "Your daily Scripture awaits",
       "A moment for Scripture today?",
@@ -148,39 +130,29 @@ export function usePushNotifications() {
       "Continue your reading journey",
       "Scripture for your day",
     ];
-    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
     return scheduleNotification(
       "Scripture Daily",
       {
-        body: randomMessage,
+        body: messages[Math.floor(Math.random() * messages.length)],
         tag: "daily-reminder",
         requireInteraction: false,
-        silent: false,
       },
-      delay
+      scheduledTime.getTime() - now.getTime()
     );
-  }, [settings.reminders, state.permission, scheduleNotification]);
+  }, [settings.reminders, permission, scheduleNotification]);
 
-  // Test notification
   const sendTestNotification = useCallback(() => {
-    if (state.permission !== "granted") return;
-
-    try {
-      new Notification("Scripture Daily", {
-        body: "Notifications are working! Your daily reminders are set.",
-        icon: "/apple-touch-icon.png",
-        badge: "/favicon.png",
-        tag: "test-notification",
-      });
-    } catch (error) {
-      console.error("Error sending test notification:", error);
-    }
-  }, [state.permission]);
+    showNotification("Scripture Daily", {
+      body: "Notifications are working. Your daily reminders are set.",
+      tag: "test-notification",
+    });
+  }, [showNotification]);
 
   return {
     isSupported: state.isSupported,
-    permission: state.permission,
+    hasServiceWorker: state.hasServiceWorker,
+    permission,
     isLoading: state.isLoading,
     requestPermission,
     scheduleNotification,
