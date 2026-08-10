@@ -1,4 +1,4 @@
-import { Home, List, Clock, Settings, Trophy } from "lucide-react";
+import { Home, List, Clock, Settings, Trophy, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ const navItems = [
   { to: "/", icon: Home, label: "Today" },
   { to: "/progress", icon: Trophy, label: "Progress" },
   { to: "/history", icon: Clock, label: "History" },
+  { to: "/community", icon: Users, label: "Community" },
   { to: "/lists", icon: List, label: "Lists" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

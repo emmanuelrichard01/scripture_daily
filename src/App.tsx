@@ -16,6 +16,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Milestones = lazy(() => import("./pages/Milestones"));
 const ProgressPage = lazy(() => import("./pages/Progress"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Community = lazy(() => import("./pages/Community"));
 const Auth = lazy(() => import("./pages/Auth"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -49,6 +50,7 @@ const App = () => (
                   <Route path="/history" element={<History />} />
                   <Route path="/progress" element={<ProgressPage />} />
                   <Route path="/lists" element={<Lists />} />
+                  <Route path="/community" element={<Community />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/milestones" element={<Milestones />} />
                   <Route path="/profile" element={<Profile />} />
