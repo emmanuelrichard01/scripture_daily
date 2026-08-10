@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ReadingCardProps {
   reading: TodayReading;
   onToggle: () => void;
+  onOpenReader?: () => void;
   index: number;
 }
 
-export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
+export function ReadingCard({ reading, onToggle, onOpenReader, index }: ReadingCardProps) {
   return (
     <motion.button
       layout
@@ -28,7 +29,7 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
           ? "bg-success/5 border-success/20 shadow-sm"
           : "glass-card hover:shadow-md transition-shadow"
       )}
-      onClick={onToggle}
+      onClick={onOpenReader || onToggle}
       aria-pressed={reading.completed}
       aria-label={`${reading.book} chapter ${reading.chapter} from ${reading.listName}. ${reading.completed ? "Completed" : "Not completed"}. Tap to ${reading.completed ? "unmark" : "mark as read"}.`}
     >
@@ -56,16 +57,20 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
         aria-hidden="true"
       />
 
-      {/* Completion indicator with spring animation */}
-      <motion.div
+      {/* Completion indicator with spring animation - now an interactive button */}
+      <motion.button
         layout
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
         className={cn(
-          "flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ml-2 shadow-sm z-10",
+          "flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ml-2 shadow-sm z-10 transition-transform hover:scale-105 active:scale-95",
           reading.completed
             ? "bg-success text-success-foreground"
-            : "bg-secondary text-muted-foreground"
+            : "bg-secondary text-muted-foreground hover:bg-secondary/80"
         )}
-        aria-hidden="true"
+        aria-label={reading.completed ? "Unmark as read" : "Mark as read"}
       >
         <AnimatePresence mode="wait">
           {reading.completed ? (
@@ -90,7 +95,7 @@ export function ReadingCard({ reading, onToggle, index }: ReadingCardProps) {
             </motion.span>
           )}
         </AnimatePresence>
-      </motion.div>
+      </motion.button>
 
       {/* Reading details */}
       <div className="flex-1 min-w-0 z-10">

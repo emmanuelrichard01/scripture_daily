@@ -15,6 +15,8 @@ import { useMilestoneAcknowledgements } from "@/hooks/useMilestoneAcknowledgemen
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAudio } from "@/hooks/useAudio";
 import { useAuth } from "@/contexts/AuthContext";
+import { Reader } from "@/components/Reader";
+import type { TodayReading } from "@/lib/readingPlan";
 import {
   getTodaysReadings,
   getReadingDay,
@@ -29,6 +31,7 @@ const Index = () => {
   const { playBloop, playTada } = useAudio();
   const { showOnboarding, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
   const [announcement, setAnnouncement] = useState("");
+  const [activeReading, setActiveReading] = useState<TodayReading | null>(null);
 
   const {
     history,
@@ -48,54 +51,39 @@ const Index = () => {
 
   const formattedDate = formatDate(today);
   const readingDay = getReadingDay(today, startDate);
-  const calendarDay = getDayOfYear(today);
+  const dayOfYear = getDayOfYear(today);
 
-  useMilestoneAcknowledgements(listProgress);
+  // Use the TRUE HORNER calculations instead of naive sequential math
+  const todaysReadings = useMemo(() => getTodaysReadings(listProgress, completedTodayListIds), [listProgress, completedTodayListIds]);
+  const completedToday = todaysReadings.filter((r) => r.completed).length;
+  const isComplete = completedToday === 10;
 
-  const getTodayISO = () => {
-    const d = today;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  };
+  const daysSinceStart = Math.max(1, Math.floor((today.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)));
+  const avgPerDay = (totalChaptersRead / daysSinceStart).toFixed(1);
 
-  const todayIso = getTodayISO();
-
-  const todaysReadings = useMemo(
-    () => getTodaysReadings(listProgress, completedTodayListIds),
-    [listProgress, completedTodayListIds]
-  );
+  // Check for milestones
+  useMilestoneAcknowledgements(streakCount, totalChaptersRead, (msg) => {
+    setAnnouncement(msg);
+    setTimeout(() => setAnnouncement(""), 4000);
+  });
 
   const handleToggle = (listId: number) => {
-    triggerHaptic("light");
-    const reading = todaysReadings.find((r) => r.listId === listId);
+    // Only play sounds/haptics if we are checking it, not unchecking it
+    const isCurrentlyCompleted = completedTodayListIds.has(listId);
     
-    if (reading) {
-      if (!reading.completed) {
-        playBloop();
-        if (completedTodayListIds.size === 9) {
-          setTimeout(playTada, 300);
-        }
-      }
+    if (!isCurrentlyCompleted) {
+      triggerHaptic("light");
       
-      setAnnouncement(
-        `${reading.book} ${reading.chapter} ${
-          reading.completed ? "unmarked" : "marked as read"
-        }.`
-      );
+      if (completedToday === 9) {
+        // This is the 10th one!
+        playTada();
+      } else {
+        playBloop();
+      }
     }
-    toggleComplete(todayIso, listId);
+    
+    toggleComplete(today.toISOString().split("T")[0], listId);
   };
-
-  const completedToday = todaysReadings.filter((r) => r.completed).length;
-
-  // Calculate days since start
-  const daysSinceStart = useMemo(() => {
-    const start = new Date(startDate);
-    const diff = today.getTime() - start.getTime();
-    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1);
-  }, [startDate, today]);
-
-  // Average chapters per day
-  const avgPerDay = (totalChaptersRead / daysSinceStart).toFixed(1);
 
   // Show onboarding for new users
   if (onboardingLoading) {
@@ -112,39 +100,47 @@ const Index = () => {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
-
   return (
-    <div className="min-h-dvh bg-background pb-20">
-      <Header formattedDate={formattedDate} />
-
-      <p className="sr-only" role="status" aria-live="polite">
-        {announcement}
-      </p>
-
-      <main className="max-w-lg mx-auto px-5 py-5" aria-label="Today's readings">
-        {/* User greeting & sync */}
-        <div className="flex items-center justify-between mb-4 gap-3">
-          {user ? (
-            <UserProfile size="sm" showGreeting={true} />
-          ) : (
-            <div className="text-sm text-muted-foreground">Welcome</div>
-          )}
-          <SyncIndicator
-            status={syncStatus}
-            lastSyncedAt={lastSyncedAt}
-            onRetry={retrySync}
-            isAuthenticated={isAuthenticated}
+    <div className="min-h-dvh bg-background pb-24 text-foreground selection:bg-primary/20">
+      <Header
+        left={<UserProfile user={user} />}
+        right={
+          isAuthenticated ? (
+            <SyncIndicator
+              status={syncStatus}
+              lastSyncedAt={lastSyncedAt}
+              onRetry={retrySync}
+            />
+          ) : null
+        }
+      />
+      
+      <main className="max-w-md mx-auto px-6 pt-24 fade-in">
+        <header className="mb-8" aria-label="Date and progress summary">
+          <div className="flex flex-col gap-1 mb-6">
+            <h1 className="text-3xl font-serif text-foreground tracking-tight">
+              {formattedDate}
+            </h1>
+            <p className="text-muted-foreground flex items-center gap-2">
+              <Calendar className="w-4 h-4" aria-hidden="true" />
+              Day {dayOfYear} of the year
+            </p>
+            {announcement && (
+              <p className="text-sm font-medium text-success animate-fade-in" role="status" aria-live="polite">
+                {announcement}
+              </p>
+            )}
+          </div>
+          
+          <TodayProgress 
+            completed={completedToday} 
+            total={10} 
+            isComplete={isComplete}
           />
-        </div>
+        </header>
 
-
-        {/* Hero section with today's progress */}
-        <div className="mb-6 animate-fade-in" role="region" aria-label="Today's progress">
-          <TodayProgress completedCount={completedToday} totalCount={10} />
-        </div>
-
-        {/* Stats grid with subtle colors */}
-        <div className="grid grid-cols-2 gap-2.5 mb-6" role="region" aria-label="Reading statistics">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 gap-3 mb-8" role="region" aria-label="Reading statistics">
           <div className="animate-slide-up" style={{ animationDelay: "50ms" }}>
             <StatsCard
               icon={<Flame className="w-5 h-5 text-track-orange" strokeWidth={1.5} aria-hidden="true" />}
@@ -205,6 +201,7 @@ const Index = () => {
                 <ReadingCard
                   reading={reading}
                   onToggle={() => handleToggle(reading.listId)}
+                  onOpenReader={() => setActiveReading(reading)}
                   index={index}
                 />
               </div>
@@ -230,6 +227,18 @@ const Index = () => {
 
       <InstallPrompt />
       <BottomNav />
+
+      {activeReading && (
+        <Reader
+          isOpen={!!activeReading}
+          onOpenChange={(open) => !open && setActiveReading(null)}
+          book={activeReading.book}
+          chapter={activeReading.chapter}
+          listName={activeReading.listName}
+          isCompleted={activeReading.completed}
+          onToggleComplete={() => handleToggle(activeReading.listId)}
+        />
+      )}
     </div>
   );
 };
