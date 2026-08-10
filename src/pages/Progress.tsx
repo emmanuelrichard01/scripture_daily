@@ -61,7 +61,7 @@ const Progress = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
-          <h1 className="text-xl font-semibold font-serif text-foreground">
+          <h1 className="text-xl font-semibold text-foreground">
             Reading Progress
           </h1>
         </div>
@@ -114,7 +114,7 @@ const Progress = () => {
 
         {/* List Progress */}
         <div className="mb-4">
-          <h2 className="text-lg font-semibold font-serif text-foreground mb-1">
+          <h2 className="text-lg font-semibold text-foreground mb-1">
             Reading Lists
           </h2>
           <p className="text-sm text-muted-foreground">

@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import useEmblaCarousel from "embla-carousel-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Book, Layers, Calendar, ArrowRight, Check, Sparkles } from "lucide-react";
+import { Book, Layers, ArrowRight, Sparkles, LogIn, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StartDatePicker } from "@/components/StartDatePicker";
-import { useCloudProgress } from "@/hooks/useCloudProgress";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -12,16 +12,28 @@ interface OnboardingFlowProps {
 const ONBOARDING_KEY = "horner-onboarding-complete";
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const { startDate, updateStartDate } = useCloudProgress();
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const navigate = useNavigate();
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+  }, [emblaApi, onSelect]);
 
   const steps = [
     {
       id: "welcome",
       icon: Sparkles,
       title: "Welcome to Scripture Daily",
-      description:
-        "A thoughtful approach to reading the Bible, based on Professor Grant Horner's system. Read 10 chapters daily from different sections of Scripture.",
+      description: "A thoughtful approach to reading the Bible, based on Professor Grant Horner's system.",
       color: "text-track-blue",
       bgColor: "bg-track-blue/10",
     },
@@ -29,8 +41,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       id: "system",
       icon: Layers,
       title: "10 Reading Tracks",
-      description:
-        "The system divides Scripture into 10 lists—Gospels, Epistles, Psalms, Proverbs, and more. Each day you read one chapter from each list.",
+      description: "The system divides Scripture into 10 lists—Gospels, Epistles, Psalms, Proverbs, and more.",
       color: "text-track-purple",
       bgColor: "bg-track-purple/10",
     },
@@ -38,138 +49,145 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       id: "cycle",
       icon: Book,
       title: "Unique Daily Combinations",
-      description:
-        "Because each list has different lengths (28-250 days), you'll encounter unique chapter combinations. The pattern won't repeat for years.",
+      description: "Because each list has different lengths (28-250 days), you'll encounter unique chapter combinations. The pattern won't repeat for years.",
       color: "text-track-green",
       bgColor: "bg-track-green/10",
     },
     {
-      id: "start",
-      icon: Calendar,
-      title: "Choose Your Start Date",
-      description:
-        "Begin your reading journey from any date. The system will calculate your daily readings based on when you started.",
-      color: "text-track-orange",
-      bgColor: "bg-track-orange/10",
-      hasDatePicker: true,
-    },
+      id: "auth",
+      icon: Check,
+      title: "Ready to Begin?",
+      description: "Sign in to save your progress to the cloud, or continue as a guest to save locally.",
+      color: "text-foreground",
+      bgColor: "bg-primary/10",
+    }
   ];
 
   const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      localStorage.setItem(ONBOARDING_KEY, "true");
-      onComplete();
-    }
+    if (emblaApi) emblaApi.scrollNext();
   };
 
-  const handleSkip = () => {
+  const handleGuest = () => {
     localStorage.setItem(ONBOARDING_KEY, "true");
     onComplete();
   };
 
-  const currentStepData = steps[currentStep];
-  const Icon = currentStepData.icon;
-  const isLastStep = currentStep === steps.length - 1;
+  const handleSignUp = () => {
+    localStorage.setItem(ONBOARDING_KEY, "true");
+    onComplete();
+    navigate("/auth");
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col supports-[height:100cqh]:h-[100cqh] supports-[height:100svh]:h-[100svh]">
       {/* Skip button */}
-      <div className="flex justify-end p-4">
-        <button
-          onClick={handleSkip}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-secondary"
-          aria-label="Skip onboarding"
-        >
-          Skip
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-sm text-center"
-          >
-            {/* Icon */}
-            <div
-              className={`w-20 h-20 rounded-2xl ${currentStepData.bgColor} flex items-center justify-center mx-auto mb-6`}
+      <div className="flex justify-end p-4 h-16">
+        <AnimatePresence>
+          {selectedIndex < steps.length - 1 && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleGuest}
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-xl hover:bg-secondary active:scale-95"
+              aria-label="Skip onboarding"
             >
-              <Icon
-                className={`w-10 h-10 ${currentStepData.color}`}
-                strokeWidth={1.5}
-              />
-            </div>
-
-            {/* Title */}
-            <h1 className="text-2xl font-semibold text-foreground mb-3">
-              {currentStepData.title}
-            </h1>
-
-            {/* Description */}
-            <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-              {currentStepData.description}
-            </p>
-
-            {/* Date picker for last step */}
-            {currentStepData.hasDatePicker && (
-              <div className="mb-8 p-4 bg-card rounded-2xl border border-border">
-                <StartDatePicker
-                  currentStartDate={startDate}
-                  onUpdateStartDate={updateStartDate}
-                />
-              </div>
-            )}
-          </motion.div>
+              Skip
+            </motion.button>
+          )}
         </AnimatePresence>
       </div>
 
-      {/* Bottom section */}
-      <div className="px-6 pb-8 safe-area-bottom">
-        {/* Progress dots */}
-        <div className="flex justify-center gap-2 mb-6" role="tablist" aria-label="Onboarding progress">
-          {steps.map((step, index) => (
+      {/* Carousel */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-hidden" ref={emblaRef}>
+          <div className="flex h-full touch-pan-y">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isLast = index === steps.length - 1;
+              return (
+                <div 
+                  key={step.id} 
+                  className="flex-[0_0_100%] min-w-0 flex flex-col items-center justify-center px-8"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 20 }}
+                    className={`w-20 h-20 rounded-3xl ${step.bgColor} flex items-center justify-center mb-8 border border-border/50 shadow-sm`}
+                  >
+                    <Icon className={`w-10 h-10 ${step.color}`} strokeWidth={1.5} />
+                  </motion.div>
+                  
+                  <h2 className="text-2xl font-bold text-foreground mb-4 text-center tracking-tight">
+                    {step.title}
+                  </h2>
+                  
+                  <p className="text-base text-muted-foreground text-center leading-relaxed max-w-xs">
+                    {step.description}
+                  </p>
+
+                  {isLast && (
+                    <div className="w-full max-w-xs space-y-3 mt-12">
+                      <Button
+                        onClick={handleSignUp}
+                        className="w-full h-12 text-base font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm"
+                      >
+                        Create Account
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={handleGuest}
+                        className="w-full h-12 text-base font-medium rounded-xl border-border bg-transparent hover:bg-secondary hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      >
+                        Continue as Guest
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Footer */}
+      <div className="p-8 pb-12 flex flex-col items-center gap-8">
+        {/* Pagination Dots */}
+        <div className="flex gap-2.5">
+          {steps.map((_, index) => (
             <button
-              key={step.id}
-              onClick={() => setCurrentStep(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === currentStep
-                  ? "w-6 bg-foreground"
-                  : index < currentStep
-                  ? "bg-foreground/40"
-                  : "bg-secondary"
+              key={index}
+              className={`h-2 transition-all duration-300 rounded-full ${
+                index === selectedIndex
+                  ? "w-8 bg-primary"
+                  : "w-2 bg-primary/20 hover:bg-primary/40"
               }`}
-              role="tab"
-              aria-selected={index === currentStep}
-              aria-label={`Step ${index + 1}: ${step.title}`}
+              onClick={() => emblaApi?.scrollTo(index)}
+              aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
 
-        {/* Continue button */}
-        <Button
-          onClick={handleNext}
-          className="w-full h-12 rounded-xl bg-foreground text-background hover:bg-foreground/90 gap-2 text-base font-medium"
-          aria-label={isLastStep ? "Start reading" : "Continue to next step"}
-        >
-          {isLastStep ? (
-            <>
-              <Check className="w-5 h-5" />
-              Start Reading
-            </>
-          ) : (
-            <>
-              Continue
-              <ArrowRight className="w-5 h-5" />
-            </>
+        {/* Next Button */}
+        <AnimatePresence mode="wait">
+          {selectedIndex < steps.length - 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="w-full max-w-xs"
+            >
+              <Button
+                onClick={handleNext}
+                className="w-full h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 text-lg font-medium group active:scale-95 transition-all shadow-lg shadow-foreground/10"
+              >
+                Continue
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </motion.div>
           )}
-        </Button>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -180,9 +198,15 @@ export function useOnboarding() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const hasCompleted = localStorage.getItem(ONBOARDING_KEY) === "true";
-    setShowOnboarding(!hasCompleted);
-    setIsLoading(false);
+    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY) === "true";
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true);
+    }
+    // Artificial small delay to prevent flash of unstyled content
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const completeOnboarding = () => {

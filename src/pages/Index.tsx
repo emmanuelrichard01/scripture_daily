@@ -98,7 +98,17 @@ const Index = () => {
   const avgPerDay = (totalChaptersRead / daysSinceStart).toFixed(1);
 
   // Show onboarding for new users
-  if (!onboardingLoading && showOnboarding) {
+  if (onboardingLoading) {
+    return (
+      <div className="min-h-dvh bg-background flex flex-col items-center justify-center p-6">
+        <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 animate-pulse">
+          <img src="/apple-touch-icon.png" alt="Logo" className="w-12 h-12 rounded-xl opacity-80" />
+        </div>
+      </div>
+    );
+  }
+
+  if (showOnboarding) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
