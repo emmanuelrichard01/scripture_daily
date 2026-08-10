@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProgressProvider } from "@/contexts/ProgressContext";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 import Index from "./pages/Index";
 
@@ -35,30 +36,32 @@ const RouteFallback = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ProgressProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PWAUpdatePrompt />
-          <BrowserRouter>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/history" element={<History />} />
-                <Route path="/progress" element={<ProgressPage />} />
-                <Route path="/lists" element={<Lists />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/milestones" element={<Milestones />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </ProgressProvider>
+      <SettingsProvider>
+        <ProgressProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PWAUpdatePrompt />
+            <BrowserRouter>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/history" element={<History />} />
+                  <Route path="/progress" element={<ProgressPage />} />
+                  <Route path="/lists" element={<Lists />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/milestones" element={<Milestones />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ProgressProvider>
+      </SettingsProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

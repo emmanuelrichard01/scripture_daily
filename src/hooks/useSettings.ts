@@ -1,101 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useContext } from "react";
+import { SettingsContext, SettingsContextValue } from "@/contexts/SettingsContext";
 
-const SETTINGS_KEY = "horner-settings";
-
-export interface ReminderSettings {
-  enabled: boolean;
-  time: string; // HH:MM format
-  days: number[]; // 0-6, where 0 is Sunday
+export function useSettings(): SettingsContextValue {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error("useSettings must be used within a SettingsProvider");
+  }
+  return context;
 }
 
-export interface Settings {
-  theme: "light" | "dark" | "system" | "auto";
-  reminders: ReminderSettings;
-  hapticFeedback: boolean;
-  notificationPermission: NotificationPermission | "default";
-}
-
-const getDefaultSettings = (): Settings => ({
-  theme: "system",
-  reminders: {
-    enabled: false,
-    time: "07:00",
-    days: [0, 1, 2, 3, 4, 5, 6], // All days
-  },
-  hapticFeedback: true,
-  notificationPermission: "default",
-});
-
-export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(() => {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      try {
-        return { ...getDefaultSettings(), ...JSON.parse(saved) };
-      } catch {
-        return getDefaultSettings();
-      }
-    }
-    return getDefaultSettings();
-  });
-
-  // Keep the stored permission in step with the browser's real value
-  useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    const actual = Notification.permission;
-    setSettings((prev) =>
-      prev.notificationPermission === actual
-        ? prev
-        : { ...prev, notificationPermission: actual }
-    );
-  }, []);
-
-  // Save to localStorage whenever settings change
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-
-  // Apply theme (auto theme handled separately in useAutoTheme)
-  useEffect(() => {
-    const root = document.documentElement;
-    
-    if (settings.theme === "auto") {
-      // Auto theme is handled by useAutoTheme hook
-      return;
-    } else if (settings.theme === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      root.classList.toggle("dark", prefersDark);
-    } else {
-      root.classList.toggle("dark", settings.theme === "dark");
-    }
-  }, [settings.theme]);
-
-  const updateSettings = useCallback((updates: Partial<Settings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
-  }, []);
-
-  const updateReminders = useCallback((updates: Partial<ReminderSettings>) => {
-    setSettings((prev) => ({
-      ...prev,
-      reminders: { ...prev.reminders, ...updates },
-    }));
-  }, []);
-
-  const requestNotificationPermission = useCallback(async () => {
-    if (!("Notification" in window)) {
-      return "denied" as NotificationPermission;
-    }
-
-    const permission = await Notification.requestPermission();
-    updateSettings({ notificationPermission: permission });
-    return permission;
-  }, [updateSettings]);
-
-  return {
-    settings,
-    updateSettings,
-    updateReminders,
-    requestNotificationPermission,
-  };
-}
+export type { Settings, ReminderSettings } from "@/contexts/SettingsContext";
