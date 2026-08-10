@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { useCycleMilestones } from "@/hooks/useCycleMilestones";
+import { useMilestoneAcknowledgements } from "@/hooks/useMilestoneAcknowledgements";
 import { ArrowLeft, Trophy, Target, Flame } from "lucide-react";
 
 const CHAPTER_GOALS = [100, 365, 1000, 2500, 5000, 10000];
@@ -10,8 +11,9 @@ const STREAK_GOALS = [7, 30, 100, 365];
 
 export default function Milestones() {
   const navigate = useNavigate();
-  const { completedSet, totalChaptersRead, streakCount } = useCloudProgress();
-  const { cycleStats, totalStats } = useCycleMilestones(completedSet);
+  const { listProgress, totalChaptersRead, streakCount } = useCloudProgress();
+  const { cycleStats, totalStats } = useCycleMilestones(listProgress);
+  const acknowledgements = useMilestoneAcknowledgements(listProgress);
 
   const upcoming = useMemo(() => {
     const items: {

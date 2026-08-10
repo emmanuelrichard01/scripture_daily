@@ -56,8 +56,8 @@ const Settings = () => {
     requestNotificationPermission,
   } = useSettings();
 
-  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate, completedSet } = useCloudProgress();
-  const { cycleStats, totalStats } = useCycleMilestones(completedSet);
+  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate, listProgress } = useCloudProgress();
+  const { cycleStats, totalStats } = useCycleMilestones(listProgress);
   const { user, signOut } = useAuth();
   const { isDarkNow } = useAutoTheme();
   const { isSupported: pushSupported, permission: pushPermission, requestPermission: requestPushPermission, sendTestNotification } = usePushNotifications();

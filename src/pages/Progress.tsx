@@ -3,47 +3,34 @@ import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { ListProgressCard } from "@/components/ListProgressCard";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
-import { readingLists, getDayOfYear } from "@/lib/readingPlan";
+import { readingLists } from "@/lib/readingPlan";
 import { BookOpen, Award, Target, ChevronRight } from "lucide-react";
 
 const Progress = () => {
-  const { completedSet, totalChaptersRead } = useCloudProgress();
-  const dayOfYear = getDayOfYear(new Date());
+  const { listProgress, totalChaptersRead } = useCloudProgress();
 
   // Calculate progress for each list
-  const listProgress = useMemo(() => {
+  const listProgressData = useMemo(() => {
     return readingLists.map((list) => {
       const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
-      const dayInCycle = ((dayOfYear - 1) % totalChapters) + 1;
-
-      // Count completed chapters in current cycle
-      const completedInCycle = Array.from(completedSet).filter((key) => {
-        const [dayStr, listIdStr] = key.split("-");
-        const day = parseInt(dayStr);
-        const listId = parseInt(listIdStr);
-
-        if (listId !== list.id) return false;
-
-        // Check if this day is in the current cycle
-        const cycleStart = dayOfYear - dayInCycle + 1;
-        return day >= cycleStart && day <= dayOfYear;
-      }).length;
-
+      const totalCompletedForList = listProgress[list.id] || 0;
+      
+      const completedInCycle = totalCompletedForList % totalChapters;
       const cycleProgress = (completedInCycle / totalChapters) * 100;
-      const timesCompleted = Math.floor(
-        Array.from(completedSet).filter((k) => k.endsWith(`-${list.id}`)).length /
-          totalChapters
-      );
+      const timesCompleted = Math.floor(totalCompletedForList / totalChapters);
 
       // Get current book and chapter
       let chapterCount = 0;
       let currentBook = list.books[0].name;
       let currentChapter = 1;
 
+      // The next chapter to read is completedInCycle + 1
+      const targetChapterIndex = completedInCycle + 1;
+
       for (const book of list.books) {
-        if (chapterCount + book.chapters >= dayInCycle) {
+        if (chapterCount + book.chapters >= targetChapterIndex) {
           currentBook = book.name;
-          currentChapter = dayInCycle - chapterCount;
+          currentChapter = targetChapterIndex - chapterCount;
           break;
         }
         chapterCount += book.chapters;
@@ -57,17 +44,17 @@ const Progress = () => {
         currentChapter,
       };
     });
-  }, [completedSet, dayOfYear]);
+  }, [listProgress]);
 
   // Overall stats
   const totalCycleProgress = useMemo(() => {
-    const total = listProgress.reduce((sum, p) => sum + p.cycleProgress, 0);
-    return total / listProgress.length;
-  }, [listProgress]);
+    const total = listProgressData.reduce((sum, p) => sum + p.cycleProgress, 0);
+    return total / listProgressData.length;
+  }, [listProgressData]);
 
   const totalCompletedCycles = useMemo(() => {
-    return listProgress.reduce((sum, p) => sum + p.timesCompleted, 0);
-  }, [listProgress]);
+    return listProgressData.reduce((sum, p) => sum + p.timesCompleted, 0);
+  }, [listProgressData]);
 
   return (
     <div className="min-h-dvh bg-background pb-24">
@@ -136,7 +123,7 @@ const Progress = () => {
         </div>
 
         <div className="space-y-2.5">
-          {listProgress.map(
+          {listProgressData.map(
             ({ list, cycleProgress, timesCompleted, currentBook, currentChapter }, index) => (
               <Link
                 to="/lists"
