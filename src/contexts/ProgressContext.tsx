@@ -4,13 +4,13 @@ import {
   useState,
   useRef,
   useMemo,
+  useEffect,
   ReactNode,
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { readingLists } from "@/lib/readingPlan";
+import { supabase } from "@/integrations/supabase/client";
 
-// The new "True Horner" data structure. 
-// A map of YYYY-MM-DD string to an array of completed list IDs.
 export type ReadingLog = Record<string, number[]>;
 
 interface ProgressState {
@@ -38,6 +38,7 @@ export interface ProgressContextValue {
 export const ProgressContext = createContext<ProgressContextValue | null>(null);
 
 const STORAGE_KEY = "scripture-daily-progress-v2";
+
 const getTodayISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -64,6 +65,14 @@ const loadLocalProgress = (): ProgressState => {
   return getDefaultProgress();
 };
 
+const deriveTotalChapters = (history: ReadingLog): number => {
+  let sum = 0;
+  for (const date in history) {
+    sum += history[date].length;
+  }
+  return sum;
+};
+
 const deriveStreak = (history: ReadingLog): number => {
   const dates = Object.keys(history).filter((d) => history[d].length > 0).sort();
   if (dates.length === 0) return 0;
@@ -79,7 +88,7 @@ const deriveStreak = (history: ReadingLog): number => {
   if (!hasToday && !hasYesterday) return 0;
 
   let streak = 0;
-  let cursorDate = new Date(hasToday ? todayIso : yesterdayIso);
+  const cursorDate = new Date(hasToday ? todayIso : yesterdayIso);
 
   while (true) {
     const iso = `${cursorDate.getFullYear()}-${String(cursorDate.getMonth() + 1).padStart(2, "0")}-${String(cursorDate.getDate()).padStart(2, "0")}`;
@@ -94,13 +103,159 @@ const deriveStreak = (history: ReadingLog): number => {
   return streak;
 };
 
+// -- Cloud Sync Utilities --
+
+const serializeLog = (log: ReadingLog): string[] => {
+  const arr: string[] = [];
+  for (const date in log) {
+    for (const listId of log[date]) {
+      arr.push(`${date}-${listId}`);
+    }
+  }
+  return arr;
+};
+
+const deserializeLog = (arr: string[]): ReadingLog => {
+  const log: ReadingLog = {};
+  for (const item of arr) {
+    const match = item.match(/^(\d{4}-\d{2}-\d{2})-(\d+)$/);
+    if (match) {
+      const [, date, listIdStr] = match;
+      const listId = parseInt(listIdStr, 10);
+      if (!log[date]) {
+        log[date] = [];
+      }
+      if (!log[date].includes(listId)) {
+        log[date].push(listId);
+      }
+    }
+  }
+  return log;
+};
+
+const mergeHistory = (local: ReadingLog, cloud: ReadingLog): ReadingLog => {
+  const merged: ReadingLog = { ...local };
+  for (const date in cloud) {
+    if (!merged[date]) {
+      merged[date] = [...cloud[date]];
+    } else {
+      const mergedSet = new Set([...merged[date], ...cloud[date]]);
+      merged[date] = Array.from(mergedSet).sort((a, b) => a - b);
+    }
+  }
+  return merged;
+};
+
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(loadLocalProgress);
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "error">("idle");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
-  // Derived state: total chapters read historically for each list
+  const progressRef = useRef(progress);
+  const syncTimeoutRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  const pushToCloud = useCallback(async (state: ProgressState) => {
+    if (!user) return;
+    setSyncStatus("syncing");
+    try {
+      const { data, error: selectError } = await supabase
+        .from("reading_progress")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const payload = {
+        user_id: user.id,
+        start_date: state.startDate,
+        completed_readings: serializeLog(state.history),
+        total_chapters_read: deriveTotalChapters(state.history),
+        streak_count: deriveStreak(state.history),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (data) {
+        const { error } = await supabase
+          .from("reading_progress")
+          .update(payload)
+          .eq("id", data.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("reading_progress")
+          .insert([payload]);
+        if (error) throw error;
+      }
+
+      setSyncStatus("idle");
+      setLastSyncedAt(new Date());
+    } catch (e) {
+      console.error("Cloud sync failed:", e);
+      setSyncStatus("error");
+    }
+  }, [user]);
+
+  // Pull from cloud on login
+  useEffect(() => {
+    if (!user) return;
+    
+    let isMounted = true;
+    const loadFromCloud = async () => {
+      setSyncStatus("syncing");
+      try {
+        const { data, error } = await supabase
+          .from("reading_progress")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data && isMounted) {
+          const cloudHistory = deserializeLog(data.completed_readings || []);
+          const mergedHistory = mergeHistory(progressRef.current.history, cloudHistory);
+          
+          let mergedStartDate = progressRef.current.startDate;
+          if (data.start_date && new Date(data.start_date) < new Date(mergedStartDate)) {
+            mergedStartDate = data.start_date;
+          }
+
+          const newState = {
+            version: 2,
+            history: mergedHistory,
+            startDate: mergedStartDate,
+          };
+
+          setProgress(newState);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+          setSyncStatus("idle");
+          setLastSyncedAt(new Date());
+          
+          // Save the merged state back to cloud
+          pushToCloud(newState);
+        } else if (isMounted) {
+          // New user, push local data immediately
+          setSyncStatus("idle");
+          pushToCloud(progressRef.current);
+        }
+      } catch (err) {
+        console.error("Failed to load from cloud:", err);
+        if (isMounted) setSyncStatus("error");
+      }
+    };
+
+    loadFromCloud();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, pushToCloud]);
+
+  // Derived states
   const listProgress = useMemo(() => {
     const counts: Record<number, number> = {};
     for (const list of readingLists) {
@@ -116,21 +271,12 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     return counts;
   }, [progress.history]);
 
-  // Derived state: what is completed today
   const todayIso = getTodayISO();
   const completedTodayListIds = useMemo(() => {
     return new Set(progress.history[todayIso] || []);
   }, [progress.history, todayIso]);
 
-  // Derived state: overall totals
-  const totalChaptersRead = useMemo(() => {
-    let sum = 0;
-    for (const date in progress.history) {
-      sum += progress.history[date].length;
-    }
-    return sum;
-  }, [progress.history]);
-
+  const totalChaptersRead = useMemo(() => deriveTotalChapters(progress.history), [progress.history]);
   const streakCount = useMemo(() => deriveStreak(progress.history), [progress.history]);
 
   // Handlers
@@ -158,9 +304,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       };
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+
+      // Debounce push to cloud
+      if (user) {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        setSyncStatus("syncing");
+        syncTimeoutRef.current = setTimeout(() => {
+          pushToCloud(newState);
+        }, 1500);
+      }
+
       return newState;
     });
-  }, []);
+  }, [user, pushToCloud]);
 
   const getCompletedForDay = useCallback(
     (dateIso: string) => {
@@ -177,8 +333,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   );
 
   const retrySync = useCallback(() => {
-    setSyncStatus("idle");
-  }, []);
+    setSyncStatus("syncing");
+    pushToCloud(progressRef.current);
+  }, [pushToCloud]);
 
   const value = {
     history: progress.history,

@@ -6,9 +6,9 @@ export function useAudio() {
 
   useEffect(() => {
     // Only create context after user gesture if possible, or initialize suspended
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioContext) {
-      audioCtxRef.current = new AudioContext();
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtxRef.current = new AudioContextClass();
     }
     return () => {
       if (audioCtxRef.current?.state !== 'closed') {
