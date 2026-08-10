@@ -15,6 +15,15 @@ interface PushNotificationState {
  * directly and only touches a service worker if one already happens to be
  * registered (e.g. a messaging worker).
  */
+/**
+ * usePushNotifications
+ * 
+ * Note: This implementation currently relies on client-side `setTimeout` which 
+ * means reminders only work if the web app tab is kept open in the background.
+ * True background push notifications (which work when the app is closed) require
+ * a Service Worker, VAPID keys, and a backend server to store push subscriptions.
+ * That infrastructure is out of scope for the current local-first architecture.
+ */
 export function usePushNotifications() {
   const { settings, requestNotificationPermission } = useSettings();
   const permission = settings.notificationPermission;

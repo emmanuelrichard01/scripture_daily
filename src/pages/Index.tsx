@@ -13,54 +13,76 @@ import { OnboardingFlow, useOnboarding } from "@/components/onboarding/Onboardin
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { useMilestoneAcknowledgements } from "@/hooks/useMilestoneAcknowledgements";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useAudio } from "@/hooks/useAudio";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getTodaysReadings,
+  getReadingDay,
   getDayOfYear,
   formatDate,
 } from "@/lib/readingPlan";
 
 const Index = () => {
-  const today = new Date();
-  const dayOfYear = getDayOfYear(today);
-  const formattedDate = formatDate(today);
+  const today = useMemo(() => new Date(), []);
   const { user } = useAuth();
   const { triggerHaptic } = useHaptics();
+  const { playBloop, playTada } = useAudio();
   const { showOnboarding, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
   const [announcement, setAnnouncement] = useState("");
 
   const {
-    completedSet,
+    history,
+    listProgress,
+    completedTodayListIds,
     streakCount,
     totalChaptersRead,
     startDate,
     toggleComplete,
-    getCompletedForDay,
-    isDayComplete,
     syncStatus,
     lastSyncedAt,
     retrySync,
     isAuthenticated,
+    getCompletedForDay,
+    isDayComplete,
   } = useCloudProgress();
 
-  useMilestoneAcknowledgements(completedSet);
+  const formattedDate = formatDate(today);
+  const readingDay = getReadingDay(today, startDate);
+  const calendarDay = getDayOfYear(today);
+
+  useMilestoneAcknowledgements(listProgress);
+
+  const getTodayISO = () => {
+    const d = today;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const todayIso = getTodayISO();
 
   const todaysReadings = useMemo(
-    () => getTodaysReadings(dayOfYear, completedSet),
-    [dayOfYear, completedSet]
+    () => getTodaysReadings(listProgress, completedTodayListIds),
+    [listProgress, completedTodayListIds]
   );
 
   const handleToggle = (listId: number) => {
     triggerHaptic("light");
     const reading = todaysReadings.find((r) => r.listId === listId);
+    
     if (reading) {
+      if (!reading.completed) {
+        playBloop();
+        if (completedTodayListIds.size === 9) {
+          setTimeout(playTada, 300);
+        }
+      }
+      
       setAnnouncement(
         `${reading.book} ${reading.chapter} ${
           reading.completed ? "unmarked" : "marked as read"
         }.`
       );
     }
-    toggleComplete(dayOfYear, listId);
+    toggleComplete(todayIso, listId);
   };
 
   const completedToday = todaysReadings.filter((r) => r.completed).length;
@@ -135,8 +157,8 @@ const Index = () => {
             <StatsCard
               icon={<Calendar className="w-5 h-5 text-track-green" strokeWidth={1.5} aria-hidden="true" />}
               label="Day"
-              value={dayOfYear}
-              sublabel={`of 365`}
+              value={readingDay}
+              sublabel="reading day"
               accentColor="track-green"
             />
           </div>
@@ -158,7 +180,7 @@ const Index = () => {
               Today's Chapters
             </h2>
             <span className="text-xs text-muted-foreground" aria-hidden="true">
-              Day {dayOfYear}
+              Day {readingDay}
             </span>
           </div>
 

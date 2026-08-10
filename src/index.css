@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,166 +6,178 @@
 
 @layer base {
   :root {
-    /* Apple-inspired neutral palette */
-    --background: 0 0% 98%;
-    --foreground: 220 15% 16%;
+    /* ── Light theme: warm ivory with indigo accents ── */
+    --background: 40 30% 97%;
+    --foreground: 230 25% 14%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 16%;
+    --card: 40 25% 99%;
+    --card-foreground: 230 25% 14%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 16%;
+    --popover: 40 25% 99%;
+    --popover-foreground: 230 25% 14%;
 
-    /* Muted primary - not too bold */
-    --primary: 220 13% 26%;
+    /* Primary — deep indigo */
+    --primary: 234 55% 46%;
     --primary-foreground: 0 0% 100%;
 
-    /* Soft secondary */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 13% 26%;
+    /* Soft warm secondary */
+    --secondary: 35 20% 94%;
+    --secondary-foreground: 230 20% 26%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 35 16% 93%;
+    --muted-foreground: 230 10% 48%;
 
-    /* Subtle accent */
-    --accent: 220 14% 93%;
-    --accent-foreground: 220 13% 26%;
+    /* Warm accent */
+    --accent: 35 18% 91%;
+    --accent-foreground: 230 20% 26%;
 
-    /* Success - calm green */
-    --success: 142 42% 42%;
+    /* Success — warm green */
+    --success: 152 48% 42%;
     --success-foreground: 0 0% 100%;
 
-    /* Destructive - soft red */
-    --destructive: 0 65% 55%;
+    /* Destructive */
+    --destructive: 4 68% 56%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 13% 26%;
+    --border: 35 16% 89%;
+    --input: 35 16% 89%;
+    --ring: 234 55% 46%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Semantic track colors from icon */
-    --track-blue: 209 78% 46%;
-    --track-red: 0 72% 51%;
-    --track-green: 142 55% 45%;
-    --track-yellow: 43 96% 56%;
-    --track-purple: 280 55% 50%;
-    --track-orange: 24 90% 50%;
-    --track-teal: 180 55% 45%;
-    --track-pink: 340 65% 55%;
-    --track-indigo: 235 55% 55%;
-    --track-cyan: 195 70% 50%;
+    /* ── Track colors (10 Horner lists) ── */
+    --track-blue: 220 72% 52%;
+    --track-green: 152 52% 44%;
+    --track-red: 4 72% 54%;
+    --track-purple: 268 56% 52%;
+    --track-yellow: 38 92% 54%;
+    --track-pink: 338 62% 56%;
+    --track-orange: 22 88% 52%;
+    --track-teal: 174 56% 42%;
+    --track-indigo: 234 55% 56%;
+    --track-cyan: 192 68% 48%;
 
-    /* Shadows */
-    --shadow-xs: 0 1px 2px 0 hsl(220 15% 16% / 0.03);
-    --shadow-sm: 0 1px 3px 0 hsl(220 15% 16% / 0.04), 0 1px 2px -1px hsl(220 15% 16% / 0.04);
-    --shadow-md: 0 4px 6px -1px hsl(220 15% 16% / 0.05), 0 2px 4px -2px hsl(220 15% 16% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(220 15% 16% / 0.05), 0 4px 6px -4px hsl(220 15% 16% / 0.05);
+    /* ── Elevation (layered shadows) ── */
+    --shadow-xs: 0 1px 2px hsl(230 25% 14% / 0.04);
+    --shadow-sm: 0 2px 4px hsl(230 25% 14% / 0.05), 0 1px 2px hsl(230 25% 14% / 0.04);
+    --shadow-md: 0 4px 12px hsl(230 25% 14% / 0.06), 0 2px 4px hsl(230 25% 14% / 0.04);
+    --shadow-lg: 0 8px 24px hsl(230 25% 14% / 0.08), 0 4px 8px hsl(230 25% 14% / 0.04);
+    --shadow-glow: 0 0 20px hsl(234 55% 46% / 0.12);
 
-    /* Surfaces & gradients */
-    --surface-raised: 0 0% 100%;
-    --surface-sunken: 220 16% 95%;
+    /* ── Surfaces & gradients ── */
+    --surface-raised: 40 25% 99%;
+    --surface-sunken: 35 20% 94%;
     --gradient-hero: linear-gradient(
       145deg,
-      hsl(220 14% 98%) 0%,
-      hsl(220 16% 95%) 100%
+      hsl(40 30% 97%) 0%,
+      hsl(35 20% 94%) 100%
     );
     --gradient-quiet: linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.9) 0%,
-      hsl(220 16% 96% / 0.6) 100%
+      hsl(40 25% 99% / 0.9) 0%,
+      hsl(35 20% 94% / 0.6) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(234 55% 46%) 0%,
+      hsl(268 56% 52%) 100%
     );
 
-    /* Motion */
-    --ease-quiet: cubic-bezier(0.22, 1, 0.36, 1);
-    --duration-fast: 160ms;
-    --duration-base: 240ms;
-    --duration-slow: 420ms;
-
+    /* ── Motion tokens ── */
+    --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 150ms;
+    --duration-base: 250ms;
+    --duration-slow: 400ms;
 
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 220 13% 26%;
-    --sidebar-primary: 220 13% 26%;
+    --sidebar-background: 40 30% 97%;
+    --sidebar-foreground: 230 20% 26%;
+    --sidebar-primary: 234 55% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 96%;
-    --sidebar-accent-foreground: 220 13% 26%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 220 13% 26%;
+    --sidebar-accent: 35 20% 94%;
+    --sidebar-accent-foreground: 230 20% 26%;
+    --sidebar-border: 35 16% 89%;
+    --sidebar-ring: 234 55% 46%;
   }
 
   .dark {
-    --background: 220 16% 8%;
-    --foreground: 220 9% 96%;
+    /* ── Dark theme: deep navy with indigo glow ── */
+    --background: 230 22% 7%;
+    --foreground: 220 15% 94%;
 
-    --card: 220 14% 11%;
-    --card-foreground: 220 9% 96%;
+    --card: 230 20% 10%;
+    --card-foreground: 220 15% 94%;
 
-    --popover: 220 14% 11%;
-    --popover-foreground: 220 9% 96%;
+    --popover: 230 20% 10%;
+    --popover-foreground: 220 15% 94%;
 
-    --primary: 220 9% 90%;
-    --primary-foreground: 220 16% 8%;
+    --primary: 234 65% 65%;
+    --primary-foreground: 230 22% 7%;
 
-    --secondary: 220 14% 15%;
-    --secondary-foreground: 220 9% 90%;
+    --secondary: 230 18% 14%;
+    --secondary-foreground: 220 12% 88%;
 
-    --muted: 220 14% 15%;
-    --muted-foreground: 220 9% 60%;
+    --muted: 230 18% 14%;
+    --muted-foreground: 220 10% 56%;
 
-    --accent: 220 14% 18%;
-    --accent-foreground: 220 9% 90%;
+    --accent: 230 18% 17%;
+    --accent-foreground: 220 12% 88%;
 
-    --success: 142 45% 50%;
-    --success-foreground: 220 16% 8%;
+    --success: 152 50% 52%;
+    --success-foreground: 230 22% 7%;
 
-    --destructive: 0 60% 55%;
-    --destructive-foreground: 220 9% 96%;
+    --destructive: 4 62% 58%;
+    --destructive-foreground: 220 15% 94%;
 
-    --border: 220 14% 18%;
-    --input: 220 14% 18%;
-    --ring: 220 9% 90%;
+    --border: 230 18% 16%;
+    --input: 230 18% 16%;
+    --ring: 234 65% 65%;
 
-    /* Improved track colors for dark mode - better contrast */
-    --track-blue: 209 70% 60%;
-    --track-red: 0 65% 60%;
-    --track-green: 142 50% 55%;
-    --track-yellow: 43 85% 58%;
-    --track-purple: 280 55% 60%;
-    --track-orange: 24 80% 58%;
-    --track-teal: 180 50% 55%;
-    --track-pink: 340 60% 62%;
-    --track-indigo: 235 55% 65%;
-    --track-cyan: 195 60% 58%;
+    /* Dark track colors — brighter for contrast */
+    --track-blue: 220 68% 64%;
+    --track-green: 152 48% 56%;
+    --track-red: 4 66% 62%;
+    --track-purple: 268 56% 64%;
+    --track-yellow: 38 86% 60%;
+    --track-pink: 338 58% 64%;
+    --track-orange: 22 82% 60%;
+    --track-teal: 174 50% 56%;
+    --track-indigo: 234 55% 68%;
+    --track-cyan: 192 62% 60%;
 
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
-    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.25), 0 1px 2px -1px hsl(0 0% 0% / 0.25);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.35), 0 4px 6px -4px hsl(0 0% 0% / 0.35);
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.25);
+    --shadow-sm: 0 2px 4px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25);
+    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.35), 0 2px 4px hsl(0 0% 0% / 0.25);
+    --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.4), 0 4px 8px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 24px hsl(234 65% 65% / 0.15);
 
-    --surface-raised: 220 14% 11%;
-    --surface-sunken: 220 16% 6%;
+    --surface-raised: 230 20% 10%;
+    --surface-sunken: 230 22% 5%;
     --gradient-hero: linear-gradient(
       145deg,
-      hsl(220 14% 13%) 0%,
-      hsl(220 16% 9%) 100%
+      hsl(230 20% 12%) 0%,
+      hsl(230 22% 8%) 100%
     );
     --gradient-quiet: linear-gradient(
       180deg,
-      hsl(220 14% 13% / 0.9) 0%,
-      hsl(220 16% 9% / 0.6) 100%
+      hsl(230 20% 12% / 0.9) 0%,
+      hsl(230 22% 8% / 0.6) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(234 65% 65%) 0%,
+      hsl(268 56% 64%) 100%
     );
 
-
-    --sidebar-background: 220 14% 8%;
-    --sidebar-foreground: 220 9% 90%;
-    --sidebar-primary: 220 9% 90%;
-    --sidebar-primary-foreground: 220 16% 8%;
-    --sidebar-accent: 220 14% 18%;
-    --sidebar-accent-foreground: 220 9% 90%;
-    --sidebar-border: 220 14% 18%;
-    --sidebar-ring: 220 9% 90%;
+    --sidebar-background: 230 20% 8%;
+    --sidebar-foreground: 220 12% 88%;
+    --sidebar-primary: 234 65% 65%;
+    --sidebar-primary-foreground: 230 22% 7%;
+    --sidebar-accent: 230 18% 17%;
+    --sidebar-accent-foreground: 220 12% 88%;
+    --sidebar-border: 230 18% 16%;
+    --sidebar-ring: 234 65% 65%;
   }
 }
 
@@ -176,19 +188,19 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Apple-style typography - same font family, weight variations */
-  h1, h2, h3 {
+  /* Headings get the display font */
+  h1, h2, h3, h4 {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     @apply tracking-tight;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  /* Consistent, visible keyboard focus everywhere */
+  /* Visible keyboard focus for a11y */
   a:focus-visible,
   button:focus-visible,
   [role="button"]:focus-visible,
@@ -213,14 +225,17 @@
 
 
 @layer components {
+  /* ── Cards ── */
   .card-elevated {
     @apply bg-card rounded-2xl border border-border;
     box-shadow: var(--shadow-sm);
   }
 
   .card-interactive {
-    @apply bg-card rounded-2xl border border-border transition-all duration-200;
+    @apply bg-card rounded-2xl border border-border transition-all;
     box-shadow: var(--shadow-xs);
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-spring);
   }
 
   .card-interactive:hover {
@@ -229,10 +244,27 @@
   }
 
   .card-interactive:active {
-    transform: scale(0.995);
+    transform: scale(0.98);
   }
 
-  /* Safe area support for mobile devices */
+  /* ── Glassmorphism surfaces ── */
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl;
+  }
+
+  .glass-card {
+    @apply bg-card/70 backdrop-blur-lg border border-border/50 rounded-2xl;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── Hero surface ── */
+  .surface-hero {
+    @apply rounded-2xl border border-border/60;
+    background: var(--gradient-hero);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ── Safe area for mobile ── */
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
@@ -241,7 +273,7 @@
     padding-top: env(safe-area-inset-top, 0);
   }
 
-  /* Track color utilities */
+  /* ── Track utilities ── */
   .track-indicator {
     @apply w-1 h-full rounded-full;
   }
@@ -250,19 +282,12 @@
     @apply w-2 h-2 rounded-full;
   }
 
-  /* Quiet hero surface used for primary progress panels */
-  .surface-hero {
-    @apply rounded-2xl border border-border;
-    background: var(--gradient-hero);
-    box-shadow: var(--shadow-sm);
-  }
-
-  /* Minimum comfortable tap target */
+  /* ── Tap target (44x44 minimum) ── */
   .tap-target {
     @apply min-h-[44px] min-w-[44px];
   }
 
-  /* Skeleton placeholder */
+  /* ── Skeleton ── */
   .skeleton {
     @apply rounded-xl bg-muted animate-pulse motion-reduce:animate-none;
   }
@@ -270,23 +295,28 @@
 
 
 @layer utilities {
+  /* ── Animations ── */
   .animate-fade-in {
-    animation: fade-in 0.3s ease-out;
+    animation: fade-in var(--duration-base) var(--ease-spring);
   }
 
   .animate-slide-up {
-    animation: slide-up 0.35s ease-out;
+    animation: slide-up 0.35s var(--ease-spring);
   }
 
   .animate-scale-in {
-    animation: scale-in 0.2s ease-out;
+    animation: scale-in 0.2s var(--ease-spring);
   }
 
-  /* Reduced motion support */
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in,
     .animate-slide-up,
-    .animate-scale-in {
+    .animate-scale-in,
+    .animate-glow-pulse {
       animation: none;
     }
   }
@@ -303,7 +333,7 @@
   @keyframes slide-up {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
@@ -314,7 +344,7 @@
   @keyframes scale-in {
     from {
       opacity: 0;
-      transform: scale(0.96);
+      transform: scale(0.95);
     }
     to {
       opacity: 1;
@@ -322,13 +352,22 @@
     }
   }
 
-  /* Subtle hover effect with reduced motion support */
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 8px hsl(var(--primary) / 0.15);
+    }
+    50% {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.25);
+    }
+  }
+
+  /* ── Hover lift ── */
   .hover-lift {
-    @apply transition-all duration-200;
+    transition: all var(--duration-base) var(--ease-spring);
   }
 
   .hover-lift:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
   }
 
@@ -338,7 +377,7 @@
     }
   }
 
-  /* Text styles */
+  /* ── Text styles ── */
   .text-caption {
     @apply text-xs font-medium text-muted-foreground;
   }
@@ -347,17 +386,25 @@
     @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
   }
 
-  /* Custom font size for very small text */
   .text-2xs {
     font-size: 0.65rem;
     line-height: 1rem;
   }
 
-  /* Focus visible styles for accessibility */
+  /* ── Focus ring ── */
   .focus-ring {
     @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none;
   }
+
+  /* ── Gradient text ── */
+  .text-gradient {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
+
 @layer utilities {
   .scrollbar-none {
     scrollbar-width: none;

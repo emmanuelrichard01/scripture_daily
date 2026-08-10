@@ -9,8 +9,8 @@ interface SettingsSectionProps {
 export function SettingsSection({
   title,
   description,
-}: SettingsSectionProps & { children: ReactNode }) {
-  const { children } = arguments[0];
+  children,
+}: SettingsSectionProps) {
   return (
     <div className="card-elevated overflow-hidden">
       <div className="px-4 py-3 border-b border-border">

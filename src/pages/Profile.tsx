@@ -43,8 +43,24 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [preferredTranslation, setPreferredTranslation] = useState("ESV");
+  const [preferredTranslation, setPreferredTranslation] = useState(() => {
+    try {
+      return localStorage.getItem("horner-preferred-translation") || "ESV";
+    } catch {
+      return "ESV";
+    }
+  });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Persist translation preference
+  const updateTranslation = (value: string) => {
+    setPreferredTranslation(value);
+    try {
+      localStorage.setItem("horner-preferred-translation", value);
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   // Load profile data
   useEffect(() => {
@@ -290,7 +306,7 @@ const Profile = () => {
                 </Label>
                 <Select
                   value={preferredTranslation}
-                  onValueChange={setPreferredTranslation}
+                  onValueChange={updateTranslation}
                 >
                   <SelectTrigger 
                     id="translation"

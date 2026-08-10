@@ -19,19 +19,13 @@ interface MilestoneEvent {
   message: string;
 }
 
-export function useCycleMilestones(completedSet: Set<string>) {
+export function useCycleMilestones(listProgress: Record<number, number>) {
   // Calculate cycle stats for each reading list
   const cycleStats = useMemo((): CycleStats[] => {
     return readingLists.map((list) => {
       const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
       
-      // Count completed chapters for this list
-      let completedCount = 0;
-      completedSet.forEach((key) => {
-        if (key.endsWith(`-${list.id}`)) {
-          completedCount++;
-        }
-      });
+      const completedCount = listProgress[list.id] || 0;
 
       const completedCycles = Math.floor(completedCount / totalChapters);
       const currentCycleProgress = completedCount % totalChapters;
@@ -47,7 +41,7 @@ export function useCycleMilestones(completedSet: Set<string>) {
         progressPercent,
       };
     });
-  }, [completedSet]);
+  }, [listProgress]);
 
   // Calculate total stats
   const totalStats = useMemo(() => {

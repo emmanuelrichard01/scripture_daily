@@ -92,21 +92,10 @@ export function useSettings() {
     return permission;
   }, [updateSettings]);
 
-  const scheduleReminder = useCallback(() => {
-    if (!settings.reminders.enabled || settings.notificationPermission !== "granted") {
-      return;
-    }
-
-    // For web, we use the Service Worker approach
-    // This is a placeholder - actual implementation would require SW registration
-    console.log("Reminder scheduled for:", settings.reminders.time);
-  }, [settings.reminders, settings.notificationPermission]);
-
   return {
     settings,
     updateSettings,
     updateReminders,
     requestNotificationPermission,
-    scheduleReminder,
   };
 }

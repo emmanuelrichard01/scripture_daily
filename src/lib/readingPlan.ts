@@ -191,27 +191,37 @@ export interface TodayReading {
   completed: boolean;
 }
 
-// Get today's reading based on day number in year
+// Get today's reading based on how many chapters have been completed in each list so far
 export function getTodaysReadings(
-  dayOfYear: number,
-  completedReadings: Set<string>
+  listProgress: Record<number, number>, // map of listId to total chapters read historically
+  completedTodayListIds: Set<number> // set of listIds completed *today*
 ): TodayReading[] {
   return readingLists.map((list) => {
     const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
-    const dayInCycle = ((dayOfYear - 1) % totalChapters) + 1;
+    
+    // The total number of chapters read in this track ever.
+    const historicalCompletions = listProgress[list.id] || 0;
+    
+    // If the list is marked complete today, the 'current chapter' is the one we just finished.
+    // If it's NOT complete today, the 'current chapter' is the NEXT one to read.
+    const isCompletedToday = completedTodayListIds.has(list.id);
+    const targetChapterIndex = isCompletedToday ? historicalCompletions : historicalCompletions + 1;
+    
+    // Cycle math: 1-indexed position within the current cycle
+    let dayInCycle = targetChapterIndex % totalChapters;
+    if (dayInCycle === 0) dayInCycle = totalChapters; // 1-indexed
 
     let chapterCount = 0;
     for (const book of list.books) {
       if (chapterCount + book.chapters >= dayInCycle) {
         const chapter = dayInCycle - chapterCount;
-        const readingKey = `${dayOfYear}-${list.id}`;
         return {
           listId: list.id,
           listName: list.name,
           book: book.name,
           chapter,
           colorVar: list.colorVar,
-          completed: completedReadings.has(readingKey),
+          completed: isCompletedToday,
         };
       }
       chapterCount += book.chapters;
@@ -235,6 +245,22 @@ export function getDayOfYear(date: Date): number {
   const diff = date.getTime() - start.getTime();
   const oneDay = 1000 * 60 * 60 * 24;
   return Math.floor(diff / oneDay);
+}
+
+/**
+ * Compute the "reading day" relative to the user's chosen start date.
+ * Day 1 is the start date itself.  This is what determines which chapters
+ * appear for today — it replaces the old `getDayOfYear` usage in the
+ * reading logic so that changing the start date actually rotates the lists.
+ */
+export function getReadingDay(today: Date, startDateISO: string): number {
+  const start = new Date(startDateISO);
+  // Zero out times to avoid DST issues
+  const a = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const b = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const diffMs = a.getTime() - b.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  return Math.max(1, Math.floor(diffMs / oneDay) + 1);
 }
 
 // Format date for display - Apple style

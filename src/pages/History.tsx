@@ -3,45 +3,23 @@ import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { ShareableProgressCard } from "@/components/ShareableProgressCard";
-import {
-  getDayOfYear,
-  readingLists,
-  hornerFacts,
-  readingTips,
-} from "@/lib/readingPlan";
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  BookOpen,
-  Calendar,
-  Lightbulb,
-  Info,
-  Share2,
-  ChevronDown,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { readingLists } from "@/lib/readingPlan";
+import { getDateISO } from "@/lib/utils";
+import { ChevronRight, Share2, Filter } from "lucide-react";
+import { LifetimeStats } from "@/components/history/LifetimeStats";
+import { HistoryChart } from "@/components/history/HistoryChart";
+import { HornerFacts } from "@/components/history/HornerFacts";
+import { AnimatePresence } from "framer-motion";
 
 type ViewMode = "week" | "month";
 
 const History = () => {
-  const { completedSet, totalChaptersRead, streakCount, startDate } =
-    useCloudProgress();
-  const today = new Date();
+  const { history, totalChaptersRead } = useCloudProgress();
+  const today = useMemo(() => new Date(), []);
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [weekOffset, setWeekOffset] = useState(0);
   const [trackFilter, setTrackFilter] = useState<number | null>(null);
-  const [expandedTip, setExpandedTip] = useState<number | null>(null);
   const [showShareCard, setShowShareCard] = useState(false);
-  const [expandedTrack, setExpandedTrack] = useState<number | null>(null);
 
   const trackIds = useMemo(
     () => (trackFilter === null ? readingLists.map((l) => l.id) : [trackFilter]),
@@ -54,12 +32,13 @@ const History = () => {
   const chartData = useMemo(() => {
     const data: { label: string; chapters: number; fullDate: string }[] = [];
 
-    const countForDay = (dayOfYear: number) =>
-      trackIds.reduce(
-        (sum, listId) =>
-          sum + (completedSet.has(`${dayOfYear}-${listId}`) ? 1 : 0),
+    const countForDay = (dateIso: string) => {
+      const completedListIds = history[dateIso] || [];
+      return trackIds.reduce(
+        (sum, listId) => sum + (completedListIds.includes(listId) ? 1 : 0),
         0
       );
+    };
 
     if (viewMode === "week") {
       for (let i = 6; i >= 0; i--) {
@@ -68,7 +47,7 @@ const History = () => {
 
         data.push({
           label: date.toLocaleDateString("en-US", { weekday: "short" }),
-          chapters: countForDay(getDayOfYear(date)),
+          chapters: countForDay(getDateISO(date)),
           fullDate: date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -84,7 +63,7 @@ const History = () => {
         for (let day = 0; day < 7; day++) {
           const date = new Date(weekStart);
           date.setDate(date.getDate() + day);
-          weekTotal += countForDay(getDayOfYear(date));
+          weekTotal += countForDay(getDateISO(date));
         }
 
         data.push({
@@ -99,48 +78,57 @@ const History = () => {
     }
 
     return data;
-  }, [completedSet, viewMode, weekOffset, today, trackIds]);
+  }, [history, viewMode, weekOffset, today, trackIds]);
 
-  // Lifetime summary: best streak and chapters this calendar month
+  // Lifetime summary
   const lifetime = useMemo(() => {
-    const days = new Set<number>();
+    // Unique days read in general
+    const daysSet = new Set<string>();
+    
+    // Total chapters read in the current month
     let monthChapters = 0;
 
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthDays = new Set<number>();
-    for (
-      let d = new Date(monthStart);
-      d <= today;
-      d.setDate(d.getDate() + 1)
-    ) {
-      monthDays.add(getDayOfYear(new Date(d)));
+    const currentMonthStr = getDateISO(today).substring(0, 7); // "YYYY-MM"
+
+    for (const [dateStr, listIds] of Object.entries(history)) {
+      if (listIds.length === 0) continue;
+      
+      const filteredListIds = trackFilter !== null ? listIds.filter(id => id === trackFilter) : listIds;
+      if (filteredListIds.length === 0) continue;
+
+      daysSet.add(dateStr);
+
+      if (dateStr.startsWith(currentMonthStr)) {
+        monthChapters += filteredListIds.length;
+      }
     }
 
-    completedSet.forEach((key) => {
-      const [dayStr, listStr] = key.split("-");
-      const day = parseInt(dayStr, 10);
-      const listId = parseInt(listStr, 10);
-      if (Number.isNaN(day)) return;
-      if (trackFilter !== null && listId !== trackFilter) return;
-      days.add(day);
-      if (monthDays.has(day)) monthChapters++;
-    });
-
-    const sorted = Array.from(days).sort((a, b) => a - b);
+    const sortedDates = Array.from(daysSet).sort();
     let best = 0;
     let run = 0;
-    let previous: number | null = null;
-    for (const day of sorted) {
-      run = previous !== null && day === previous + 1 ? run + 1 : 1;
+    let previousDate: Date | null = null;
+
+    for (const dateStr of sortedDates) {
+      const d = new Date(dateStr);
+      if (previousDate) {
+        const diffTime = Math.abs(d.getTime() - previousDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          run += 1;
+        } else {
+          run = 1;
+        }
+      } else {
+        run = 1;
+      }
       best = Math.max(best, run);
-      previous = day;
+      previousDate = d;
     }
 
-    return { bestStreak: best, monthChapters, activeDays: days.size };
-  }, [completedSet, today, trackFilter]);
+    return { bestStreak: best, monthChapters, activeDays: daysSet.size };
+  }, [history, today, trackFilter]);
 
-
-  // Calculate summary stats
+  // Calculate summary stats for chart
   const stats = useMemo(() => {
     const totalThisWeek = chartData.reduce((sum, d) => sum + d.chapters, 0);
     const days = viewMode === "week" ? 7 : 28;
@@ -148,461 +136,153 @@ const History = () => {
     const completionRate = (
       (totalThisWeek / (days * maxPerDay)) *
       100
-    ).toFixed(0);
-
-    const start = new Date(startDate);
-    const daysSinceStart = Math.max(
-      1,
-      Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
     );
 
-    return {
-      totalThisWeek,
-      avgPerDay,
-      completionRate,
-      daysSinceStart,
-    };
-  }, [chartData, viewMode, startDate, today, maxPerDay]);
-
-
-  // Get current week date range
-  const weekDateRange = useMemo(() => {
-    if (viewMode !== "week") return "";
-    const startDay = new Date(today);
-    startDay.setDate(startDay.getDate() - 6 + weekOffset * 7);
-    const endDay = new Date(today);
-    endDay.setDate(endDay.getDate() + weekOffset * 7);
-
-    return `${startDay.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })} – ${endDay.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })}`;
-  }, [weekOffset, today, viewMode]);
-
-  // Random tip for today
-  const dailyTip = useMemo(() => {
-    const dayOfYear = getDayOfYear(today);
-    return readingTips[dayOfYear % readingTips.length];
-  }, [today]);
-
-  // Track progress with more detail
-  const trackProgress = useMemo(() => {
-    return readingLists.map((list) => {
-      const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
-      let completedCount = 0;
-      completedSet.forEach((key) => {
-        if (key.endsWith(`-${list.id}`)) completedCount++;
-      });
-      const cyclesCompleted = Math.floor(completedCount / totalChapters);
-      const currentCycleProgress = completedCount % totalChapters;
-      const progressPercent = (currentCycleProgress / totalChapters) * 100;
-
-      return {
-        ...list,
-        totalChapters,
-        completedCount,
-        cyclesCompleted,
-        currentCycleProgress,
-        progressPercent,
-      };
-    });
-  }, [completedSet]);
+    return { avgPerDay, completionRate, totalThisWeek };
+  }, [chartData, viewMode, maxPerDay]);
 
   return (
-    <div className="min-h-dvh bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
+    <div className="min-h-dvh bg-background pb-[88px]">
+      <header className="sticky top-0 z-40 glass border-b border-border/50 shadow-sm">
         <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">History</h1>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">
+            History
+          </h1>
           <button
             onClick={() => setShowShareCard(true)}
-            className="p-2 rounded-xl hover:bg-secondary transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors focus-ring"
+            aria-label="Share progress"
+            aria-haspopup="dialog"
+            aria-expanded={showShareCard}
           >
-            <Share2 className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
+            <Share2 className="w-4 h-4" aria-hidden="true" />
+            <span className="text-xs font-semibold">Share</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
-        {/* Lifetime summary strip */}
-        <section
-          className="surface-hero p-4 grid grid-cols-3 gap-3"
-          aria-label="Lifetime summary"
-        >
-          <div>
-            <p className="text-xl font-semibold tabular-nums text-foreground">
-              {lifetime.bestStreak}
+      <main className="max-w-lg mx-auto px-5 py-6 flex-1 flex flex-col">
+        {totalChaptersRead === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-20 animate-fade-in">
+            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-muted-foreground/50"
+              >
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold tracking-tight mb-2">No History Yet</h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-[240px]">
+              Your reading journey will be mapped out here once you complete your first chapter.
             </p>
-            <p className="text-2xs text-muted-foreground">best streak</p>
+            <Link
+              to="/"
+              className="px-6 py-3 rounded-full bg-foreground text-background font-bold text-sm shadow-md hover:bg-foreground/90 transition-all focus-ring"
+            >
+              Start Reading
+            </Link>
           </div>
-          <div>
-            <p className="text-xl font-semibold tabular-nums text-foreground">
-              {lifetime.activeDays}
-            </p>
-            <p className="text-2xs text-muted-foreground">active days</p>
-          </div>
-          <div>
-            <p className="text-xl font-semibold tabular-nums text-foreground">
-              {lifetime.monthChapters}
-            </p>
-            <p className="text-2xs text-muted-foreground">this month</p>
-          </div>
-        </section>
+        ) : (
+          <>
+            <LifetimeStats
+              bestStreak={lifetime.bestStreak}
+              totalChaptersRead={totalChaptersRead}
+              monthChapters={lifetime.monthChapters}
+              activeDays={lifetime.activeDays}
+            />
 
-        {/* Track filter */}
-        <div
-          className="flex gap-2 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-none"
-          role="group"
-          aria-label="Filter by track"
+        {/* Track Filter */}
+        <div 
+          className="flex items-center gap-3 overflow-x-auto pb-4 mb-2 scrollbar-none snap-x"
+          role="radiogroup"
+          aria-label="Filter history by track"
         >
-          <button
-            onClick={() => setTrackFilter(null)}
-            aria-pressed={trackFilter === null}
-            className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
-              trackFilter === null
-                ? "bg-foreground text-background border-transparent"
-                : "bg-card text-muted-foreground border-border hover:bg-secondary"
-            )}
-          >
-            All tracks
-          </button>
+          <div className="flex items-center gap-2 pl-1 snap-start">
+            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+            <button
+              role="radio"
+              aria-checked={trackFilter === null}
+              onClick={() => setTrackFilter(null)}
+              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-ring ${
+                trackFilter === null
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+              }`}
+            >
+              All Tracks
+            </button>
+          </div>
           {readingLists.map((list) => (
             <button
               key={list.id}
-              onClick={() =>
-                setTrackFilter((cur) => (cur === list.id ? null : list.id))
-              }
-              aria-pressed={trackFilter === list.id}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors",
+              role="radio"
+              aria-checked={trackFilter === list.id}
+              onClick={() => setTrackFilter(list.id)}
+              className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-ring flex items-center gap-2 ${
                 trackFilter === list.id
-                  ? "text-background border-transparent"
-                  : "bg-card text-muted-foreground border-border hover:bg-secondary"
-              )}
-              style={
-                trackFilter === list.id
-                  ? { backgroundColor: `hsl(var(${list.colorVar}))` }
-                  : undefined
-              }
+                  ? "bg-foreground text-background shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+              }`}
             >
-              {list.name}
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: `hsl(var(${list.colorVar}))` }}
+                aria-hidden="true"
+              />
+              Track {list.id}
             </button>
           ))}
         </div>
 
-        {/* View toggle */}
-        <div className="flex items-center gap-2 p-1 bg-secondary rounded-xl">
-          <button
-            className={cn(
-              "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
-              viewMode === "week"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
-            )}
-            onClick={() => setViewMode("week")}
-          >
-            Weekly
-          </button>
-          <button
-            className={cn(
-              "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
-              viewMode === "month"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
-            )}
-            onClick={() => setViewMode("month")}
-          >
-            Monthly
-          </button>
-        </div>
+        <HistoryChart
+          data={chartData}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          weekOffset={weekOffset}
+          setWeekOffset={setWeekOffset}
+          avgPerDay={stats.avgPerDay}
+          completionRate={stats.completionRate}
+          maxPerDay={maxPerDay}
+        />
 
-        {/* Week navigation */}
-        {viewMode === "week" && (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setWeekOffset((o) => o - 1)}
-              className="p-2 rounded-xl hover:bg-secondary transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-            </button>
-            <span className="text-sm font-medium text-foreground">
-              {weekDateRange}
-            </span>
-            <button
-              onClick={() => setWeekOffset((o) => Math.min(0, o + 1))}
-              disabled={weekOffset >= 0}
-              className={cn(
-                "p-2 rounded-xl transition-colors",
-                weekOffset >= 0
-                  ? "opacity-30"
-                  : "hover:bg-secondary"
-              )}
-            >
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </button>
+        {/* Action Link to Progress Page */}
+        <Link
+          to="/progress"
+          className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-8 hover:bg-primary/10 transition-colors focus-ring group"
+          aria-label="View detailed milestones"
+        >
+          <div>
+            <h3 className="font-bold text-sm text-foreground">Detailed Milestones</h3>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">View your trophies and streak data</p>
           </div>
+          <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+        </Link>
+
+        <HornerFacts />
+          </>
         )}
-
-        {/* Chart */}
-        <div className="card-elevated p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-                Chapters Read
-              </p>
-              <p className="text-2xl font-semibold text-foreground">
-                {stats.totalThisWeek}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-                Completion
-              </p>
-              <p className="text-lg font-semibold text-foreground">
-                {stats.completionRate}%
-              </p>
-            </div>
-          </div>
-
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorChapters" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="hsl(var(--track-blue))"
-                      stopOpacity={0.2}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="hsl(var(--track-blue))"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="label"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  dy={8}
-                />
-                <YAxis hide domain={[0, "auto"]} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-lg">
-                          <p className="text-xs text-muted-foreground">
-                            {payload[0].payload.fullDate}
-                          </p>
-                          <p className="text-sm font-semibold text-foreground">
-                            {payload[0].value} chapters
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="chapters"
-                  stroke="hsl(var(--track-blue))"
-                  strokeWidth={2}
-                  fill="url(#colorChapters)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="card-elevated p-4 text-center">
-            <div className="w-8 h-8 rounded-lg bg-track-orange/10 flex items-center justify-center mx-auto mb-2">
-              <TrendingUp className="w-4 h-4 text-track-orange" />
-            </div>
-            <p className="text-lg font-semibold text-foreground">{streakCount}</p>
-            <p className="text-2xs text-muted-foreground">Day Streak</p>
-          </div>
-          <div className="card-elevated p-4 text-center">
-            <div className="w-8 h-8 rounded-lg bg-track-blue/10 flex items-center justify-center mx-auto mb-2">
-              <BookOpen className="w-4 h-4 text-track-blue" />
-            </div>
-            <p className="text-lg font-semibold text-foreground">
-              {totalChaptersRead}
-            </p>
-            <p className="text-2xs text-muted-foreground">Total Read</p>
-          </div>
-          <div className="card-elevated p-4 text-center">
-            <div className="w-8 h-8 rounded-lg bg-track-green/10 flex items-center justify-center mx-auto mb-2">
-              <Calendar className="w-4 h-4 text-track-green" />
-            </div>
-            <p className="text-lg font-semibold text-foreground">
-              {stats.daysSinceStart}
-            </p>
-            <p className="text-2xs text-muted-foreground">Days Active</p>
-          </div>
-        </div>
-
-        {/* Track Progress - Redesigned for mobile */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              Track Progress
-            </h2>
-            <Link
-              to="/lists"
-              className="text-2xs text-track-blue font-medium"
-            >
-              View all →
-            </Link>
-          </div>
-          
-          <div className="space-y-2" role="list" aria-label="Reading track progress">
-            {trackProgress.map((track) => (
-              <button
-                key={track.id}
-                onClick={() => setExpandedTrack(expandedTrack === track.id ? null : track.id)}
-                className="w-full card-interactive p-3 min-h-[72px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                aria-expanded={expandedTrack === track.id}
-                aria-label={`${track.name}: ${track.currentCycleProgress} of ${track.totalChapters} chapters, ${track.cyclesCompleted} cycles completed`}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Color indicator */}
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
-                    style={{ backgroundColor: `hsl(var(${track.colorVar}))` }}
-                    aria-hidden="true"
-                  >
-                    {track.cyclesCompleted > 0 ? `${track.cyclesCompleted}×` : track.id}
-                  </div>
-                  
-                  {/* Track info */}
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {track.name}
-                      </p>
-                      <ChevronDown 
-                        className={cn(
-                          "w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 ml-2",
-                          expandedTrack === track.id && "rotate-180"
-                        )}
-                      />
-                    </div>
-                    
-                    {/* Progress bar */}
-                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none"
-                        style={{
-                          width: `${track.progressPercent}%`,
-                          backgroundColor: `hsl(var(${track.colorVar}))`,
-                        }}
-                      />
-                    </div>
-                    
-                    <p className="text-2xs text-muted-foreground mt-1">
-                      {track.currentCycleProgress} / {track.totalChapters} chapters
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Expanded content */}
-                {expandedTrack === track.id && (
-                  <div className="mt-3 pt-3 border-t border-border/50 animate-fade-in">
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {track.description}
-                    </p>
-                    <div className="flex gap-4 text-xs">
-                      <div>
-                        <span className="text-muted-foreground">Cycles: </span>
-                        <span className="font-medium text-foreground">{track.cyclesCompleted}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Total read: </span>
-                        <span className="font-medium text-foreground">{track.completedCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Daily Tip */}
-        <div className="card-elevated p-4 bg-track-yellow/5 border-track-yellow/10">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-track-yellow/10 flex items-center justify-center flex-shrink-0">
-              <Lightbulb className="w-4 h-4 text-track-yellow" />
-            </div>
-            <div>
-              <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                Daily Tip
-              </p>
-              <p className="text-sm text-foreground leading-relaxed">
-                {dailyTip}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Horner's System Facts */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">
-              About Horner's System
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {hornerFacts.map((fact, index) => (
-              <button
-                key={index}
-                className={cn(
-                  "w-full text-left card-interactive p-4 transition-all",
-                  expandedTip === index && "bg-secondary/50"
-                )}
-                onClick={() =>
-                  setExpandedTip(expandedTip === index ? null : index)
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-sm text-foreground">
-                    {fact.title}
-                  </h3>
-                  <ChevronRight
-                    className={cn(
-                      "w-4 h-4 text-muted-foreground transition-transform",
-                      expandedTip === index && "rotate-90"
-                    )}
-                  />
-                </div>
-                {expandedTip === index && (
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed animate-fade-in">
-                    {fact.description}
-                  </p>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
       </main>
 
-      <ShareableProgressCard
-        isOpen={showShareCard}
-        onClose={() => setShowShareCard(false)}
-      />
-
       <BottomNav />
+
+      {/* Share Card Modal */}
+      <AnimatePresence>
+        {showShareCard && (
+          <ShareableProgressCard
+            streak={lifetime.bestStreak} 
+            totalChapters={totalChaptersRead}
+            onClose={() => setShowShareCard(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -15,9 +15,9 @@ interface ShareableProgressCardProps {
 export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { completedSet, totalChaptersRead, streakCount, startDate } = useCloudProgress();
+  const { listProgress, totalChaptersRead, streakCount, startDate } = useCloudProgress();
   const { user } = useAuth();
-  const { cycleStats, totalStats } = useCycleMilestones(completedSet);
+  const { cycleStats, totalStats } = useCycleMilestones(listProgress);
 
   const today = new Date();
   const currentYear = today.getFullYear();

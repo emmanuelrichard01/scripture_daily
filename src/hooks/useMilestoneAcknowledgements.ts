@@ -6,8 +6,8 @@ import { useCycleMilestones } from "@/hooks/useCycleMilestones";
  * Quiet acknowledgements when a user completes a full cycle in any track.
  * This is intentionally subtle (non-celebratory) to match the app's tone.
  */
-export function useMilestoneAcknowledgements(completedSet: Set<string>) {
-  const { cycleStats, checkMilestones } = useCycleMilestones(completedSet);
+export function useMilestoneAcknowledgements(listProgress: Record<number, number>) {
+  const { cycleStats, checkMilestones } = useCycleMilestones(listProgress);
   const prevCountsRef = useRef<Map<number, number>>(new Map());
   const initializedRef = useRef(false);
 

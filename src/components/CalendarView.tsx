@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getDayOfYear } from "@/lib/readingPlan";
+import { cn, pluralize, getDateISO } from "@/lib/utils";
 
 interface CalendarViewProps {
-  getCompletedForDay: (dayOfYear: number) => number;
-  isDayComplete: (dayOfYear: number) => boolean;
+  getCompletedForDay: (dateIso: string) => number;
+  isDayComplete: (dateIso: string) => boolean;
 }
 
 export function CalendarView({
@@ -13,7 +12,7 @@ export function CalendarView({
   isDayComplete,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
 
   const { year, month, days, firstDayOfWeek } = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -25,140 +24,117 @@ export function CalendarView({
 
     const days = Array.from({ length: daysInMonth }, (_, i) => {
       const date = new Date(year, month, i + 1);
-      const dayOfYear = getDayOfYear(date);
+      const dateIso = getDateISO(date);
+      const completed = getCompletedForDay(dateIso);
+      
+      // Heatmap intensity calculation (0 to 4 level)
+      // 0 = none, 1 = 1-3 ch, 2 = 4-6 ch, 3 = 7-9 ch, 4 = 10 ch (complete)
+      let intensity = 0;
+      if (completed > 0) {
+        intensity = Math.ceil((completed / 10) * 4);
+      }
+
       return {
         date: i + 1,
-        dayOfYear,
-        completed: getCompletedForDay(dayOfYear),
-        isComplete: isDayComplete(dayOfYear),
-        isToday:
-          date.toDateString() === today.toDateString(),
+        dateIso,
+        completed,
+        isComplete: isDayComplete(dateIso),
+        intensity,
+        isToday: date.toDateString() === today.toDateString(),
         isPast: date < today && date.toDateString() !== today.toDateString(),
-        isFuture: date > today,
       };
     });
 
     return { year, month, days, firstDayOfWeek };
   }, [currentDate, getCompletedForDay, isDayComplete, today]);
 
-  const monthName = new Date(year, month).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
-  const prevMonth = () => {
+  const handlePrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
-  const nextMonth = () => {
+  const handleNextMonth = () => {
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
+  const monthName = currentDate.toLocaleString("default", { month: "long" });
+
+  const getIntensityClass = (intensity: number) => {
+    switch (intensity) {
+      case 4: return "bg-primary text-primary-foreground font-bold shadow-sm";
+      case 3: return "bg-primary/80 text-primary-foreground font-semibold";
+      case 2: return "bg-primary/50 text-foreground font-medium";
+      case 1: return "bg-primary/30 text-foreground/80";
+      default: return "bg-secondary/50 text-foreground/50";
+    }
   };
 
   return (
-    <div className="card-elevated p-5" role="region" aria-label={`Calendar for ${monthName}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm font-semibold text-foreground" id="calendar-month">
-          {monthName}
-        </h3>
+    <div className="card-elevated p-5">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-base font-bold text-foreground tracking-tight">
+          {monthName} <span className="text-muted-foreground ml-1 font-semibold">{year}</span>
+        </h2>
         <div className="flex items-center gap-1">
           <button
-            onClick={goToToday}
-            className="px-2.5 py-1.5 text-2xs font-medium text-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors min-h-[32px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            aria-label="Go to today"
-          >
-            Today
-          </button>
-          <button
-            onClick={prevMonth}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors min-h-[36px] min-w-[36px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={handlePrevMonth}
+            className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors focus-ring"
             aria-label="Previous month"
           >
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={nextMonth}
-            className="p-2 rounded-lg hover:bg-secondary transition-colors min-h-[36px] min-w-[36px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={handleNextMonth}
+            className="p-2 rounded-xl hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors focus-ring"
             aria-label="Next month"
           >
-            <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-1 mb-1.5" role="row" aria-label="Days of the week">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
           <div
-            key={`${day}-${i}`}
-            className="text-center text-2xs font-medium text-muted-foreground py-1.5"
-            role="columnheader"
-            aria-label={day}
+            key={day}
+            className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2"
           >
-            {day.charAt(0)}
+            {day}
           </div>
         ))}
-      </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1" role="grid" aria-labelledby="calendar-month">
-        {/* Empty cells for days before first of month */}
         {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-          <div key={`empty-${i}`} className="aspect-square" role="gridcell" aria-hidden="true" />
+          <div key={`empty-${i}`} />
         ))}
 
-        {/* Day cells */}
-        {days.map((day) => (
+        {days.map((dayInfo, i) => (
           <div
-            key={day.date}
-            role="gridcell"
-            aria-label={`${new Date(year, month, day.date).toLocaleDateString("en-US", { month: "long", day: "numeric" })}. ${day.isComplete ? "All readings complete" : day.completed > 0 ? `${day.completed} of 10 readings complete` : "No readings complete"}`}
-            className={cn(
-              "aspect-square flex flex-col items-center justify-center rounded-xl text-xs relative transition-all motion-reduce:transition-none",
-              day.isToday && "bg-foreground text-background",
-              day.isComplete && !day.isToday && "bg-success/10",
-              day.isPast && !day.isComplete && day.completed === 0 && "bg-destructive/5",
-              day.isFuture && "opacity-40"
-            )}
+            key={i}
+            className="group relative flex justify-center"
           >
-            <span
+            <div
               className={cn(
-                "font-medium",
-                day.isComplete && !day.isToday && "text-success"
+                "w-full aspect-square rounded-xl flex items-center justify-center text-xs transition-all duration-300",
+                getIntensityClass(dayInfo.intensity),
+                dayInfo.isToday && !dayInfo.isComplete && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                !dayInfo.isPast && !dayInfo.isToday && "opacity-40",
               )}
+              role="img"
+              aria-label={`${monthName} ${dayInfo.date}, ${year}: ${dayInfo.completed} chapters read`}
             >
-              {day.date}
-            </span>
+              {dayInfo.date}
+            </div>
             
-            {/* Progress indicator */}
-            {day.completed > 0 && !day.isFuture && !day.isToday && (
-              <div className="absolute bottom-1 left-1/2 -translate-x-1/2" aria-hidden="true">
-                <div
-                  className={cn(
-                    "w-1 h-1 rounded-full",
-                    day.isComplete ? "bg-success" : "bg-muted-foreground"
-                  )}
-                />
+            {/* Tooltip */}
+            {dayInfo.completed > 0 && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-popover text-popover-foreground text-xs font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg z-10 border border-border">
+                {dayInfo.completed} {pluralize(dayInfo.completed, "chapter")}
+                {/* Arrow */}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-border" />
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-popover mt-[-1px]" />
               </div>
             )}
           </div>
         ))}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-border">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-success/30" />
-          <span className="text-2xs text-muted-foreground">Complete</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30" />
-          <span className="text-2xs text-muted-foreground">Partial</span>
-        </div>
       </div>
     </div>
   );
