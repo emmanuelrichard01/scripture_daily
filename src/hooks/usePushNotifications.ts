@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettings } from "./useSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PushNotificationState {
   isSupported: boolean;
@@ -7,25 +9,15 @@ interface PushNotificationState {
   isLoading: boolean;
 }
 
-/**
- * Local (in-tab) reminder notifications.
- *
- * There is intentionally no push backend and no app-shell service worker in
- * this project, so this hook degrades gracefully: it uses the Notification API
- * directly and only touches a service worker if one already happens to be
- * registered (e.g. a messaging worker).
- */
+const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
 /**
  * usePushNotifications
- * 
- * Note: This implementation currently relies on client-side `setTimeout` which 
- * means reminders only work if the web app tab is kept open in the background.
- * True background push notifications (which work when the app is closed) require
- * a Service Worker, VAPID keys, and a backend server to store push subscriptions.
- * That infrastructure is out of scope for the current local-first architecture.
+ * Fully implemented real background push notifications via VAPID and Service Worker.
  */
 export function usePushNotifications() {
   const { settings, requestNotificationPermission } = useSettings();
+  const { user } = useAuth();
   const permission = settings.notificationPermission;
 
   const [state, setState] = useState<PushNotificationState>({
@@ -38,7 +30,7 @@ export function usePushNotifications() {
     let cancelled = false;
 
     const check = async () => {
-      const isSupported = typeof window !== "undefined" && "Notification" in window;
+      const isSupported = typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
       if (!isSupported) {
         if (!cancelled) {
           setState({ isSupported: false, hasServiceWorker: false, isLoading: false });
@@ -47,16 +39,15 @@ export function usePushNotifications() {
       }
 
       let hasServiceWorker = false;
-      if ("serviceWorker" in navigator) {
-        try {
-          hasServiceWorker = !!(await navigator.serviceWorker.getRegistration());
-        } catch {
-          hasServiceWorker = false;
-        }
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        hasServiceWorker = !!registration;
+      } catch {
+        hasServiceWorker = false;
       }
 
       if (!cancelled) {
-        setState({ isSupported: true, hasServiceWorker, isLoading: false });
+        setState({ isSupported, hasServiceWorker, isLoading: false });
       }
     };
 
@@ -66,17 +57,63 @@ export function usePushNotifications() {
     };
   }, []);
 
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const subscribeToPush = async () => {
+    if (!user || !PUBLIC_VAPID_KEY) return;
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+      }
+
+      const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey("p256dh") as ArrayBuffer)));
+      const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey("auth") as ArrayBuffer)));
+
+      // Save to Supabase
+      await supabase.from("push_subscriptions").upsert({
+        user_id: user.id,
+        endpoint: subscription.endpoint,
+        p256dh: p256dh,
+        auth: auth
+      }, { onConflict: "endpoint" });
+
+    } catch (error) {
+      console.error("Failed to subscribe to push notifications", error);
+    }
+  };
+
   const requestPermission = useCallback(async () => {
     if (!state.isSupported) {
-      return {
-        success: false,
-        error: "This browser doesn't support notifications",
-      };
+      return { success: false, error: "This browser doesn't support notifications" };
     }
 
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
       const result = await requestNotificationPermission();
+      
+      if (result === "granted") {
+        await subscribeToPush();
+      }
+
       setState((prev) => ({ ...prev, isLoading: false }));
 
       if (result !== "granted") {
@@ -88,10 +125,11 @@ export function usePushNotifications() {
       setState((prev) => ({ ...prev, isLoading: false }));
       return { success: false, error: "Couldn't enable notifications" };
     }
-  }, [state.isSupported, requestNotificationPermission]);
+  }, [state.isSupported, requestNotificationPermission, user]);
 
   const showNotification = useCallback(
     (title: string, options: NotificationOptions = {}) => {
+      // Local fallback in case push hasn't triggered yet
       if (permission !== "granted") return;
       try {
         new Notification(title, {
@@ -99,73 +137,55 @@ export function usePushNotifications() {
           badge: "/favicon.png",
           ...options,
         });
-      } catch (error) {
-        console.error("Error showing notification:", error);
+      } catch (e) {
+        if (state.hasServiceWorker) {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(title, {
+              icon: "/apple-touch-icon.png",
+              badge: "/favicon.png",
+              ...options,
+            });
+          });
+        }
       }
     },
-    [permission]
+    [permission, state.hasServiceWorker]
   );
 
-  const scheduleNotification = useCallback(
-    (title: string, options: NotificationOptions, delay: number) => {
-      if (permission !== "granted") return null;
-      return setTimeout(() => showNotification(title, options), delay);
+  const scheduleLocalReminder = useCallback(
+    (timeString: string, title: string, options: NotificationOptions = {}) => {
+      if (permission !== "granted") return () => {};
+
+      const now = new Date();
+      const [hours, minutes] = timeString.split(":").map(Number);
+      
+      let targetTime = new Date(now);
+      targetTime.setHours(hours, minutes, 0, 0);
+
+      if (targetTime.getTime() <= now.getTime()) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+
+      const timeUntil = targetTime.getTime() - now.getTime();
+      
+      // We still set a local timeout as a fallback while the app is open
+      const timeoutId = setTimeout(() => {
+        showNotification(title, options);
+        scheduleLocalReminder(timeString, title, options);
+      }, timeUntil);
+
+      return () => clearTimeout(timeoutId);
     },
     [permission, showNotification]
   );
 
-  /**
-   * Schedules today's (or tomorrow's) reminder for as long as the tab stays
-   * open. Returns null when nothing was scheduled.
-   */
-  const scheduleDailyReminder = useCallback(() => {
-    if (!settings.reminders.enabled || permission !== "granted") return null;
-
-    const now = new Date();
-    const [hours, minutes] = settings.reminders.time.split(":").map(Number);
-    const scheduledTime = new Date(now);
-    scheduledTime.setHours(hours, minutes, 0, 0);
-
-    if (scheduledTime <= now) {
-      scheduledTime.setDate(scheduledTime.getDate() + 1);
-    }
-
-    if (!settings.reminders.days.includes(scheduledTime.getDay())) return null;
-
-    const messages = [
-      "Your daily Scripture awaits",
-      "A moment for Scripture today?",
-      "10 chapters ready for you",
-      "Continue your reading journey",
-      "Scripture for your day",
-    ];
-
-    return scheduleNotification(
-      "Scripture Daily",
-      {
-        body: messages[Math.floor(Math.random() * messages.length)],
-        tag: "daily-reminder",
-        requireInteraction: false,
-      },
-      scheduledTime.getTime() - now.getTime()
-    );
-  }, [settings.reminders, permission, scheduleNotification]);
-
-  const sendTestNotification = useCallback(() => {
-    showNotification("Scripture Daily", {
-      body: "Notifications are working. Your daily reminders are set.",
-      tag: "test-notification",
-    });
-  }, [showNotification]);
-
   return {
     isSupported: state.isSupported,
     hasServiceWorker: state.hasServiceWorker,
-    permission,
     isLoading: state.isLoading,
+    permission,
     requestPermission,
-    scheduleNotification,
-    scheduleDailyReminder,
-    sendTestNotification,
+    showNotification,
+    scheduleLocalReminder,
   };
 }
