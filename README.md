@@ -24,6 +24,7 @@ This project goes far beyond a simple checklist. It features a **"True Horner" V
 
 - **Offline-First Resilience**: Powered by `workbox` and standard PWA service workers. Instantly log progress locally with zero network latency. The UI never blocks on a network request.
 - **Intelligent Cloud Sync**: When online, the app debounces and batches your local `localStorage` progress and seamlessly pushes it to Supabase in the background.
+- **Versatile Native Bible Reader**: Complete with an elegant sliding drawer and on-the-fly translation switching (supports ESV, NIV, NLT, NASB, LSB, WEB, and KJV directly via the Bolls.life API) so you never have to leave the app to read.
 - **Union Merge Conflict Resolution**: Never lose progress. If you use the app as an unauthenticated "Guest" and later sign in, your local progress is intelligently union-merged with your cloud data.
 - **Micro-Interactions & Haptics**: Uses Framer Motion for buttery-smooth animations, `embla-carousel-react` for native-feeling swipe gestures, and the Web Audio API for iOS-compatible haptic vibration feedback.
 - **Global Settings Context**: A Single Source of Truth architecture ensures that your Theme (Light/Dark/System/Auto), Haptic preferences, and Notification Reminders sync instantly across all your devices.

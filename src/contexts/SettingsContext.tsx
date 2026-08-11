@@ -22,6 +22,7 @@ export interface Settings {
   reminders: ReminderSettings;
   hapticFeedback: boolean;
   notificationPermission: NotificationPermission | "default";
+  preferredVersion: string;
 }
 
 export interface SettingsContextValue {
@@ -42,6 +43,7 @@ const getDefaultSettings = (): Settings => ({
   },
   hapticFeedback: true,
   notificationPermission: "default",
+  preferredVersion: "ESV",
 });
 
 const loadLocalSettings = (): Settings => {
@@ -195,6 +197,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  // Persist to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings]);
 
   // Alternative to fixing the setState async issue:
   // We use a wrapper function that handles both.

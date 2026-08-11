@@ -5,6 +5,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookOpen, Check, Loader2 } from "lucide-react";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAudio } from "@/hooks/useAudio";
+import { useSettings } from "@/hooks/useSettings";
+import { getBookId, AVAILABLE_VERSIONS } from "@/utils/bibleBooks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ReaderProps {
   isOpen: boolean;
@@ -17,20 +26,8 @@ interface ReaderProps {
 }
 
 interface Verse {
-  book_id: string;
-  book_name: string;
-  chapter: number;
   verse: number;
   text: string;
-}
-
-interface BibleApiResponse {
-  reference: string;
-  verses: Verse[];
-  text: string;
-  translation_id: string;
-  translation_name: string;
-  translation_note: string;
 }
 
 export function Reader({
@@ -42,12 +39,14 @@ export function Reader({
   isCompleted,
   onToggleComplete,
 }: ReaderProps) {
-  const [data, setData] = useState<BibleApiResponse | null>(null);
+  const [verses, setVerses] = useState<Verse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const haptics = useHaptics();
   const audio = useAudio();
+  const { settings, updateSettings } = useSettings();
+  const preferredVersion = settings.preferredVersion || "ESV";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -56,18 +55,30 @@ export function Reader({
     const fetchChapter = async () => {
       setIsLoading(true);
       setError(null);
-      setData(null);
+      setVerses([]);
+      
       try {
-        // Fetching from bible-api.com (default is World English Bible)
-        const response = await fetch(`https://bible-api.com/${encodeURIComponent(book)}%20${chapter}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch chapter");
+        const bookId = getBookId(book);
+        if (!bookId) {
+          throw new Error(`Could not find book ID for ${book}`);
         }
+
+        const url = `https://bolls.life/get-text/${preferredVersion}/${bookId}/${chapter}/`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch chapter from Bolls API");
+        }
+        
         const json = await response.json();
-        if (isMounted) setData(json);
+        
+        if (isMounted) {
+          // Bolls API returns an array of { pk, verse, text }
+          setVerses(json);
+        }
       } catch (err) {
         console.error(err);
-        if (isMounted) setError("Failed to load scripture text. Please check your connection.");
+        if (isMounted) setError("Failed to load scripture text. Please check your connection or try another version.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -78,7 +89,7 @@ export function Reader({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, book, chapter]);
+  }, [isOpen, book, chapter, preferredVersion]);
 
   const handleToggle = () => {
     haptics.light();
@@ -86,28 +97,48 @@ export function Reader({
       audio.playBloop();
     }
     onToggleComplete();
-    // Optional: close the reader after marking complete
-    // onOpenChange(false);
   };
+
+  const currentVersionName = AVAILABLE_VERSIONS.find(v => v.id === preferredVersion)?.name || preferredVersion;
 
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="h-[90vh] flex flex-col bg-background/95 backdrop-blur-xl border-t">
-        <DrawerHeader className="text-left pb-2 shrink-0 border-b">
-          <DrawerTitle className="text-2xl font-serif text-foreground flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-primary" />
-            {book} {chapter}
-          </DrawerTitle>
-          <DrawerDescription className="text-sm font-medium text-muted-foreground">
-            {listName} • {data?.translation_name || "World English Bible"}
-          </DrawerDescription>
+        <DrawerHeader className="text-left pb-2 shrink-0 border-b flex flex-row items-start justify-between pr-4">
+          <div>
+            <DrawerTitle className="text-2xl font-serif text-foreground flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              {book} {chapter}
+            </DrawerTitle>
+            <DrawerDescription className="text-sm font-medium text-muted-foreground mt-1">
+              {listName}
+            </DrawerDescription>
+          </div>
+          <div className="pt-1">
+            <Select
+              value={preferredVersion}
+              onValueChange={(value) => {
+                haptics.light();
+                updateSettings({ preferredVersion: value });
+              }}
+            >
+              <SelectTrigger className="w-24 h-8 text-xs border-0 bg-secondary" aria-label="Translation">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_VERSIONS.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>{v.id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </DrawerHeader>
 
         <ScrollArea className="flex-1 p-6">
           {isLoading && (
             <div className="flex flex-col items-center justify-center h-40 space-y-4 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin" />
-              <p>Loading scripture...</p>
+              <p>Loading {preferredVersion}...</p>
             </div>
           )}
 
@@ -118,16 +149,18 @@ export function Reader({
             </div>
           )}
 
-          {data && (
+          {!isLoading && !error && verses.length > 0 && (
             <div className="max-w-2xl mx-auto pb-10">
               <div className="space-y-4">
                 <p className="text-lg leading-relaxed text-foreground font-serif">
-                  {data.verses.map((v) => (
+                  {verses.map((v) => (
                     <span key={v.verse}>
                       <sup className="text-xs text-muted-foreground font-sans mr-1 select-none">
                         {v.verse}
                       </sup>
-                      {v.text}
+                      {/* Bolls API text sometimes contains HTML tags, but usually clean text. We can render it safely. */}
+                      <span dangerouslySetInnerHTML={{ __html: v.text }} />
+                      {' '}
                     </span>
                   ))}
                 </p>
@@ -136,11 +169,16 @@ export function Reader({
           )}
         </ScrollArea>
 
-        <DrawerFooter className="shrink-0 border-t bg-background/50 backdrop-blur-md pb-safe">
+        <DrawerFooter className="shrink-0 border-t bg-background/50 backdrop-blur-md pb-safe flex flex-row gap-3">
+          <DrawerClose asChild>
+            <Button variant="outline" className="h-14 flex-1 rounded-2xl">
+              Close
+            </Button>
+          </DrawerClose>
           <Button
             size="lg"
             variant={isCompleted ? "secondary" : "default"}
-            className="w-full h-14 rounded-2xl text-lg font-medium shadow-lg transition-all active:scale-[0.98]"
+            className="flex-[2] h-14 rounded-2xl text-lg font-medium shadow-lg transition-all active:scale-[0.98]"
             onClick={handleToggle}
           >
             {isCompleted ? (
@@ -149,7 +187,7 @@ export function Reader({
                 Completed
               </>
             ) : (
-              "Mark as Read"
+              "Mark Complete"
             )}
           </Button>
         </DrawerFooter>

@@ -214,6 +214,29 @@ const Settings = () => {
 
         {/* Reading Settings */}
         <SettingsSection title="Reading">
+          <SettingsRow
+            label="Bible Translation"
+            description="Select your preferred version"
+            action={
+              <Select
+                value={settings.preferredVersion}
+                onValueChange={(value) => updateSettings({ preferredVersion: value })}
+              >
+                <SelectTrigger className="w-36 h-11 border-0 bg-secondary" aria-label="Select translation">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ESV">ESV</SelectItem>
+                  <SelectItem value="NLT">NLT</SelectItem>
+                  <SelectItem value="NIV">NIV</SelectItem>
+                  <SelectItem value="NASB">NASB</SelectItem>
+                  <SelectItem value="LSB">LSB</SelectItem>
+                  <SelectItem value="WEB">WEB</SelectItem>
+                  <SelectItem value="KJV">KJV</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+          />
           <StartDatePicker 
             currentStartDate={startDate}
             onUpdateStartDate={updateStartDate}
