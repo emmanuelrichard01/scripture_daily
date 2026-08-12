@@ -159,7 +159,7 @@ export function usePushNotifications() {
       const now = new Date();
       const [hours, minutes] = timeString.split(":").map(Number);
       
-      let targetTime = new Date(now);
+      const targetTime = new Date(now);
       targetTime.setHours(hours, minutes, 0, 0);
 
       if (targetTime.getTime() <= now.getTime()) {
