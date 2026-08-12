@@ -30,7 +30,7 @@ const Index = () => {
   const { triggerHaptic } = useHaptics();
   const { playBloop, playTada } = useAudio();
   const { showOnboarding, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
-  const [activeReading, setActiveReading] = useState<TodayReading | null>(null);
+  const [activeReadingListId, setActiveReadingListId] = useState<number | null>(null);
 
   const {
     history,
@@ -54,6 +54,7 @@ const Index = () => {
 
   // Use the TRUE HORNER calculations instead of naive sequential math
   const todaysReadings = useMemo(() => getTodaysReadings(listProgress, completedTodayListIds), [listProgress, completedTodayListIds]);
+  const activeReading = useMemo(() => todaysReadings.find(r => r.listId === activeReadingListId) || null, [todaysReadings, activeReadingListId]);
   const completedToday = todaysReadings.filter((r) => r.completed).length;
   const isComplete = completedToday === 10;
 
@@ -196,7 +197,7 @@ const Index = () => {
                 key={reading.listId}
                 reading={reading}
                 onToggle={() => handleToggle(reading.listId)}
-                onOpenReader={() => setActiveReading(reading)}
+                onOpenReader={() => setActiveReadingListId(reading.listId)}
                 index={index}
               />
             ))}
@@ -225,7 +226,7 @@ const Index = () => {
       {activeReading && (
         <Reader
           isOpen={!!activeReading}
-          onOpenChange={(open) => !open && setActiveReading(null)}
+          onOpenChange={(open) => !open && setActiveReadingListId(null)}
           book={activeReading.book}
           chapter={activeReading.chapter}
           listName={activeReading.listName}
