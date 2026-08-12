@@ -152,6 +152,7 @@ const Index = () => {
               sublabel={streakCount === 1 ? "day" : "days"}
               accentColor="track-orange"
             />
+          </div>
           <div className="animate-slide-up" style={{ animationDelay: "300ms" }}>
             <StatsCard
               icon={<BookOpen className="w-5 h-5 text-track-blue" strokeWidth={1.5} aria-hidden="true" />}
@@ -160,6 +161,7 @@ const Index = () => {
               sublabel="read"
               accentColor="track-blue"
             />
+          </div>
           <div className="animate-slide-up" style={{ animationDelay: "400ms" }}>
             <StatsCard
               icon={<Calendar className="w-5 h-5 text-track-green" strokeWidth={1.5} aria-hidden="true" />}
@@ -168,6 +170,7 @@ const Index = () => {
               sublabel="reading day"
               accentColor="track-green"
             />
+          </div>
           <div className="animate-slide-up" style={{ animationDelay: "500ms" }}>
             <StatsCard
               icon={<TrendingUp className="w-5 h-5 text-track-purple" strokeWidth={1.5} aria-hidden="true" />}
