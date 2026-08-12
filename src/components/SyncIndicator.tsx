@@ -1,10 +1,11 @@
 import { Cloud, CloudOff, Loader2, RefreshCw, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SyncStatus } from "@/hooks/useCloudProgress";
+
+export type SyncStatus = "idle" | "syncing" | "error" | "local" | "offline";
 
 interface SyncIndicatorProps {
   isSyncing?: boolean;
-  isAuthenticated: boolean;
+  isAuthenticated?: boolean;
   status?: SyncStatus;
   lastSyncedAt?: Date | null;
   onRetry?: () => void;

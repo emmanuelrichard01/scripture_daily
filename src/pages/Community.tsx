@@ -191,7 +191,7 @@ const Community = () => {
   if (!user) {
     return (
       <div className="min-h-dvh bg-background pb-24 flex flex-col items-center justify-center p-6 text-center">
-        <Header left={<div className="font-serif text-xl font-bold">Community</div>} />
+        <Header left={<h1 className="font-heading text-xl font-semibold">Community</h1>} />
         <ShieldAlert className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
         <h2 className="text-xl font-semibold mb-2">Sign in Required</h2>
         <p className="text-muted-foreground max-w-sm mb-6">
@@ -204,9 +204,9 @@ const Community = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-24 text-foreground">
-      <Header left={<div className="font-serif text-xl font-bold">Community</div>} right={<UserProfile user={user} />} />
+      <Header left={<h1 className="font-heading text-xl font-semibold">Community</h1>} right={<UserProfile user={user} />} />
       
-      <main className="max-w-md mx-auto px-6 pt-24 fade-in">
+      <main className="max-w-md mx-auto px-6 py-6 fade-in">
         <div className="mb-8">
           <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -289,7 +289,7 @@ const Community = () => {
           ) : friends.length > 0 ? (
             <div className="grid gap-3">
               {friends.map(friend => {
-                const isTodayActive = friend.progress && friend.progress.last_read_date === format(new Date(), 'yyyy-MM-dd');
+                const isTodayActive = friend.progress && friend.progress.updated_at && format(new Date(friend.progress.updated_at), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
                 
                 return (
                   <div key={friend.friendshipId} className="flex items-center justify-between p-4 rounded-2xl glass-card relative overflow-hidden group">

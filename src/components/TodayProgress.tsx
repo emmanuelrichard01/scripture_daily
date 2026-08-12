@@ -4,14 +4,14 @@ import { pluralize } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TodayProgressProps {
-  completedCount: number;
-  totalCount: number;
+  completed: number;
+  total: number;
+  isComplete: boolean;
 }
 
-export function TodayProgress({ completedCount, totalCount }: TodayProgressProps) {
-  const progress = Math.round((completedCount / totalCount) * 100);
-  const isComplete = completedCount === totalCount;
-  const remaining = totalCount - completedCount;
+export function TodayProgress({ completed, total, isComplete }: TodayProgressProps) {
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const remaining = total - completed;
 
   return (
     <div className="surface-hero p-5 flex items-center gap-5 relative overflow-hidden">
@@ -50,10 +50,10 @@ export function TodayProgress({ completedCount, totalCount }: TodayProgressProps
                 className="flex items-baseline justify-center"
               >
                 <span className="text-2xl font-bold tabular-nums text-foreground tracking-tight">
-                  {completedCount}
+                  {completed}
                 </span>
                 <span className="text-muted-foreground text-sm font-medium tabular-nums ml-0.5">
-                  /{totalCount}
+                  /{total}
                 </span>
               </motion.div>
             )}
@@ -90,9 +90,9 @@ export function TodayProgress({ completedCount, totalCount }: TodayProgressProps
         <div
           className="mt-4 h-1.5 bg-secondary rounded-full overflow-hidden shadow-inner"
           role="progressbar"
-          aria-valuenow={completedCount}
+          aria-valuenow={completed}
           aria-valuemin={0}
-          aria-valuemax={totalCount}
+          aria-valuemax={total}
           aria-label="Chapters completed today"
         >
           <motion.div

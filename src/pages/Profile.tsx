@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,32 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowLeft,
   Camera,
   User,
-  Book,
   Save,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-const BIBLE_TRANSLATIONS = [
-  { value: "ESV", label: "ESV - English Standard Version" },
-  { value: "NIV", label: "NIV - New International Version" },
-  { value: "KJV", label: "KJV - King James Version" },
-  { value: "NKJV", label: "NKJV - New King James Version" },
-  { value: "NLT", label: "NLT - New Living Translation" },
-  { value: "NASB", label: "NASB - New American Standard" },
-  { value: "CSB", label: "CSB - Christian Standard Bible" },
-  { value: "RSV", label: "RSV - Revised Standard Version" },
-];
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -43,24 +26,7 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [preferredTranslation, setPreferredTranslation] = useState(() => {
-    try {
-      return localStorage.getItem("horner-preferred-translation") || "ESV";
-    } catch {
-      return "ESV";
-    }
-  });
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // Persist translation preference
-  const updateTranslation = (value: string) => {
-    setPreferredTranslation(value);
-    try {
-      localStorage.setItem("horner-preferred-translation", value);
-    } catch {
-      // Ignore storage errors
-    }
-  };
 
   // Load profile data
   useEffect(() => {
@@ -203,19 +169,20 @@ const Profile = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-xl hover:bg-secondary transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
-          </button>
-          <h1 className="text-lg font-semibold text-foreground">Edit Profile</h1>
-        </div>
-      </header>
+      <Header 
+        left={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-xl hover:bg-secondary transition-colors active:scale-95"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" />
+            </button>
+            <h1 className="text-xl font-heading font-semibold text-foreground">Edit Profile</h1>
+          </div>
+        }
+      />
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-6">
         {isLoading ? (
@@ -296,36 +263,6 @@ const Profile = () => {
                 />
               </div>
 
-              {/* Preferred Bible Translation */}
-              <div className="space-y-2">
-                <Label htmlFor="translation" className="text-sm font-medium">
-                  <span className="flex items-center gap-2">
-                    <Book className="w-4 h-4 text-muted-foreground" />
-                    Preferred Translation
-                  </span>
-                </Label>
-                <Select
-                  value={preferredTranslation}
-                  onValueChange={updateTranslation}
-                >
-                  <SelectTrigger 
-                    id="translation"
-                    className="h-12 rounded-xl bg-secondary border-0"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BIBLE_TRANSLATIONS.map((translation) => (
-                      <SelectItem key={translation.value} value={translation.value}>
-                        {translation.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  This preference can be used for future Bible text integration
-                </p>
-              </div>
             </div>
 
             {/* Save Button */}

@@ -15,7 +15,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        heading: ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

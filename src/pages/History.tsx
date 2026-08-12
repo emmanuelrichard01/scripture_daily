@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { ShareableProgressCard } from "@/components/ShareableProgressCard";
@@ -143,14 +144,14 @@ const History = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-[88px]">
-      <header className="sticky top-0 z-40 glass border-b border-border/50 shadow-sm">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight text-foreground">
-            History
-          </h1>
+      <Header 
+        left={
+          <h1 className="text-xl font-heading font-semibold text-foreground">History</h1>
+        }
+        right={
           <button
             onClick={() => setShowShareCard(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors focus-ring"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors focus-ring active:scale-95"
             aria-label="Share progress"
             aria-haspopup="dialog"
             aria-expanded={showShareCard}
@@ -158,8 +159,8 @@ const History = () => {
             <Share2 className="w-4 h-4" aria-hidden="true" />
             <span className="text-xs font-semibold">Share</span>
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-lg mx-auto px-5 py-6 flex-1 flex flex-col">
         {totalChaptersRead === 0 ? (

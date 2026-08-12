@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { useCycleMilestones } from "@/hooks/useCycleMilestones";
@@ -84,18 +85,20 @@ export default function Milestones() {
 
   return (
     <div className="min-h-dvh bg-background pb-20">
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 -ml-2 rounded-xl tap-target flex items-center justify-center hover:bg-secondary transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5 text-foreground" aria-hidden="true" />
-          </button>
-          <h1 className="text-lg font-semibold text-foreground">Milestones</h1>
-        </div>
-      </header>
+      <Header 
+        left={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-xl tap-target flex items-center justify-center hover:bg-secondary transition-colors active:scale-95"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" aria-hidden="true" />
+            </button>
+            <h1 className="text-xl font-heading font-semibold text-foreground">Milestones</h1>
+          </div>
+        }
+      />
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-6" aria-label="Reading milestones">
         <section className="surface-hero p-4" aria-label="Overview">

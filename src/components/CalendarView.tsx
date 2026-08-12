@@ -12,6 +12,7 @@ export function CalendarView({
   isDayComplete,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
   const today = useMemo(() => new Date(), []);
 
   const { year, month, days, firstDayOfWeek } = useMemo(() => {
@@ -58,13 +59,15 @@ export function CalendarView({
 
   const monthName = currentDate.toLocaleString("default", { month: "long" });
 
-  const getIntensityClass = (intensity: number) => {
+  const getIntensityClass = (intensity: number, isFuture: boolean) => {
+    if (isFuture) return "bg-transparent border border-dashed border-border text-muted-foreground/30";
+    
     switch (intensity) {
       case 4: return "bg-primary text-primary-foreground font-bold shadow-sm";
-      case 3: return "bg-primary/80 text-primary-foreground font-semibold";
+      case 3: return "bg-primary/75 text-primary-foreground font-semibold";
       case 2: return "bg-primary/50 text-foreground font-medium";
-      case 1: return "bg-primary/30 text-foreground/80";
-      default: return "bg-secondary/50 text-foreground/50";
+      case 1: return "bg-primary/25 text-foreground/80";
+      default: return "bg-secondary/40 text-foreground/40";
     }
   };
 
@@ -106,35 +109,55 @@ export function CalendarView({
           <div key={`empty-${i}`} />
         ))}
 
-        {days.map((dayInfo, i) => (
-          <div
-            key={i}
-            className="group relative flex justify-center"
-          >
+        {days.map((dayInfo, i) => {
+          const isFuture = !dayInfo.isPast && !dayInfo.isToday;
+          return (
             <div
-              className={cn(
-                "w-full aspect-square rounded-xl flex items-center justify-center text-xs transition-all duration-300",
-                getIntensityClass(dayInfo.intensity),
-                dayInfo.isToday && !dayInfo.isComplete && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                !dayInfo.isPast && !dayInfo.isToday && "opacity-40",
-              )}
-              role="img"
-              aria-label={`${monthName} ${dayInfo.date}, ${year}: ${dayInfo.completed} chapters read`}
+              key={i}
+              className="relative flex justify-center"
             >
-              {dayInfo.date}
+              <button
+                className={cn(
+                  "w-full aspect-square rounded-xl flex items-center justify-center text-xs transition-all duration-300",
+                  getIntensityClass(dayInfo.intensity, isFuture),
+                  dayInfo.isToday && !dayInfo.isComplete && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                )}
+                onClick={() => {
+                  if (dayInfo.completed > 0) {
+                    setActiveTooltip(activeTooltip === dayInfo.date ? null : dayInfo.date);
+                  }
+                }}
+                onBlur={() => setActiveTooltip(null)}
+                disabled={isFuture}
+                aria-label={`${monthName} ${dayInfo.date}, ${year}: ${dayInfo.completed} chapters read`}
+              >
+                {dayInfo.date}
+              </button>
+              
+              {/* Tooltip (shows on tap for mobile, or hover on desktop if we kept group-hover, but we use state for both to be consistent) */}
+              {dayInfo.completed > 0 && activeTooltip === dayInfo.date && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-popover text-popover-foreground text-[11px] font-semibold rounded-lg shadow-lg z-20 border border-border/50 whitespace-nowrap pointer-events-none animate-fade-in">
+                  {dayInfo.completed} {pluralize(dayInfo.completed, "chapter")}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-border/50" />
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-popover mt-[-1px]" />
+                </div>
+              )}
             </div>
-            
-            {/* Tooltip */}
-            {dayInfo.completed > 0 && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-popover text-popover-foreground text-xs font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg z-10 border border-border">
-                {dayInfo.completed} {pluralize(dayInfo.completed, "chapter")}
-                {/* Arrow */}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-border" />
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-popover mt-[-1px]" />
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-2 mt-6 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <span>Less</span>
+        <div className="flex gap-1">
+          <div className="w-3 h-3 rounded bg-secondary/40" />
+          <div className="w-3 h-3 rounded bg-primary/25" />
+          <div className="w-3 h-3 rounded bg-primary/50" />
+          <div className="w-3 h-3 rounded bg-primary/75" />
+          <div className="w-3 h-3 rounded bg-primary" />
+        </div>
+        <span>More</span>
       </div>
     </div>
   );

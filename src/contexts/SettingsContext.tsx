@@ -189,21 +189,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.theme]);
 
-  const updateSettings = useCallback((updates: Partial<Settings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...updates };
-      // Call saveAndSync inside setState is bad pattern, instead we do it locally or 
-      // better yet just return new state and use a separate function.
-      return next;
-    });
-  }, []);
-
-  // Persist to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  }, [settings]);
-
-  // Alternative to fixing the setState async issue:
   // We use a wrapper function that handles both.
   const updateSettingsSync = useCallback((updates: Partial<Settings>) => {
     const newSettings = { ...settingsRef.current, ...updates };

@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { useNavigate } from "react-router-dom";
+import { Header } from "@/components/Header";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { readingLists } from "@/lib/readingPlan";
-import { ChevronDown, Check, BookOpen, Trophy } from "lucide-react";
+import { ChevronDown, Check, Trophy, ArrowLeft } from "lucide-react";
 import { cn, pluralize } from "@/lib/utils";
 import {
   Collapsible,
@@ -13,7 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAudio } from "@/hooks/useAudio";
 import { useHaptics } from "@/hooks/useHaptics";
 
-const Lists = () => {
+export function Lists() {
+  const navigate = useNavigate();
   const { listProgress, completedTodayListIds, toggleComplete } = useCloudProgress();
   const [expandedLists, setExpandedLists] = useState<Set<number>>(new Set());
   const { playBloop, playTada } = useAudio();
@@ -86,17 +88,25 @@ const Lists = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-[88px]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 glass border-b border-border/50 shadow-sm">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold tracking-tight text-foreground">
-            Reading Tracks
-          </h1>
+      <Header 
+        left={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-xl tap-target flex items-center justify-center hover:bg-secondary transition-colors active:scale-95"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-foreground" aria-hidden="true" />
+            </button>
+            <h1 className="text-xl font-heading font-semibold text-foreground">Reading Tracks</h1>
+          </div>
+        }
+        right={
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             10 Lists
           </span>
-        </div>
-      </header>
+        }
+      />
 
       <main className="max-w-lg mx-auto px-5 py-6">
         <p className="text-sm font-medium text-muted-foreground mb-6">

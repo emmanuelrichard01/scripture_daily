@@ -33,6 +33,8 @@ export interface ProgressContextValue {
   lastSyncedAt: Date | null;
   retrySync: () => void;
   isAuthenticated: boolean;
+  resetProgress: () => void;
+  updateStartDate: (newDate: string) => void;
 }
 
 export const ProgressContext = createContext<ProgressContextValue | null>(null);
@@ -337,7 +339,30 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     pushToCloud(progressRef.current);
   }, [pushToCloud]);
 
-  const value = {
+  const resetProgress = useCallback(() => {
+    const freshState = getDefaultProgress();
+    setProgress(freshState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(freshState));
+    if (user) {
+      pushToCloud(freshState);
+    }
+  }, [user, pushToCloud]);
+
+  const updateStartDate = useCallback((newDate: string) => {
+    setProgress((prev) => {
+      const newState: ProgressState = { ...prev, startDate: newDate };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+      if (user) {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = setTimeout(() => {
+          pushToCloud(newState);
+        }, 1500);
+      }
+      return newState;
+    });
+  }, [user, pushToCloud]);
+
+  const value: ProgressContextValue = {
     history: progress.history,
     totalChaptersRead,
     streakCount,
@@ -351,6 +376,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     lastSyncedAt,
     retrySync,
     isAuthenticated: !!user,
+    resetProgress,
+    updateStartDate,
   };
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;

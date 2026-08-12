@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface ShareableProgressCardProps {
-  isOpen: boolean;
+  streak: number;
+  totalChapters: number;
   onClose: () => void;
 }
 
-export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCardProps) {
+export function ShareableProgressCard({ streak, totalChapters, onClose }: ShareableProgressCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { listProgress, totalChaptersRead, streakCount, startDate } = useCloudProgress();
@@ -104,7 +105,6 @@ export function ShareableProgressCard({ isOpen, onClose }: ShareableProgressCard
     }
   };
 
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">

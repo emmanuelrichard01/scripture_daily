@@ -24,9 +24,9 @@ export function ReadingCard({ reading, onToggle, onOpenReader, index }: ReadingC
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.97 }}
       className={cn(
-        "w-full group relative flex items-center gap-4 p-4 rounded-2xl border text-left min-h-[72px] focus-ring overflow-hidden",
+        "w-full group relative flex items-center gap-4 p-4 rounded-2xl border text-left min-h-[76px] focus-ring overflow-hidden",
         reading.completed
-          ? "bg-success/5 border-success/20 shadow-sm"
+          ? "bg-success/10 border-success/30 shadow-sm"
           : "glass-card hover:shadow-md transition-shadow"
       )}
       onClick={onOpenReader || onToggle}
@@ -79,7 +79,7 @@ export function ReadingCard({ reading, onToggle, onOpenReader, index }: ReadingC
               initial={{ scale: 0, rotate: -45 }}
               animate={{ scale: 1, rotate: 0 }}
               exit={{ scale: 0, rotate: 45 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
             >
               <Check className="w-5 h-5" strokeWidth={2.5} />
             </motion.div>
@@ -99,12 +99,12 @@ export function ReadingCard({ reading, onToggle, onOpenReader, index }: ReadingC
 
       {/* Reading details */}
       <div className="flex-1 min-w-0 z-10">
-        <span className="text-label">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 mb-0.5 block">
           {reading.listName}
         </span>
         <h3
           className={cn(
-            "font-semibold text-base transition-colors",
+            "font-heading font-semibold text-lg transition-colors leading-tight",
             reading.completed ? "text-success" : "text-foreground"
           )}
         >
@@ -115,8 +115,8 @@ export function ReadingCard({ reading, onToggle, onOpenReader, index }: ReadingC
       {/* Mark as read text */}
       <span
         className={cn(
-          "text-xs font-semibold uppercase tracking-wider transition-colors z-10",
-          reading.completed ? "text-success" : "text-muted-foreground"
+          "text-[10px] font-bold uppercase tracking-wider transition-colors z-10",
+          reading.completed ? "text-success/80" : "text-muted-foreground/60 group-hover:text-primary/70"
         )}
         aria-hidden="true"
       >

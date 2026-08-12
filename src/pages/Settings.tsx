@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BottomNav } from "@/components/BottomNav";
+import { Header } from "@/components/Header";
 import { SettingsSection, SettingsRow } from "@/components/SettingsSection";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { StartDatePicker } from "@/components/StartDatePicker";
@@ -60,12 +61,12 @@ const Settings = () => {
   const { cycleStats, totalStats } = useCycleMilestones(listProgress);
   const { user, signOut } = useAuth();
   const { isDarkNow } = useAutoTheme();
-  const { isSupported: pushSupported, permission: pushPermission, requestPermission: requestPushPermission, sendTestNotification } = usePushNotifications();
+  const { isSupported: pushSupported, permission: pushPermission, requestPermission: requestPushPermission } = usePushNotifications();
   const [showResetDialog, setShowResetDialog] = useState(false);
 
   const handleExportData = () => {
     const data = {
-      progress: localStorage.getItem("horner-reading-progress"),
+      progress: localStorage.getItem("scripture-daily-progress-v2"),
       settings: localStorage.getItem("horner-settings"),
       exportedAt: new Date().toISOString(),
     };
@@ -104,7 +105,6 @@ const Settings = () => {
     const result = await requestPushPermission();
     if (result.success) {
       toast.success("Notifications enabled!");
-      sendTestNotification();
     } else {
       toast.error(result.error || "Could not enable notifications");
     }
@@ -124,14 +124,7 @@ const Settings = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="max-w-lg mx-auto px-5 h-14 flex items-center">
-          <h1 className="text-lg font-semibold text-foreground">
-            Settings
-          </h1>
-        </div>
-      </header>
+      <Header left={<h1 className="text-xl font-heading font-semibold text-foreground">Settings</h1>} />
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-5" role="main" aria-label="Settings">
         {/* User Profile Card */}
@@ -214,29 +207,6 @@ const Settings = () => {
 
         {/* Reading Settings */}
         <SettingsSection title="Reading">
-          <SettingsRow
-            label="Bible Translation"
-            description="Select your preferred version"
-            action={
-              <Select
-                value={settings.preferredVersion}
-                onValueChange={(value) => updateSettings({ preferredVersion: value })}
-              >
-                <SelectTrigger className="w-36 h-11 border-0 bg-secondary" aria-label="Select translation">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ESV">ESV</SelectItem>
-                  <SelectItem value="NLT">NLT</SelectItem>
-                  <SelectItem value="NIV">NIV</SelectItem>
-                  <SelectItem value="NASB">NASB</SelectItem>
-                  <SelectItem value="LSB">LSB</SelectItem>
-                  <SelectItem value="WEB">WEB</SelectItem>
-                  <SelectItem value="KJV">KJV</SelectItem>
-                </SelectContent>
-              </Select>
-            }
-          />
           <StartDatePicker 
             currentStartDate={startDate}
             onUpdateStartDate={updateStartDate}

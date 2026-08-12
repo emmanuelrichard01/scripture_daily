@@ -30,7 +30,6 @@ const Index = () => {
   const { triggerHaptic } = useHaptics();
   const { playBloop, playTada } = useAudio();
   const { showOnboarding, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
-  const [announcement, setAnnouncement] = useState("");
   const [activeReading, setActiveReading] = useState<TodayReading | null>(null);
 
   const {
@@ -61,11 +60,18 @@ const Index = () => {
   const daysSinceStart = Math.max(1, Math.floor((today.getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)));
   const avgPerDay = (totalChaptersRead / daysSinceStart).toFixed(1);
 
-  // Check for milestones
-  useMilestoneAcknowledgements(streakCount, totalChaptersRead, (msg) => {
-    setAnnouncement(msg);
-    setTimeout(() => setAnnouncement(""), 4000);
-  });
+  // Time of day greeting
+  const hour = new Date().getHours();
+  let greeting = "Good evening";
+  if (hour < 12) greeting = "Good morning";
+  else if (hour < 17) greeting = "Good afternoon";
+
+  const firstName = user?.user_metadata?.full_name?.split(" ")[0] || 
+                    user?.user_metadata?.name?.split(" ")[0] || 
+                    "Reader";
+
+  // Check for milestones (uses toast internally)
+  useMilestoneAcknowledgements(listProgress);
 
   const handleToggle = (listId: number) => {
     // Only play sounds/haptics if we are checking it, not unchecking it
@@ -115,33 +121,30 @@ const Index = () => {
         }
       />
       
-      <main className="max-w-md mx-auto px-6 pt-24 fade-in">
+      <main className="max-w-md mx-auto px-6 py-6 fade-in">
         <header className="mb-8" aria-label="Date and progress summary">
-          <div className="flex flex-col gap-1 mb-6">
-            <h1 className="text-3xl font-serif text-foreground tracking-tight">
-              {formattedDate}
+          <div className="flex flex-col gap-1.5 mb-6">
+            <h1 className="text-3xl font-heading font-semibold text-foreground tracking-tight">
+              {greeting}, {firstName}
             </h1>
-            <p className="text-muted-foreground flex items-center gap-2">
+            <p className="text-muted-foreground font-medium flex items-center gap-2">
               <Calendar className="w-4 h-4" aria-hidden="true" />
-              Day {dayOfYear} of the year
+              {formattedDate} &middot; Day {readingDay}
             </p>
-            {announcement && (
-              <p className="text-sm font-medium text-success animate-fade-in" role="status" aria-live="polite">
-                {announcement}
-              </p>
-            )}
           </div>
           
-          <TodayProgress 
-            completed={completedToday} 
-            total={10} 
-            isComplete={isComplete}
-          />
+          <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+            <TodayProgress 
+              completed={completedToday} 
+              total={10} 
+              isComplete={isComplete}
+            />
+          </div>
         </header>
 
         {/* Stats Row */}
         <div className="grid grid-cols-2 gap-3 mb-8" role="region" aria-label="Reading statistics">
-          <div className="animate-slide-up" style={{ animationDelay: "50ms" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
             <StatsCard
               icon={<Flame className="w-5 h-5 text-track-orange" strokeWidth={1.5} aria-hidden="true" />}
               label="Streak"
@@ -149,8 +152,7 @@ const Index = () => {
               sublabel={streakCount === 1 ? "day" : "days"}
               accentColor="track-orange"
             />
-          </div>
-          <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "300ms" }}>
             <StatsCard
               icon={<BookOpen className="w-5 h-5 text-track-blue" strokeWidth={1.5} aria-hidden="true" />}
               label="Chapters"
@@ -158,8 +160,7 @@ const Index = () => {
               sublabel="read"
               accentColor="track-blue"
             />
-          </div>
-          <div className="animate-slide-up" style={{ animationDelay: "150ms" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "400ms" }}>
             <StatsCard
               icon={<Calendar className="w-5 h-5 text-track-green" strokeWidth={1.5} aria-hidden="true" />}
               label="Day"
@@ -167,8 +168,7 @@ const Index = () => {
               sublabel="reading day"
               accentColor="track-green"
             />
-          </div>
-          <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "500ms" }}>
             <StatsCard
               icon={<TrendingUp className="w-5 h-5 text-track-purple" strokeWidth={1.5} aria-hidden="true" />}
               label="Average"
@@ -180,43 +180,34 @@ const Index = () => {
         </div>
 
         {/* Today's readings list */}
-        <section className="mb-6" aria-labelledby="todays-chapters-heading">
-          <div className="flex items-center justify-between mb-3">
-            <h2 id="todays-chapters-heading" className="text-sm font-semibold text-foreground">
+        <section className="mb-8" aria-labelledby="todays-chapters-heading">
+          <div className="flex items-center justify-between mb-4">
+            <h2 id="todays-chapters-heading" className="text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
               Today's Chapters
             </h2>
-            <span className="text-xs text-muted-foreground" aria-hidden="true">
-              Day {readingDay}
-            </span>
           </div>
 
-          <div className="space-y-2" role="list" aria-label="Reading list">
+          <div className="space-y-2.5 animate-stagger" role="list" aria-label="Reading list">
             {todaysReadings.map((reading, index) => (
-              <div
+              <ReadingCard
                 key={reading.listId}
-                className="animate-slide-up"
-                style={{ animationDelay: `${250 + index * 30}ms` }}
-                role="listitem"
-              >
-                <ReadingCard
-                  reading={reading}
-                  onToggle={() => handleToggle(reading.listId)}
-                  onOpenReader={() => setActiveReading(reading)}
-                  index={index}
-                />
-              </div>
+                reading={reading}
+                onToggle={() => handleToggle(reading.listId)}
+                onOpenReader={() => setActiveReading(reading)}
+                index={index}
+              />
             ))}
           </div>
         </section>
 
         {/* Calendar */}
         <section className="mb-6" aria-labelledby="calendar-heading">
-          <div className="mb-3">
-            <h2 id="calendar-heading" className="text-sm font-semibold text-foreground">
-              Calendar
+          <div className="mb-4">
+            <h2 id="calendar-heading" className="text-[13px] font-bold uppercase tracking-wider text-muted-foreground">
+              Activity History
             </h2>
           </div>
-          <div className="animate-scale-in" style={{ animationDelay: "400ms" }}>
+          <div className="animate-scale-in" style={{ animationDelay: "600ms" }}>
             <CalendarView
               getCompletedForDay={getCompletedForDay}
               isDayComplete={isDayComplete}

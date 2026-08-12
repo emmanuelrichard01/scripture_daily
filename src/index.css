@@ -90,6 +90,27 @@
     --duration-base: 250ms;
     --duration-slow: 400ms;
 
+    /* ── Spacing scale (4px grid) ── */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    /* ── Glass properties ── */
+    --glass-bg: hsl(40 30% 97% / 0.78);
+    --glass-border: hsl(35 16% 89% / 0.5);
+    --glass-blur: 20px;
+
+    /* ── Reader typography ── */
+    --reader-font: 'Georgia', 'Times New Roman', serif;
+    --reader-line-height: 1.85;
+    --reader-font-size: 1.125rem;
+
     /* Sidebar */
     --sidebar-background: 40 30% 97%;
     --sidebar-foreground: 230 20% 26%;
@@ -102,26 +123,27 @@
   }
 
   .dark {
-    /* ── Dark theme: deep navy with indigo glow ── */
+    /* ── Dark theme: deep navy — improved contrast ── */
     --background: 230 22% 7%;
     --foreground: 220 15% 94%;
 
-    --card: 230 20% 10%;
+    /* FIXED: increased card lightness delta from 3% to 6% for visible distinction */
+    --card: 230 20% 13%;
     --card-foreground: 220 15% 94%;
 
-    --popover: 230 20% 10%;
+    --popover: 230 20% 13%;
     --popover-foreground: 220 15% 94%;
 
     --primary: 234 65% 65%;
     --primary-foreground: 230 22% 7%;
 
-    --secondary: 230 18% 14%;
+    --secondary: 230 18% 16%;
     --secondary-foreground: 220 12% 88%;
 
-    --muted: 230 18% 14%;
+    --muted: 230 16% 18%;
     --muted-foreground: 220 10% 56%;
 
-    --accent: 230 18% 17%;
+    --accent: 230 18% 19%;
     --accent-foreground: 220 12% 88%;
 
     --success: 152 50% 52%;
@@ -130,8 +152,8 @@
     --destructive: 4 62% 58%;
     --destructive-foreground: 220 15% 94%;
 
-    --border: 230 18% 16%;
-    --input: 230 18% 16%;
+    --border: 230 16% 20%;
+    --input: 230 16% 20%;
     --ring: 234 65% 65%;
 
     /* Dark track colors — brighter for contrast */
@@ -152,16 +174,16 @@
     --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.4), 0 4px 8px hsl(0 0% 0% / 0.3);
     --shadow-glow: 0 0 24px hsl(234 65% 65% / 0.15);
 
-    --surface-raised: 230 20% 10%;
+    --surface-raised: 230 20% 13%;
     --surface-sunken: 230 22% 5%;
     --gradient-hero: linear-gradient(
       145deg,
-      hsl(230 20% 12%) 0%,
-      hsl(230 22% 8%) 100%
+      hsl(230 20% 15%) 0%,
+      hsl(230 22% 10%) 100%
     );
     --gradient-quiet: linear-gradient(
       180deg,
-      hsl(230 20% 12% / 0.9) 0%,
+      hsl(230 20% 14% / 0.9) 0%,
       hsl(230 22% 8% / 0.6) 100%
     );
     --gradient-accent: linear-gradient(
@@ -169,6 +191,11 @@
       hsl(234 65% 65%) 0%,
       hsl(268 56% 64%) 100%
     );
+
+    /* ── Dark glass — stronger for legibility ── */
+    --glass-bg: hsl(230 22% 7% / 0.85);
+    --glass-border: hsl(230 16% 20% / 0.6);
+    --glass-blur: 24px;
 
     --sidebar-background: 230 20% 8%;
     --sidebar-foreground: 220 12% 88%;
@@ -192,6 +219,7 @@
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   /* Headings get the display font */
@@ -249,11 +277,17 @@
 
   /* ── Glassmorphism surfaces ── */
   .glass {
-    @apply bg-background/80 backdrop-blur-xl;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
   }
 
   .glass-card {
-    @apply bg-card/70 backdrop-blur-lg border border-border/50 rounded-2xl;
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    @apply rounded-2xl;
     box-shadow: var(--shadow-sm);
   }
 
@@ -291,6 +325,35 @@
   .skeleton {
     @apply rounded-xl bg-muted animate-pulse motion-reduce:animate-none;
   }
+
+  /* ── Standardized page header ── */
+  .page-header {
+    @apply sticky top-0 z-40 border-b border-border/50;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+
+  .page-header-inner {
+    @apply max-w-lg mx-auto px-5 h-14 flex items-center gap-3;
+  }
+
+  /* ── Reader typography ── */
+  .reader-text {
+    font-family: var(--reader-font);
+    font-size: var(--reader-font-size);
+    line-height: var(--reader-line-height);
+    text-rendering: optimizeLegibility;
+    word-spacing: 0.02em;
+    @apply text-foreground;
+  }
+
+  .reader-verse-number {
+    @apply text-[11px] font-sans font-semibold text-muted-foreground/70 select-none;
+    vertical-align: super;
+    margin-right: 0.15em;
+    letter-spacing: -0.02em;
+  }
 }
 
 
@@ -302,6 +365,7 @@
 
   .animate-slide-up {
     animation: slide-up 0.35s var(--ease-spring);
+    animation-fill-mode: both;
   }
 
   .animate-scale-in {
@@ -312,11 +376,27 @@
     animation: glow-pulse 2s ease-in-out infinite;
   }
 
+  /* Staggered fade-in for lists */
+  .animate-stagger > * {
+    animation: slide-up 0.4s var(--ease-spring) both;
+  }
+  .animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .animate-stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .animate-stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .animate-stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .animate-stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .animate-stagger > *:nth-child(6) { animation-delay: 300ms; }
+  .animate-stagger > *:nth-child(7) { animation-delay: 360ms; }
+  .animate-stagger > *:nth-child(8) { animation-delay: 420ms; }
+  .animate-stagger > *:nth-child(9) { animation-delay: 480ms; }
+  .animate-stagger > *:nth-child(10) { animation-delay: 540ms; }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in,
     .animate-slide-up,
     .animate-scale-in,
-    .animate-glow-pulse {
+    .animate-glow-pulse,
+    .animate-stagger > * {
       animation: none;
     }
   }
@@ -333,7 +413,7 @@
   @keyframes slide-up {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;

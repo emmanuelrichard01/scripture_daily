@@ -48,6 +48,18 @@ export function Reader({
   const { settings, updateSettings } = useSettings();
   const preferredVersion = settings.preferredVersion || "ESV";
 
+  // Scroll to top when verses change
+  useEffect(() => {
+    if (verses.length > 0) {
+      setTimeout(() => {
+        const viewport = document.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+    }
+  }, [verses]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -104,17 +116,20 @@ export function Reader({
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="h-[90vh] flex flex-col bg-background/95 backdrop-blur-xl border-t">
-        <DrawerHeader className="text-left pb-2 shrink-0 border-b flex flex-row items-start justify-between pr-4">
+        {/* Visual handle indicator */}
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted-foreground/20" />
+        
+        <DrawerHeader className="text-left pb-4 shrink-0 border-b border-border/50 flex flex-row items-start justify-between pr-4 mt-2">
           <div>
-            <DrawerTitle className="text-2xl font-serif text-foreground flex items-center gap-2">
+            <DrawerTitle className="text-2xl font-heading font-semibold text-foreground flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-primary" />
               {book} {chapter}
             </DrawerTitle>
-            <DrawerDescription className="text-sm font-medium text-muted-foreground mt-1">
+            <DrawerDescription className="text-[13px] font-medium text-muted-foreground mt-1 tracking-wide uppercase">
               {listName}
             </DrawerDescription>
           </div>
-          <div className="pt-1">
+          <div className="pt-0.5">
             <Select
               value={preferredVersion}
               onValueChange={(value) => {
@@ -150,16 +165,16 @@ export function Reader({
           )}
 
           {!isLoading && !error && verses.length > 0 && (
-            <div className="max-w-2xl mx-auto pb-10">
+            <div className="max-w-2xl mx-auto pb-10 pt-2">
               <div className="space-y-4">
-                <p className="text-lg leading-relaxed text-foreground font-serif">
+                <p className="reader-text">
                   {verses.map((v) => (
                     <span key={v.verse}>
-                      <sup className="text-xs text-muted-foreground font-sans mr-1 select-none">
+                      <span className="reader-verse-number">
                         {v.verse}
-                      </sup>
-                      {/* Bolls API text sometimes contains HTML tags, but usually clean text. We can render it safely. */}
-                      <span dangerouslySetInnerHTML={{ __html: v.text }} />
+                      </span>
+                      {/* Strip any HTML from the API response to prevent XSS */}
+                      {v.text.replace(/<[^>]*>/g, '')}
                       {' '}
                     </span>
                   ))}

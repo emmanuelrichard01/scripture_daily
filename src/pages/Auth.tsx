@@ -5,7 +5,8 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { BookOpen, LogIn, Mail, ArrowLeft, Loader2, KeyRound } from "lucide-react";
+import { Header } from "@/components/Header";
 import { toast } from "sonner";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -141,20 +142,19 @@ const Auth = () => {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-3xl" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-track-blue/5 blur-3xl" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/50 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
+      <Header
+        left={
           <button
             onClick={() => {
               triggerHaptic("light");
               navigate("/");
             }}
-            className="p-2.5 -ml-2.5 rounded-full hover:bg-secondary active:scale-95 transition-all text-foreground/80 hover:text-foreground"
+            className="p-2 -ml-2 rounded-xl hover:bg-secondary active:scale-95 transition-all text-foreground/80 hover:text-foreground"
           >
             <ArrowLeft className="w-5 h-5" strokeWidth={2} />
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <main className="flex-1 flex flex-col justify-center max-w-lg mx-auto w-full px-6 py-8 relative z-10">
         <motion.div

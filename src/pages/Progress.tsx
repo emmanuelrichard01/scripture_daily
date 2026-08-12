@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { ListProgressCard } from "@/components/ListProgressCard";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
@@ -58,14 +59,7 @@ const Progress = () => {
 
   return (
     <div className="min-h-dvh bg-background pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-lg mx-auto px-5 h-16 flex items-center">
-          <h1 className="text-xl font-semibold text-foreground">
-            Reading Progress
-          </h1>
-        </div>
-      </header>
+      <Header left={<h1 className="text-xl font-heading font-semibold text-foreground">Reading Progress</h1>} />
 
       <main className="max-w-lg mx-auto px-5 py-6">
         {/* Summary Stats */}

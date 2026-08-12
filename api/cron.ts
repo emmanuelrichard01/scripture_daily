@@ -23,7 +23,7 @@ export default async function handler(req: Request) {
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY as string;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
   
   if (!supabaseUrl || !supabaseKey) {
     return new Response("Missing Supabase credentials", { status: 500 });
