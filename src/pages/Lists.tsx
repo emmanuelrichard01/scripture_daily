@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { BottomNav } from "@/components/BottomNav";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { readingLists } from "@/lib/readingPlan";
 import { ChevronDown, Check, Trophy, ArrowLeft, BookOpen } from "lucide-react";
