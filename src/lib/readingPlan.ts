@@ -307,10 +307,28 @@ export const hornerFacts = [
 
 // Reading Tips
 export const readingTips = [
-  "Read at the same time each day to build a lasting habit.",
-  "Don't worry about perfect comprehension—let Scripture wash over you.",
-  "If you miss a day, simply continue where you left off.",
-  "Consider reading aloud to engage more of your senses.",
-  "Keep a simple journal to note recurring themes you observe.",
-  "The goal is consistency, not speed. Take your time.",
+  {
+    title: "Build a Lasting Habit",
+    description: "Read at the same time each day to build a lasting habit."
+  },
+  {
+    title: "Focus on the Big Picture",
+    description: "Don't worry about perfect comprehension—let Scripture wash over you."
+  },
+  {
+    title: "No Guilt in Missing",
+    description: "If you miss a day, simply continue where you left off."
+  },
+  {
+    title: "Engage Your Senses",
+    description: "Consider reading aloud to engage more of your senses."
+  },
+  {
+    title: "Track Your Insights",
+    description: "Keep a simple journal to note recurring themes you observe."
+  },
+  {
+    title: "Consistency Over Speed",
+    description: "The goal is consistency, not speed. Take your time."
+  }
 ];

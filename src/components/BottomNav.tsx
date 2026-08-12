@@ -17,7 +17,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/50 safe-area-bottom shadow-[0_-8px_32px_hsl(0,0%,0%,0.04)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50 safe-area-bottom shadow-[0_-8px_32px_hsl(0,0%,0%,0.04)]"
       role="navigation"
       aria-label="Main navigation"
     >
