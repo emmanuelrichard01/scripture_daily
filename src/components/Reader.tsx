@@ -140,7 +140,7 @@ export function Reader({
               <SelectTrigger className="w-24 h-8 text-xs border-0 bg-secondary" aria-label="Translation">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent portal={false}>
+              <SelectContent portal={false} data-vaul-no-drag>
                 {AVAILABLE_VERSIONS.map((v) => (
                   <SelectItem key={v.id} value={v.id}>{v.id}</SelectItem>
                 ))}
