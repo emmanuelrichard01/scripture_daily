@@ -12,14 +12,14 @@ export function SettingsSection({
   children,
 }: SettingsSectionProps) {
   return (
-    <div className="card-elevated overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    <div className="card-elevated overflow-hidden border border-border/60 shadow-sm">
+      <div className="px-4 py-3 bg-secondary/30 border-b border-border/40">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
         {description && (
-          <p className="text-2xs text-muted-foreground mt-0.5">{description}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">{description}</p>
         )}
       </div>
-      <div className="divide-y divide-border">{children}</div>
+      <div className="divide-y divide-border/40">{children}</div>
     </div>
   );
 }

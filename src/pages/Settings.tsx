@@ -128,23 +128,36 @@ const Settings = () => {
 
       <main className="max-w-lg mx-auto px-5 py-6 space-y-5" role="main" aria-label="Settings">
         {/* User Profile Card */}
-        {user && (
+        {user ? (
           <Link 
             to="/profile" 
-            className="card-elevated p-4 block hover:bg-secondary/30 transition-colors"
+            className="card-elevated p-5 block hover:bg-secondary/40 transition-all border border-border/60 shadow-md relative overflow-hidden group"
             aria-label="Edit profile"
           >
-            <div className="flex items-center justify-between">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
+            <div className="flex items-center justify-between relative z-10">
               <UserProfile size="lg" showGreeting={true} />
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-track-green">
-                  <Cloud className="w-4 h-4" aria-hidden="true" />
-                  <span className="text-2xs font-medium">Synced</span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-track-green/10 text-track-green border border-track-green/20">
+                  <Cloud className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span className="text-[11px] font-bold">Cloud Synced</span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
               </div>
             </div>
           </Link>
+        ) : (
+          <div className="card-elevated p-5 bg-gradient-to-br from-primary/10 via-background to-secondary/30 border border-primary/20 shadow-md flex items-center justify-between">
+            <div>
+              <h3 className="font-heading font-bold text-foreground text-base">Sync Your Reading Progress</h3>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">Create a free account to back up streaks & history</p>
+            </div>
+            <Link to="/auth">
+              <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-sm hover:bg-primary/90">
+                Sign In
+              </Button>
+            </Link>
+          </div>
         )}
 
         {/* Account Section */}
@@ -390,29 +403,29 @@ const Settings = () => {
           />
         </SettingsSection>
 
-        {/* Stats Summary */}
-        <div className="card-elevated p-4 bg-gradient-to-br from-track-blue/5 to-track-purple/5" role="region" aria-label="Your progress summary">
-          <p className="text-2xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-            Your Progress
+        {/* Stats Summary Widget */}
+        <div className="card-elevated p-5 bg-gradient-to-br from-track-blue/10 via-background to-track-purple/10 border border-border/80 shadow-md relative overflow-hidden" role="region" aria-label="Your progress summary">
+          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-4">
+            Reading Lifetime Summary
           </p>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-2xl font-semibold text-foreground">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
+              <p className="text-2xl font-heading font-bold text-foreground">
                 {totalChaptersRead}
               </p>
-              <p className="text-2xs text-muted-foreground">chapters</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Chapters</p>
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-foreground">
+            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
+              <p className="text-2xl font-heading font-bold text-track-orange">
                 {streakCount}
               </p>
-              <p className="text-2xs text-muted-foreground">day streak</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Day Streak</p>
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-foreground">
+            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
+              <p className="text-2xl font-heading font-bold text-track-yellow">
                 {totalStats.totalCycles}
               </p>
-              <p className="text-2xs text-muted-foreground">cycles</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Cycles</p>
             </div>
           </div>
         </div>

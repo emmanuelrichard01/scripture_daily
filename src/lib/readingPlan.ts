@@ -284,51 +284,51 @@ export function formatShortDate(date: Date): string {
 // Horner's System Facts
 export const hornerFacts = [
   {
-    title: "Never the Same Combination",
-    description: "Due to the varying cycle lengths (28-250 days), the daily combination of 10 chapters won't repeat for many years, ensuring fresh insights each day.",
+    title: "10 Lists Every Single Day",
+    description: "You read 1 chapter from each of 10 distinct lists daily. In 1 year, you'll complete the Gospels 4 times, Paul's letters 4-5 times, Old Testament 1-2 times, and Proverbs 12 times.",
   },
   {
-    title: "Read the Entire Bible",
-    description: "With this system, you'll read the Gospels and Acts 4 times a year, the Epistles twice, and complete the entire Old Testament annually.",
+    title: "Never-Repeating Combinations",
+    description: "Because list lengths range from 28 to 250 days, the daily combination of 10 chapters will never repeat for years, creating continuous cross-textual connections.",
   },
   {
-    title: "Pattern Recognition",
-    description: "By reading from multiple sections daily, you'll begin to see connections between books, themes, and passages you never noticed before.",
+    title: "High-Speed Pattern Recognition",
+    description: "Professor Horner observed that reading across multiple biblical genres daily trains your subconscious mind to synthesize scripture, theology, and biblical themes automatically.",
   },
   {
-    title: "20-30 Minutes Daily",
-    description: "Ten chapters sounds like a lot, but most chapters are brief. The average reading takes just 20-30 minutes of focused time.",
+    title: "25-30 Minutes Total Time",
+    description: "Ten chapters sound overwhelming, but when read at a steady flow without studying or cross-referencing, the entire daily reading takes just 25 to 30 minutes.",
   },
   {
-    title: "Compound Effect",
-    description: "Professor Horner observed that after 3-4 years, readers develop an intuitive understanding of Scripture that transforms their spiritual life.",
+    title: "The 3-Year Mastery Effect",
+    description: "After 3 years, you will have read over 10,000 chapters of scripture. You will know the location and flow of every book, narrative, and doctrine in the Bible.",
   },
 ];
 
-// Reading Tips
+// Authentic Grant Horner Reading Tips
 export const readingTips = [
   {
-    title: "Build a Lasting Habit",
-    description: "Read at the same time each day to build a lasting habit."
+    title: "Read for Flow, Not In-Depth Study",
+    description: "Do not stop to consult commentaries or study Bibles during your 10 chapters. Read at a moderate, steady pace and let the narrative wash over you. Save deep study for a separate session."
   },
   {
-    title: "Focus on the Big Picture",
-    description: "Don't worry about perfect comprehension—let Scripture wash over you."
+    title: "Strictly No Catching Up",
+    description: "If you miss a day, DO NOT attempt to read 20 chapters the next day. Simply resume where you left off. The system is a continuous loop designed for long-term consistency, not guilt."
   },
   {
-    title: "No Guilt in Missing",
-    description: "If you miss a day, simply continue where you left off."
+    title: "Stick to One Main Translation per Cycle",
+    description: "Use one primary translation (e.g., ESV, NASB, or KJV) for your entire reading cycle so linguistic phrasing and structural patterns imprint naturally in your memory."
   },
   {
-    title: "Engage Your Senses",
-    description: "Consider reading aloud to engage more of your senses."
+    title: "Complete All 10 Chapters Daily",
+    description: "Try to complete all 10 chapters in one or two sit-downs each day. Reading all 10 in a single day is what activates the rapid multi-track pattern recognition effect."
   },
   {
-    title: "Track Your Insights",
-    description: "Keep a simple journal to note recurring themes you observe."
+    title: "Build a Set Ritual",
+    description: "Read at the same time each day (e.g. first thing in the morning with coffee). Habitual timing makes reading 10 chapters effortless and automatic."
   },
   {
-    title: "Consistency Over Speed",
-    description: "The goal is consistency, not speed. Take your time."
+    title: "Trust the Cumulative Process",
+    description: "Don't worry if you don't remember everything you read today. The power of the Horner system is cumulative repetition over months and years."
   }
 ];

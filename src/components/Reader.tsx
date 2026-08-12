@@ -92,6 +92,19 @@ export function Reader({
   const { settings, updateSettings } = useSettings();
   const preferredVersion = settings.preferredVersion || "ESV";
 
+  // Explicit local state for version selection to guarantee instant re-fetch
+  const [currentVersion, setCurrentVersion] = useState<string>(preferredVersion);
+
+  useEffect(() => {
+    setCurrentVersion(preferredVersion);
+  }, [preferredVersion]);
+
+  const handleVersionChange = (newVersion: string) => {
+    haptics.light();
+    setCurrentVersion(newVersion);
+    updateSettings({ preferredVersion: newVersion });
+  };
+
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
   // Handle scroll to top button visibility
@@ -123,11 +136,11 @@ export function Reader({
           throw new Error(`Could not find book ID for ${book}`);
         }
 
-        const url = `https://bolls.life/get-text/${preferredVersion}/${bookId}/${chapter}/`;
+        const url = `https://bolls.life/get-text/${currentVersion}/${bookId}/${chapter}/`;
         const response = await fetch(url);
 
         if (!response.ok) {
-          throw new Error("Failed to fetch chapter from Bolls API");
+          throw new Error(`Failed to fetch ${currentVersion} translation from Bolls API`);
         }
 
         const json = await response.json();
@@ -139,7 +152,7 @@ export function Reader({
         console.error(err);
         if (isMounted) {
           setError(
-            "Failed to load scripture text. Please check your connection or try another version."
+            `Failed to load ${currentVersion} translation. Please check your connection or try another version.`
           );
         }
       } finally {
@@ -152,7 +165,7 @@ export function Reader({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, book, chapter, preferredVersion]);
+  }, [isOpen, book, chapter, currentVersion]);
 
   const handleToggle = () => {
     haptics.light();
@@ -299,11 +312,8 @@ export function Reader({
             {/* Translation Select (Rock-solid Native Select wrapper) */}
             <div className="relative flex items-center">
               <select
-                value={preferredVersion}
-                onChange={(e) => {
-                  haptics.light();
-                  updateSettings({ preferredVersion: e.target.value });
-                }}
+                value={currentVersion}
+                onChange={(e) => handleVersionChange(e.target.value)}
                 className="appearance-none bg-secondary/80 hover:bg-secondary text-foreground text-xs font-bold pl-3 pr-7 py-1.5 rounded-xl border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer transition-all"
                 aria-label="Select Bible Translation"
               >
