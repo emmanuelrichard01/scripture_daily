@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { useCloudProgress } from "@/hooks/useCloudProgress";
 import { readingLists } from "@/lib/readingPlan";
-import { ChevronDown, Check, Trophy, ArrowLeft } from "lucide-react";
+import { ChevronDown, Check, Trophy, ArrowLeft, BookOpen } from "lucide-react";
 import { cn, pluralize } from "@/lib/utils";
 import {
   Collapsible,
@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAudio } from "@/hooks/useAudio";
 import { useHaptics } from "@/hooks/useHaptics";
 
-export function Lists() {
+const Lists = () => {
   const navigate = useNavigate();
   const { listProgress, completedTodayListIds, toggleComplete } = useCloudProgress();
   const [expandedLists, setExpandedLists] = useState<Set<number>>(new Set());
