@@ -1,81 +1,53 @@
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import type { ReactNode } from "react";
 
 interface ProgressRingProps {
-  progress: number; // 0-100
+  /** Completion, 0–100. */
+  progress: number;
   size?: number;
   strokeWidth?: number;
-  className?: string;
-  children?: React.ReactNode;
+  isComplete?: boolean;
+  children?: ReactNode;
 }
 
 export function ProgressRing({
   progress,
-  size = 80,
-  strokeWidth = 6,
-  className,
+  size = 88,
+  strokeWidth = 7,
+  isComplete = false,
   children,
 }: ProgressRingProps) {
+  const clamped = Math.min(100, Math.max(0, progress));
   const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (progress / 100) * circumference;
-  const isComplete = progress === 100;
+  const circumference = 2 * Math.PI * radius;
+  // Draw the full circle, then hide the unfinished portion via dash offset.
+  const offset = circumference - (clamped / 100) * circumference;
 
   return (
-    <div className={cn("relative inline-flex items-center justify-center", className)}>
-      <svg
-        width={size}
-        height={size}
-        className="transform -rotate-90 overflow-visible"
-      >
-        {/* Glow effect when complete */}
-        {isComplete && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="hsl(var(--success))"
-            strokeWidth={strokeWidth}
-            fill="none"
-            className="opacity-20 animate-glow-pulse"
-          />
-        )}
-        
-        {/* Background circle */}
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="hsl(var(--secondary))"
-          strokeWidth={strokeWidth}
           fill="none"
+          strokeWidth={strokeWidth}
+          className="stroke-secondary"
         />
-        
-        {/* Progress circle */}
-        <motion.circle
+        <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={isComplete ? "hsl(var(--success))" : "url(#progress-gradient)"}
-          strokeWidth={strokeWidth}
           fill="none"
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, ease: [0.34, 1.56, 0.64, 1] }} // bouncy spring
+          strokeDashoffset={offset}
+          className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
+          stroke={isComplete ? "hsl(var(--success))" : "hsl(var(--primary))"}
         />
-        
-        <defs>
-          <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="hsl(var(--primary))" />
-            <stop offset="100%" stopColor="hsl(var(--track-purple))" />
-          </linearGradient>
-        </defs>
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        {children}
-      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
     </div>
   );
 }

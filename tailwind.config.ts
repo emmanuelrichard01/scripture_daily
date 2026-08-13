@@ -3,20 +3,15 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
-  prefix: "",
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        heading: ['Outfit', '"Plus Jakarta Sans"', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', "system-ui", "-apple-system", "sans-serif"],
+        // Fraunces is a variable optical-size serif — it holds character at
+        // display sizes without going flimsy at small ones.
+        display: ['"Fraunces"', "Georgia", "serif"],
+        serif: ["Georgia", '"Times New Roman"', "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -56,26 +51,15 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
-        // Semantic track colors
         track: {
           blue: "hsl(var(--track-blue))",
-          red: "hsl(var(--track-red))",
           green: "hsl(var(--track-green))",
-          yellow: "hsl(var(--track-yellow))",
+          red: "hsl(var(--track-red))",
           purple: "hsl(var(--track-purple))",
+          yellow: "hsl(var(--track-yellow))",
+          pink: "hsl(var(--track-pink))",
           orange: "hsl(var(--track-orange))",
           teal: "hsl(var(--track-teal))",
-          pink: "hsl(var(--track-pink))",
           indigo: "hsl(var(--track-indigo))",
           cyan: "hsl(var(--track-cyan))",
         },
@@ -85,24 +69,41 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
         "2xl": "1rem",
-        "3xl": "1.25rem",
+        "3xl": "1.5rem",
+        "4xl": "2rem",
       },
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
+        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.01em" }],
+      },
+      boxShadow: {
+        xs: "var(--shadow-xs)",
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
+      },
+      transitionTimingFunction: {
+        spring: "var(--ease-spring)",
+        "out-expo": "var(--ease-out)",
       },
       keyframes: {
         "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
+          from: { height: "0", opacity: "0" },
+          to: { height: "var(--radix-accordion-content-height)", opacity: "1" },
         },
         "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
+          from: { height: "var(--radix-accordion-content-height)", opacity: "1" },
+          to: { height: "0", opacity: "0" },
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.96)" },
+          to: { opacity: "1", transform: "scale(1)" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        "accordion-down": "accordion-down 250ms var(--ease-out)",
+        "accordion-up": "accordion-up 200ms var(--ease-out)",
+        "scale-in": "scale-in 200ms var(--ease-spring)",
       },
     },
   },

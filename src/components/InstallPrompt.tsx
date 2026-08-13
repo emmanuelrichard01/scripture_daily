@@ -1,244 +1,114 @@
-import { useState, useEffect } from "react";
-import { X, Share } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useHaptics } from "@/hooks/useHaptics";
+import { readRaw, StorageKeys, writeRaw } from "@/lib/storage";
 
+/** The non-standard event Chromium fires when the app is installable. */
 interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
-  readonly userChoice: Promise<{
-    outcome: "accepted" | "dismissed";
-    platform: string;
-  }>;
-  prompt(): Promise<void>;
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/** Show again this long after a dismissal rather than never. */
+const SNOOZE_DAYS = 30;
+
+/**
+ * A dismissible prompt to install the PWA.
+ *
+ * Only appears on the Today route, and only once the browser says the app is
+ * actually installable — a manual "add to home screen" banner shown to users who
+ * already installed, or on a browser that cannot install, is pure noise.
+ */
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const { triggerHaptic, initHaptics } = useHaptics();
+  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    // Initialize haptics on component mount (requires user gesture context)
-    initHaptics();
+    // Already running as an installed app — nothing to offer.
+    if (window.matchMedia("(display-mode: standalone)").matches) return;
 
-    // Check if already installed
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    setIsStandalone(standalone);
+    const dismissedAt = Number(readRaw(StorageKeys.installPromptDismissed) ?? 0);
+    if (dismissedAt && Date.now() - dismissedAt < SNOOZE_DAYS * 86_400_000) return;
 
-    // Check if iOS (iPhone, iPad, iPod)
-    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
-                !(window as unknown as { MSStream?: unknown }).MSStream;
-    setIsIOS(iOS);
-
-    // Check if dismissed recently
-    const dismissed = localStorage.getItem("install-prompt-dismissed");
-    if (dismissed) {
-      const dismissedTime = parseInt(dismissed);
-      // Don't show for 7 days after dismissal
-      if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
-        return;
-      }
-    }
-
-    // Listen for install prompt (Android/Desktop Chrome)
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Show after a delay
-      setTimeout(() => {
-        setShowPrompt(true);
-        triggerHaptic("light");
-      }, 3000);
+    const onBeforeInstall = (event: Event) => {
+      event.preventDefault(); // Suppress the browser's own mini-infobar.
+      setInstallEvent(event as BeforeInstallPromptEvent);
+      setIsVisible(true);
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    const onInstalled = () => setIsVisible(false);
 
-    // Show iOS prompt after delay if not installed and on iOS
-    if (iOS && !standalone) {
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 5000);
-    }
-
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
     };
-  }, [initHaptics, triggerHaptic]);
+  }, []);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-
-    triggerHaptic("medium");
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      setShowPrompt(false);
-      triggerHaptic("success");
-    }
-
-    setDeferredPrompt(null);
+  const dismiss = () => {
+    writeRaw(StorageKeys.installPromptDismissed, String(Date.now()));
+    setIsVisible(false);
   };
 
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    setShowIOSGuide(false);
-    localStorage.setItem("install-prompt-dismissed", Date.now().toString());
-    triggerHaptic("light");
+  const install = async () => {
+    if (!installEvent) return;
+    await installEvent.prompt();
+    await installEvent.userChoice;
+    setIsVisible(false);
+    setInstallEvent(null);
   };
 
-  const handleShowIOSGuide = () => {
-    setShowIOSGuide(true);
-    triggerHaptic("light");
-  };
-
-  if (isStandalone || !showPrompt) return null;
+  if (!isVisible || pathname !== "/") return null;
 
   return (
-    <>
-      {/* Main install prompt */}
-      <div className="fixed bottom-20 left-4 right-4 z-50 animate-slide-up">
-        <div className="max-w-lg mx-auto card-elevated p-4 border-track-blue/20">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-track-blue/20 to-track-purple/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              <img
-                src="/apple-touch-icon.png"
-                alt="Scripture Daily"
-                className="w-9 h-9 rounded-lg"
-                loading="lazy"
-              />
-            </div>
+    <div
+      role="dialog"
+      aria-labelledby="install-prompt-title"
+      className="fixed inset-x-4 bottom-[84px] z-40 mx-auto max-w-md rounded-2xl border border-border bg-card p-4 shadow-lg"
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+          aria-hidden="true"
+        >
+          <Download className="h-5 w-5" strokeWidth={1.75} />
+        </div>
 
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm text-foreground mb-0.5">
-                Install Scripture Daily
-              </h3>
-              <p className="text-2xs text-muted-foreground mb-3">
-                {isIOS
-                  ? "Add to your home screen for the best experience"
-                  : "Install for offline access and quick launch"}
-              </p>
+        <div className="min-w-0 flex-1">
+          <h2 id="install-prompt-title" className="text-sm font-bold">
+            Install Scripture Daily
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Add it to your home screen for faster access and offline reading.
+          </p>
 
-              {isIOS ? (
-                <Button
-                  onClick={handleShowIOSGuide}
-                  className="h-9 px-4 text-xs bg-foreground hover:bg-foreground/90 text-background rounded-xl gap-2"
-                >
-                  <Share className="w-3.5 h-3.5" />
-                  Show me how
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleInstall}
-                  className="h-9 px-4 text-xs bg-foreground hover:bg-foreground/90 text-background rounded-xl"
-                >
-                  Install App
-                </Button>
-              )}
-            </div>
-
-            <button
-              onClick={handleDismiss}
-              className="text-muted-foreground hover:text-foreground transition-colors p-1"
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={install} className="h-9 rounded-lg font-semibold">
+              Install
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={dismiss}
+              className="h-9 rounded-lg text-muted-foreground"
             >
-              <X className="w-4 h-4" strokeWidth={1.5} />
-            </button>
+              Not now
+            </Button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={dismiss}
+          className="-mr-1 -mt-1 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary focus-ring"
+          aria-label="Dismiss install prompt"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
-
-      {/* iOS Installation Guide Modal */}
-      {showIOSGuide && (
-        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="bg-card rounded-2xl max-w-sm w-full overflow-hidden animate-slide-up">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">
-                  Add to Home Screen
-                </h3>
-                <button
-                  onClick={handleDismiss}
-                  className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
-                >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {/* Step 1 */}
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-track-blue/10 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-track-blue">
-                    1
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground">
-                      Tap the <strong>Share</strong> button
-                    </p>
-                    <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-1 bg-secondary rounded-lg">
-                      <Share className="w-4 h-4 text-track-blue" />
-                      <span className="text-xs text-muted-foreground">at the bottom of Safari</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-track-green/10 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-track-green">
-                    2
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground">
-                      Scroll and tap <strong>"Add to Home Screen"</strong>
-                    </p>
-                    <p className="text-2xs text-muted-foreground mt-0.5">
-                      You may need to scroll right in the share menu
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-track-purple/10 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-track-purple">
-                    3
-                  </div>
-                  <div>
-                    <p className="text-sm text-foreground">
-                      Tap <strong>"Add"</strong> in the top right
-                    </p>
-                    <p className="text-2xs text-muted-foreground mt-0.5">
-                      Scripture Daily will appear on your home screen
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 p-3 rounded-xl bg-track-yellow/5 border border-track-yellow/10">
-                <p className="text-2xs text-muted-foreground">
-                  <span className="text-track-yellow font-medium">Tip:</span> The app works 
-                  offline and will feel just like a native app!
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-secondary/30 border-t border-border">
-              <Button
-                onClick={handleDismiss}
-                variant="outline"
-                className="w-full rounded-xl"
-              >
-                Got it
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

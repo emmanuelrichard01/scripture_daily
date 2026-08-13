@@ -1,146 +1,148 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { ListProgressCard } from "@/components/ListProgressCard";
-import { useCloudProgress } from "@/hooks/useCloudProgress";
-import { readingLists } from "@/lib/readingPlan";
-import { BookOpen, Award, Target, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { useProgress } from "@/hooks/useProgress";
+import { getList, TOTAL_PLAN_CHAPTERS } from "@/lib/readingPlan";
+import { pluralize } from "@/lib/utils";
 
-const Progress = () => {
-  const { listProgress, totalChaptersRead } = useCloudProgress();
+export default function Progress() {
+  const { listPositions, totalChaptersRead } = useProgress();
 
-  // Calculate progress for each list
-  const listProgressData = useMemo(() => {
-    return readingLists.map((list) => {
-      const totalChapters = list.books.reduce((sum, b) => sum + b.chapters, 0);
-      const totalCompletedForList = listProgress[list.id] || 0;
-      
-      const completedInCycle = totalCompletedForList % totalChapters;
-      const cycleProgress = (completedInCycle / totalChapters) * 100;
-      const timesCompleted = Math.floor(totalCompletedForList / totalChapters);
+  const summary = useMemo(() => {
+    const totalCycles = listPositions.reduce((sum, item) => sum + item.completedCycles, 0);
+    const averagePercent = Math.round(
+      listPositions.reduce((sum, item) => sum + item.progressPercent, 0) /
+        Math.max(1, listPositions.length),
+    );
+    return { totalCycles, averagePercent };
+  }, [listPositions]);
 
-      // Get current book and chapter
-      let chapterCount = 0;
-      let currentBook = list.books[0].name;
-      let currentChapter = 1;
-
-      // The next chapter to read is completedInCycle + 1
-      const targetChapterIndex = completedInCycle + 1;
-
-      for (const book of list.books) {
-        if (chapterCount + book.chapters >= targetChapterIndex) {
-          currentBook = book.name;
-          currentChapter = targetChapterIndex - chapterCount;
-          break;
-        }
-        chapterCount += book.chapters;
-      }
-
-      return {
-        list,
-        cycleProgress: Math.min(100, cycleProgress),
-        timesCompleted,
-        currentBook,
-        currentChapter,
-      };
-    });
-  }, [listProgress]);
-
-  // Overall stats
-  const totalCycleProgress = useMemo(() => {
-    const total = listProgressData.reduce((sum, p) => sum + p.cycleProgress, 0);
-    return total / listProgressData.length;
-  }, [listProgressData]);
-
-  const totalCompletedCycles = useMemo(() => {
-    return listProgressData.reduce((sum, p) => sum + p.timesCompleted, 0);
-  }, [listProgressData]);
+  /** Complete passes through the whole Bible, by volume. */
+  const biblesRead = totalChaptersRead / TOTAL_PLAN_CHAPTERS;
 
   return (
-    <div className="min-h-dvh bg-background pb-24">
-      <Header left={<h1 className="text-xl font-heading font-semibold text-foreground">Reading Progress</h1>} />
+    <PageLayout
+      title="Progress"
+      description="Each list advances only when you mark a chapter read — never by the calendar."
+    >
+      {/* ── Headline ── */}
+      <section className="surface-raised relative overflow-hidden p-6" aria-label="Overall">
+        <div
+          className="pointer-events-none absolute -right-20 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl"
+          aria-hidden="true"
+        />
 
-      <main className="max-w-lg mx-auto px-5 py-6">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-2.5 mb-8">
-          <div className="bg-card rounded-2xl p-4 border border-border text-center">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
-              <BookOpen className="w-5 h-5 text-primary" />
-            </div>
-            <p className="text-xl font-bold text-foreground">
-              {totalChaptersRead}
-            </p>
-            <p className="text-[11px] text-muted-foreground font-medium">Chapters</p>
-          </div>
+        <div className="relative">
+          <p className="section-label">Chapters read</p>
+          <p className="stat-display mt-1.5 text-5xl leading-none">
+            {totalChaptersRead.toLocaleString()}
+          </p>
 
-          <div className="bg-card rounded-2xl p-4 border border-border text-center">
-            <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-2">
-              <Target className="w-5 h-5 text-accent-foreground" />
-            </div>
-            <p className="text-xl font-bold text-foreground">
-              {Math.round(totalCycleProgress)}%
+          {totalChaptersRead > 0 && (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              That's{" "}
+              <span className="font-semibold text-foreground">{biblesRead.toFixed(2)}×</span>{" "}
+              the whole Bible by volume — {TOTAL_PLAN_CHAPTERS.toLocaleString()} chapters
+              make one full pass.
             </p>
-            <p className="text-[11px] text-muted-foreground font-medium">Avg Progress</p>
-          </div>
+          )}
 
-          <div className="bg-card rounded-2xl p-4 border border-border text-center">
-            <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center mx-auto mb-2">
-              <Award className="w-5 h-5 text-success" />
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5">
+            <div>
+              <p className="stat-display text-2xl leading-none">{summary.totalCycles}</p>
+              <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                cycles completed
+              </p>
             </div>
-            <p className="text-xl font-bold text-foreground">
-              {totalCompletedCycles}
-            </p>
-            <p className="text-[11px] text-muted-foreground font-medium">Cycles Done</p>
+            <div>
+              <p className="stat-display text-2xl leading-none">{summary.averagePercent}%</p>
+              <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                average cycle
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* View all lists link */}
+      {/* ── By list ── */}
+      <div className="mb-3 mt-8 flex items-baseline justify-between">
+        <h2 className="section-label">Every list</h2>
         <Link
           to="/lists"
-          className="flex items-center justify-between bg-primary/5 hover:bg-primary/10 rounded-xl px-4 py-3 mb-6 transition-colors group"
+          className="flex items-center gap-0.5 rounded text-xs font-semibold text-primary hover:underline focus-ring"
         >
-          <span className="text-sm font-medium text-foreground">
-            View all books & chapters
-          </span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+          All chapters
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
+      </div>
 
-        {/* List Progress */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-foreground mb-1">
-            Reading Lists
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Track your progress through each list
-          </p>
-        </div>
+      <ul className="space-y-2">
+        {listPositions.map((position, index) => {
+          const list = getList(position.listId);
+          if (!list) return null;
 
-        <div className="space-y-2.5">
-          {listProgressData.map(
-            ({ list, cycleProgress, timesCompleted, currentBook, currentChapter }, index) => (
+          const accent = `hsl(var(${list.colorVar}))`;
+
+          return (
+            <li
+              key={position.listId}
+              className="animate-rise"
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
               <Link
                 to="/lists"
-                key={list.id}
-                className="block animate-slide-up"
-                style={{ animationDelay: `${index * 40}ms` }}
+                className="surface-interactive block p-4 focus-ring"
+                aria-label={`${list.name}: ${position.progressPercent}% through cycle ${
+                  position.completedCycles + 1
+                }`}
               >
-                <ListProgressCard
-                  list={list}
-                  cycleProgress={cycleProgress}
-                  timesCompleted={timesCompleted}
-                  currentBook={currentBook}
-                  currentChapter={currentChapter}
-                />
+                <div className="mb-2.5 flex items-center gap-2.5">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: accent }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">
+                    {list.name}
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                    {position.progressPercent}%
+                  </span>
+                </div>
+
+                <div
+                  className="h-1.5 overflow-hidden rounded-full bg-secondary"
+                  role="progressbar"
+                  aria-valuenow={position.progressPercent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${list.name} cycle progress`}
+                >
+                  <div
+                    className="h-full rounded-full transition-[width] duration-700 ease-out-expo"
+                    style={{ width: `${position.progressPercent}%`, backgroundColor: accent }}
+                  />
+                </div>
+
+                <div className="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate">
+                    Next: {position.nextChapter.book} {position.nextChapter.chapter}
+                  </span>
+                  <span className="shrink-0 tabular-nums">
+                    {position.completedCycles > 0
+                      ? `${position.completedCycles} ${pluralize(
+                          position.completedCycles,
+                          "cycle",
+                        )}`
+                      : `${position.chaptersIntoCycle} of ${position.totalChapters}`}
+                  </span>
+                </div>
               </Link>
-            )
-          )}
-        </div>
-      </main>
-
-      <BottomNav />
-    </div>
+            </li>
+          );
+        })}
+      </ul>
+    </PageLayout>
   );
-};
-
-export default Progress;
+}

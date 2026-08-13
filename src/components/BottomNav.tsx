@@ -1,81 +1,64 @@
-import { Home, List, Clock, Settings, Trophy, Users } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { NavLink } from "react-router-dom";
+import { BookMarked, CalendarClock, Home, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { to: "/", icon: Home, label: "Today" },
-  { to: "/progress", icon: Trophy, label: "Progress" },
-  { to: "/history", icon: Clock, label: "History" },
-  { to: "/community", icon: Users, label: "Community" },
-  { to: "/settings", icon: Settings, label: "Settings" },
-];
+const NAV_ITEMS = [
+  { to: "/", icon: Home, label: "Today", end: true },
+  { to: "/progress", icon: BookMarked, label: "Progress", end: false },
+  { to: "/history", icon: CalendarClock, label: "History", end: false },
+  { to: "/community", icon: Users, label: "Friends", end: false },
+  { to: "/settings", icon: Settings, label: "Settings", end: false },
+] as const;
 
 export function BottomNav() {
-  const location = useLocation();
-
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border/50 safe-area-bottom shadow-[0_-8px_32px_hsl(0,0%,0%,0.04)]"
-      role="navigation"
-      aria-label="Main navigation"
+      className="glass safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-border/50"
+      aria-label="Main"
     >
-      <div className="max-w-lg mx-auto">
-        <div className="flex items-stretch justify-around h-[68px] px-1 sm:px-2">
-          {navItems.map((item) => {
-            // Need to match exactly or start with for sub-routes, but / needs exact match
-            const isActive = item.to === "/" 
-              ? location.pathname === "/" 
-              : location.pathname.startsWith(item.to);
-
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === "/"}
-                className={cn(
-                  "relative flex flex-1 flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-1 py-1 rounded-2xl transition-all duration-300 focus-ring active:scale-95",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground/80 hover:bg-secondary/40"
-                )}
-                aria-label={item.label}
-              >
-                <div className="relative z-10 flex flex-col items-center justify-center gap-1.5 mt-1">
-                  <item.icon 
-                    className={cn(
-                      "transition-transform duration-300",
-                      isActive ? "w-6 h-6 -translate-y-0.5" : "w-[22px] h-[22px]"
-                    )}
-                    strokeWidth={isActive ? 2.5 : 2} 
-                    aria-hidden="true" 
+      <ul className="mx-auto flex h-[66px] max-w-lg items-stretch justify-around px-1">
+        {NAV_ITEMS.map((item) => (
+          <li key={item.to} className="flex flex-1">
+            <NavLink
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                cn(
+                  "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 focus-ring",
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {/* A filled pill behind the active icon rather than a top
+                      rule — it survives the glass blur, which a 3px line
+                      visually does not. */}
+                  {isActive && (
+                    <span
+                      className="absolute inset-x-3 inset-y-1.5 rounded-xl bg-primary/10"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <item.icon
+                    className="relative h-[21px] w-[21px] transition-transform duration-200 ease-spring"
+                    strokeWidth={isActive ? 2.4 : 1.9}
+                    aria-hidden="true"
                   />
-                  <span className={cn(
-                    "text-[10px] tracking-wide leading-none transition-all duration-300",
-                    isActive ? "font-bold opacity-100" : "font-semibold opacity-80"
-                  )}>{item.label}</span>
-                </div>
-
-                {isActive && (
-                  <>
-                    <motion.div
-                      layoutId="bottom-nav-indicator"
-                      className="absolute inset-x-2 inset-y-1.5 bg-primary/10 rounded-xl -z-10"
-                      initial={false}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                    <motion.div
-                      layoutId="bottom-nav-line"
-                      className="absolute top-0 inset-x-4 h-[3px] rounded-b-full bg-primary"
-                      initial={false}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
-        </div>
-      </div>
+                  <span
+                    className={cn(
+                      "relative text-[10px] leading-none tracking-wide",
+                      isActive ? "font-bold" : "font-semibold",
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
     </nav>
   );
 }

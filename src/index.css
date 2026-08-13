@@ -1,495 +1,345 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * ───────────────────────────── Design tokens ─────────────────────────────
+ *
+ * Colours are unwrapped HSL triplets so Tailwind can compose them with alpha
+ * (`hsl(var(--primary) / 0.1)`).
+ *
+ * Light is a warm ivory rather than pure white — over a 25-minute reading
+ * session the reduced blue and lower peak luminance is noticeably easier on the
+ * eyes. Dark is a cool near-black rather than true black, which avoids the
+ * halation that pure black causes around light serif text on OLED panels.
+ */
 @layer base {
   :root {
-    /* ── Light theme: warm ivory with indigo accents ── */
-    --background: 40 30% 97%;
-    --foreground: 230 25% 14%;
+    --background: 36 33% 97%;
+    --foreground: 232 28% 12%;
 
-    --card: 40 25% 99%;
-    --card-foreground: 230 25% 14%;
+    /* Cards sit slightly *above* the page, hence lighter than the background. */
+    --card: 40 40% 99.5%;
+    --card-foreground: 232 28% 12%;
 
-    --popover: 40 25% 99%;
-    --popover-foreground: 230 25% 14%;
+    --popover: 40 40% 99.5%;
+    --popover-foreground: 232 28% 12%;
 
-    /* Primary — deep indigo */
-    --primary: 234 55% 46%;
+    --primary: 236 60% 48%;
     --primary-foreground: 0 0% 100%;
 
-    /* Soft warm secondary */
-    --secondary: 35 20% 94%;
-    --secondary-foreground: 230 20% 26%;
+    --secondary: 36 22% 93%;
+    --secondary-foreground: 232 20% 26%;
 
-    --muted: 35 16% 93%;
-    --muted-foreground: 230 10% 48%;
+    --muted: 36 18% 93%;
+    --muted-foreground: 232 9% 44%;
 
-    /* Warm accent */
-    --accent: 35 18% 91%;
-    --accent-foreground: 230 20% 26%;
+    --accent: 36 20% 90%;
+    --accent-foreground: 232 20% 26%;
 
-    /* Success — warm green */
-    --success: 152 48% 42%;
+    --success: 154 52% 34%;
     --success-foreground: 0 0% 100%;
 
-    /* Destructive */
-    --destructive: 4 68% 56%;
+    --destructive: 4 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 16% 89%;
-    --input: 35 16% 89%;
-    --ring: 234 55% 46%;
+    --border: 36 16% 88%;
+    --input: 36 16% 88%;
+    --ring: 236 60% 48%;
 
     --radius: 1rem;
 
-    /* ── Track colors (10 Horner lists) ── */
-    --track-blue: 220 72% 52%;
-    --track-green: 152 52% 44%;
-    --track-red: 4 72% 54%;
-    --track-purple: 268 56% 52%;
-    --track-yellow: 38 92% 54%;
-    --track-pink: 338 62% 56%;
-    --track-orange: 22 88% 52%;
-    --track-teal: 174 56% 42%;
-    --track-indigo: 234 55% 56%;
-    --track-cyan: 192 68% 48%;
+    /* ── Elevation ──
+       Two-layer shadows: a tight contact shadow plus a wider ambient one. A
+       single blurred shadow reads as fog; the pair reads as a lifted surface.
+       Tinted toward the foreground hue rather than neutral grey so shadows sit
+       in the same colour family as the page. */
+    --shadow-xs: 0 1px 2px -1px hsl(232 28% 12% / 0.06);
+    --shadow-sm: 0 1px 2px -1px hsl(232 28% 12% / 0.08), 0 2px 6px -2px hsl(232 28% 12% / 0.05);
+    --shadow-md: 0 2px 4px -2px hsl(232 28% 12% / 0.08), 0 6px 16px -4px hsl(232 28% 12% / 0.08);
+    --shadow-lg: 0 4px 8px -4px hsl(232 28% 12% / 0.1), 0 16px 32px -8px hsl(232 28% 12% / 0.12);
+    --shadow-xl: 0 8px 16px -8px hsl(232 28% 12% / 0.12), 0 32px 64px -16px hsl(232 28% 12% / 0.16);
 
-    /* ── Elevation (layered shadows) ── */
-    --shadow-xs: 0 1px 2px hsl(230 25% 14% / 0.04);
-    --shadow-sm: 0 2px 4px hsl(230 25% 14% / 0.05), 0 1px 2px hsl(230 25% 14% / 0.04);
-    --shadow-md: 0 4px 12px hsl(230 25% 14% / 0.06), 0 2px 4px hsl(230 25% 14% / 0.04);
-    --shadow-lg: 0 8px 24px hsl(230 25% 14% / 0.08), 0 4px 8px hsl(230 25% 14% / 0.04);
-    --shadow-glow: 0 0 20px hsl(234 55% 46% / 0.12);
+    /* Glass surfaces for sticky chrome. */
+    --glass: 36 33% 97% / 0.72;
 
-    /* ── Surfaces & gradients ── */
-    --surface-raised: 40 25% 99%;
-    --surface-sunken: 35 20% 94%;
-    --gradient-hero: linear-gradient(
-      145deg,
-      hsl(40 30% 97%) 0%,
-      hsl(35 20% 94%) 100%
-    );
-    --gradient-quiet: linear-gradient(
-      180deg,
-      hsl(40 25% 99% / 0.9) 0%,
-      hsl(35 20% 94% / 0.6) 100%
-    );
-    --gradient-accent: linear-gradient(
-      135deg,
-      hsl(234 55% 46%) 0%,
-      hsl(268 56% 52%) 100%
-    );
-
-    /* ── Motion tokens ── */
-    --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --duration-fast: 150ms;
-    --duration-base: 250ms;
-    --duration-slow: 400ms;
-
-    /* ── Spacing scale (4px grid) ── */
-    --space-1: 0.25rem;
-    --space-2: 0.5rem;
-    --space-3: 0.75rem;
-    --space-4: 1rem;
-    --space-5: 1.25rem;
-    --space-6: 1.5rem;
-    --space-8: 2rem;
-    --space-10: 2.5rem;
-    --space-12: 3rem;
-
-    /* ── Glass properties ── */
-    --glass-bg: hsl(40 30% 97% / 0.78);
-    --glass-border: hsl(35 16% 89% / 0.5);
-    --glass-blur: 20px;
-
-    /* ── Reader typography ── */
-    --reader-font: 'Georgia', 'Times New Roman', serif;
-    --reader-line-height: 1.85;
-    --reader-font-size: 1.125rem;
-
-    /* Sidebar */
-    --sidebar-background: 40 30% 97%;
-    --sidebar-foreground: 230 20% 26%;
-    --sidebar-primary: 234 55% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 35 20% 94%;
-    --sidebar-accent-foreground: 230 20% 26%;
-    --sidebar-border: 35 16% 89%;
-    --sidebar-ring: 234 55% 46%;
+    /* Motion. The spring curve overshoots slightly, which reads as physical;
+       the standard curve decelerates without overshoot for layout changes. */
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .dark {
-    /* ── Dark theme: deep navy — improved contrast ── */
-    --background: 230 22% 7%;
-    --foreground: 220 15% 94%;
+    --background: 234 24% 8%;
+    --foreground: 40 22% 93%;
 
-    /* FIXED: increased card lightness delta from 3% to 6% for visible distinction */
-    --card: 230 20% 13%;
-    --card-foreground: 220 15% 94%;
+    --card: 234 20% 12%;
+    --card-foreground: 40 22% 93%;
 
-    --popover: 230 20% 13%;
-    --popover-foreground: 220 15% 94%;
+    --popover: 234 20% 13%;
+    --popover-foreground: 40 22% 93%;
 
-    --primary: 234 65% 65%;
-    --primary-foreground: 230 22% 7%;
+    --primary: 236 85% 72%;
+    --primary-foreground: 234 30% 10%;
 
-    --secondary: 230 18% 16%;
-    --secondary-foreground: 220 12% 88%;
+    --secondary: 234 16% 18%;
+    --secondary-foreground: 40 16% 88%;
 
-    --muted: 230 16% 18%;
-    --muted-foreground: 220 10% 56%;
+    --muted: 234 16% 18%;
+    --muted-foreground: 236 10% 62%;
 
-    --accent: 230 18% 19%;
-    --accent-foreground: 220 12% 88%;
+    --accent: 234 16% 21%;
+    --accent-foreground: 40 16% 88%;
 
-    --success: 152 50% 52%;
-    --success-foreground: 230 22% 7%;
+    --success: 154 55% 52%;
+    --success-foreground: 234 30% 10%;
 
-    --destructive: 4 62% 58%;
-    --destructive-foreground: 220 15% 94%;
+    --destructive: 4 75% 64%;
+    --destructive-foreground: 234 30% 10%;
 
-    --border: 230 16% 20%;
-    --input: 230 16% 20%;
-    --ring: 234 65% 65%;
+    --border: 234 14% 21%;
+    --input: 234 14% 21%;
+    --ring: 236 85% 72%;
 
-    /* Dark track colors — brighter for contrast */
-    --track-blue: 220 68% 64%;
-    --track-green: 152 48% 56%;
-    --track-red: 4 66% 62%;
-    --track-purple: 268 56% 64%;
-    --track-yellow: 38 86% 60%;
-    --track-pink: 338 58% 64%;
-    --track-orange: 22 82% 60%;
-    --track-teal: 174 50% 56%;
-    --track-indigo: 234 55% 68%;
-    --track-cyan: 192 62% 60%;
+    /* Shadows barely register on a dark ground, so elevation is carried mostly
+       by the lighter card surface. These stay for depth under overlays. */
+    --shadow-xs: 0 1px 2px -1px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 2px -1px hsl(0 0% 0% / 0.4), 0 2px 6px -2px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 2px 4px -2px hsl(0 0% 0% / 0.4), 0 6px 16px -4px hsl(0 0% 0% / 0.35);
+    --shadow-lg: 0 4px 8px -4px hsl(0 0% 0% / 0.5), 0 16px 32px -8px hsl(0 0% 0% / 0.45);
+    --shadow-xl: 0 8px 16px -8px hsl(0 0% 0% / 0.55), 0 32px 64px -16px hsl(0 0% 0% / 0.5);
 
-    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.25);
-    --shadow-sm: 0 2px 4px hsl(0 0% 0% / 0.3), 0 1px 2px hsl(0 0% 0% / 0.25);
-    --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.35), 0 2px 4px hsl(0 0% 0% / 0.25);
-    --shadow-lg: 0 8px 24px hsl(0 0% 0% / 0.4), 0 4px 8px hsl(0 0% 0% / 0.3);
-    --shadow-glow: 0 0 24px hsl(234 65% 65% / 0.15);
-
-    --surface-raised: 230 20% 13%;
-    --surface-sunken: 230 22% 5%;
-    --gradient-hero: linear-gradient(
-      145deg,
-      hsl(230 20% 15%) 0%,
-      hsl(230 22% 10%) 100%
-    );
-    --gradient-quiet: linear-gradient(
-      180deg,
-      hsl(230 20% 14% / 0.9) 0%,
-      hsl(230 22% 8% / 0.6) 100%
-    );
-    --gradient-accent: linear-gradient(
-      135deg,
-      hsl(234 65% 65%) 0%,
-      hsl(268 56% 64%) 100%
-    );
-
-    /* ── Dark glass — stronger for legibility ── */
-    --glass-bg: hsl(230 22% 7% / 0.85);
-    --glass-border: hsl(230 16% 20% / 0.6);
-    --glass-blur: 24px;
-
-    --sidebar-background: 230 20% 8%;
-    --sidebar-foreground: 220 12% 88%;
-    --sidebar-primary: 234 65% 65%;
-    --sidebar-primary-foreground: 230 22% 7%;
-    --sidebar-accent: 230 18% 17%;
-    --sidebar-accent-foreground: 220 12% 88%;
-    --sidebar-border: 230 18% 16%;
-    --sidebar-ring: 234 65% 65%;
+    --glass: 234 24% 8% / 0.72;
   }
-}
 
-@layer base {
+  /*
+   * List accents.
+   *
+   * Defined outside the theme blocks where the hue is shared, then re-tuned for
+   * dark. Lightness is deliberately uneven across hues: yellow and cyan need to
+   * sit darker in light mode to hold contrast against ivory, and blue and purple
+   * need to sit lighter in dark mode.
+   */
+  :root {
+    --track-blue: 222 76% 50%;
+    --track-green: 154 55% 34%;
+    --track-red: 2 72% 52%;
+    --track-purple: 268 60% 54%;
+    --track-yellow: 36 90% 42%;
+    --track-pink: 336 66% 52%;
+    --track-orange: 20 88% 48%;
+    --track-teal: 176 65% 30%;
+    --track-indigo: 236 60% 56%;
+    --track-cyan: 194 80% 36%;
+  }
+
+  .dark {
+    --track-blue: 220 90% 70%;
+    --track-green: 154 58% 55%;
+    --track-red: 2 85% 68%;
+    --track-purple: 268 78% 74%;
+    --track-yellow: 40 95% 62%;
+    --track-pink: 336 80% 70%;
+    --track-orange: 22 92% 64%;
+    --track-teal: 176 60% 52%;
+    --track-indigo: 236 85% 76%;
+    --track-cyan: 194 80% 60%;
+  }
+
   * {
     @apply border-border;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Stops the iOS rubber-band overscroll exposing white behind the app. */
+    overscroll-behavior-y: none;
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    font-family: theme("fontFamily.sans");
+    min-height: 100dvh;
     text-rendering: optimizeLegibility;
+    /* Optical sizing and tighter default tracking; Plus Jakarta ships loose. */
+    letter-spacing: -0.011em;
   }
 
-  /* Headings get the display font */
-  h1, h2, h3, h4 {
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    @apply tracking-tight;
+  h1, h2, h3 {
+    letter-spacing: -0.021em;
   }
 
-  /* Visible keyboard focus for a11y */
-  a:focus-visible,
-  button:focus-visible,
-  [role="button"]:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  [tabindex]:focus-visible {
+  /* Keyboard focus keeps a ring; pointer input does not. */
+  :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    @apply bg-primary/20;
+  }
+
+  /* Slim, self-coloured scrollbars — the OS default is jarring inside cards. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full border-4 border-solid border-transparent bg-muted-foreground/25 bg-clip-content;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40 bg-clip-content;
   }
 }
-
 
 @layer components {
-  /* ── Cards ── */
-  .card-elevated {
-    @apply bg-card rounded-2xl border border-border;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .card-interactive {
-    @apply bg-card rounded-2xl border border-border transition-all;
-    box-shadow: var(--shadow-xs);
-    transition-duration: var(--duration-base);
-    transition-timing-function: var(--ease-spring);
-  }
-
-  .card-interactive:hover {
-    box-shadow: var(--shadow-md);
-    @apply border-border;
-  }
-
-  .card-interactive:active {
-    transform: scale(0.98);
-  }
-
-  /* ── Glassmorphism surfaces ── */
-  .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-  }
-
-  .glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    @apply rounded-2xl;
-    box-shadow: var(--shadow-sm);
-  }
-
-  /* ── Hero surface ── */
-  .surface-hero {
-    @apply rounded-2xl border border-border/60;
-    background: var(--gradient-hero);
-    box-shadow: var(--shadow-md);
-  }
-
-  /* ── Safe area for mobile ── */
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top, 0);
-  }
-
-  /* ── Track utilities ── */
-  .track-indicator {
-    @apply w-1 h-full rounded-full;
-  }
-
-  .track-dot {
-    @apply w-2 h-2 rounded-full;
-  }
-
-  /* ── Tap target (44x44 minimum) ── */
-  .tap-target {
-    @apply min-h-[44px] min-w-[44px];
-  }
-
-  /* ── Skeleton ── */
-  .skeleton {
-    @apply rounded-xl bg-muted animate-pulse motion-reduce:animate-none;
-  }
-
-  /* ── Standardized page header ── */
-  .page-header {
-    @apply sticky top-0 z-40 border-b border-border/50;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-  }
-
-  .page-header-inner {
-    @apply max-w-lg mx-auto px-5 h-14 flex items-center gap-3;
-  }
-
-  /* ── Reader typography ── */
-  .reader-text {
-    font-family: var(--reader-font);
-    font-size: var(--reader-font-size);
-    line-height: var(--reader-line-height);
-    text-rendering: optimizeLegibility;
-    word-spacing: 0.02em;
-    @apply text-foreground;
-  }
-
-  .reader-verse-number {
-    @apply text-[11px] font-sans font-semibold text-muted-foreground/70 select-none;
-    vertical-align: super;
-    margin-right: 0.15em;
-    letter-spacing: -0.02em;
-  }
-}
-
-
-@layer utilities {
-  /* ── Animations ── */
-  .animate-fade-in {
-    animation: fade-in var(--duration-base) var(--ease-spring);
-  }
-
-  .animate-slide-up {
-    animation: slide-up 0.35s var(--ease-spring);
-    animation-fill-mode: both;
-  }
-
-  .animate-scale-in {
-    animation: scale-in 0.2s var(--ease-spring);
-  }
-
-  .animate-glow-pulse {
-    animation: glow-pulse 2s ease-in-out infinite;
-  }
-
-  /* Staggered fade-in for lists */
-  .animate-stagger > * {
-    animation: slide-up 0.4s var(--ease-spring) both;
-  }
-  .animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
-  .animate-stagger > *:nth-child(2) { animation-delay: 60ms; }
-  .animate-stagger > *:nth-child(3) { animation-delay: 120ms; }
-  .animate-stagger > *:nth-child(4) { animation-delay: 180ms; }
-  .animate-stagger > *:nth-child(5) { animation-delay: 240ms; }
-  .animate-stagger > *:nth-child(6) { animation-delay: 300ms; }
-  .animate-stagger > *:nth-child(7) { animation-delay: 360ms; }
-  .animate-stagger > *:nth-child(8) { animation-delay: 420ms; }
-  .animate-stagger > *:nth-child(9) { animation-delay: 480ms; }
-  .animate-stagger > *:nth-child(10) { animation-delay: 540ms; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .animate-fade-in,
-    .animate-slide-up,
-    .animate-scale-in,
-    .animate-glow-pulse,
-    .animate-stagger > * {
-      animation: none;
-    }
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes scale-in {
-    from {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 0 0 8px hsl(var(--primary) / 0.15);
-    }
-    50% {
-      box-shadow: 0 0 20px hsl(var(--primary) / 0.25);
-    }
-  }
-
-  /* ── Hover lift ── */
-  .hover-lift {
-    transition: all var(--duration-base) var(--ease-spring);
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hover-lift:hover {
-      transform: none;
-    }
-  }
-
-  /* ── Text styles ── */
-  .text-caption {
-    @apply text-xs font-medium text-muted-foreground;
-  }
-
-  .text-label {
-    @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
-  }
-
-  .text-2xs {
-    font-size: 0.65rem;
-    line-height: 1rem;
-  }
-
-  /* ── Focus ring ── */
   .focus-ring {
-    @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none;
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
-  /* ── Gradient text ── */
-  .text-gradient {
-    background: var(--gradient-accent);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  /* The standard content container: a lifted surface, not a hairline box. */
+  .surface {
+    @apply rounded-2xl border border-border/60 bg-card;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .surface-raised {
+    @apply rounded-2xl border border-border/50 bg-card;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Interactive surfaces lift on hover and compress on press. */
+  .surface-interactive {
+    @apply surface transition-[transform,box-shadow] duration-200;
+    transition-timing-function: var(--ease-out);
+  }
+
+  .surface-interactive:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .surface-interactive:active {
+    transform: translateY(0) scale(0.995);
+  }
+
+  /* Sticky chrome. `saturate` keeps colour behind the blur from going muddy. */
+  .glass {
+    background-color: hsl(var(--glass));
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  /* Hero numerals — the one place the display face earns its weight. */
+  .stat-display {
+    @apply font-display font-semibold tabular-nums;
+    letter-spacing: -0.03em;
+    font-variation-settings: "opsz" 96;
+  }
+
+  .section-label {
+    @apply text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  /* Skeleton placeholder. A sweeping highlight rather than a pulsing block —
+     it reads as loading rather than as broken content. */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-muted/60;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.05),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
   }
 }
 
 @layer utilities {
   .scrollbar-none {
     scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Fades a horizontal scroller's trailing edge so clipped content reads as
+     scrollable rather than cut off. */
+  .fade-edge-x {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered entrance for lists. The delay is set inline per item. */
+.animate-rise {
+  animation: rise 400ms var(--ease-out) both;
+}
+
+/*
+ * Motion suppression, from either the OS preference or the in-app toggle.
+ * Collapsed to 1ms rather than removed, so animation-end callbacks still fire
+ * and nothing that waits on them hangs mid-transition.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

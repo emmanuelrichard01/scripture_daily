@@ -1,100 +1,191 @@
+/**
+ * Daily reminder dispatch, invoked by Vercel Cron once an hour.
+ *
+ * The previous version sent to *every* user with reminders enabled on every
+ * run, ignoring both their chosen time and their timezone — its own comment
+ * conceded this. Someone in Sydney who asked for 07:00 got pushed at whatever
+ * hour the cron happened to fire.
+ *
+ * This runs hourly and, for each subscription, resolves the device's local
+ * clock and sends only when the local hour matches the user's requested hour
+ * and the local weekday is one they selected.
+ */
+
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
-// Serverless function running on Node.js
+export const config = { runtime: "nodejs" };
 
-// Required VAPID setup for web-push
-webpush.setVapidDetails(
-  "mailto:support@scripturedaily.com",
-  process.env.VITE_VAPID_PUBLIC_KEY as string,
-  process.env.VAPID_PRIVATE_KEY as string
-);
+interface UserSettings {
+  user_id: string;
+  reminder_time: string;
+  reminder_days: string[];
+}
 
-export default async function handler(req: Request) {
-  // Only allow GET requests for the cron job
-  if (req.method !== 'GET') {
-    return new Response("Method not allowed", { status: 405 });
+interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  timezone: string;
+}
+
+/** Local hour (0–23) and weekday (0=Sunday) in an IANA timezone, right now. */
+function localClock(timeZone: string): { hour: number; weekday: number } {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "numeric",
+      hour12: false,
+      weekday: "short",
+    }).formatToParts(new Date());
+  } catch {
+    // An unknown or malformed zone falls back to UTC rather than dropping the
+    // reminder entirely.
+    return localClock("UTC");
   }
 
-  // Authorize cron via Vercel secure header
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
+  const hourPart = parts.find((part) => part.type === "hour")?.value ?? "0";
+  const weekdayPart = parts.find((part) => part.type === "weekday")?.value ?? "Sun";
+
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return {
+    // `hour12: false` can render midnight as "24" in some ICU versions.
+    hour: Number(hourPart) % 24,
+    weekday: Math.max(0, WEEKDAYS.indexOf(weekdayPart)),
+  };
+}
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+export default async function handler(request: Request): Promise<Response> {
+  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return json({ error: "CRON_SECRET is not configured" }, 500);
+
+  // Vercel Cron sends this header; without the check anyone could trigger a
+  // fan-out of push notifications to the entire user base.
+  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+    return json({ error: "Unauthorized" }, 401);
   }
 
-  const supabaseUrl = process.env.VITE_SUPABASE_URL as string;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-  
-  if (!supabaseUrl || !supabaseKey) {
-    return new Response("Missing Supabase credentials", { status: 500 });
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const vapidPublic = process.env.VITE_VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return json({ error: "Supabase service credentials are not configured" }, 500);
+  }
+  if (!vapidPublic || !vapidPrivate) {
+    return json({ error: "VAPID keys are not configured" }, 500);
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT ?? "mailto:support@scripturedaily.app",
+    vapidPublic,
+    vapidPrivate,
+  );
+
+  // Service role: the cron must read every user's settings, which RLS forbids
+  // to the anon key. Never expose this key to the client.
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
 
   try {
-    // 1. Get all users who have reminders enabled (user_settings)
-    const { data: usersWithReminders, error: settingsError } = await supabase
+    const { data: settings, error: settingsError } = await supabase
       .from("user_settings")
-      .select("user_id, reminder_time")
+      .select("user_id, reminder_time, reminder_days")
       .eq("reminders_enabled", true);
 
-    if (settingsError) throw settingsError;
-    if (!usersWithReminders || usersWithReminders.length === 0) {
-      return new Response("No users to notify", { status: 200 });
-    }
+    if (settingsError) throw new Error(settingsError.message);
+    if (!settings?.length) return json({ sent: 0, reason: "no reminders enabled" });
 
-    // A real implementation would check if current UTC time matches the user's local `reminder_time`
-    // For simplicity in this demo, we'll just send to everyone who has reminders enabled.
-    const userIds = usersWithReminders.map(u => u.user_id);
+    const settingsByUser = new Map<string, UserSettings>(
+      (settings as UserSettings[]).map((row) => [row.user_id, row]),
+    );
 
-    // 2. Get push subscriptions for those users
-    const { data: subscriptions, error: subError } = await supabase
+    const { data: subscriptions, error: subscriptionError } = await supabase
       .from("push_subscriptions")
-      .select("*")
-      .in("user_id", userIds);
+      .select("id, user_id, endpoint, p256dh, auth, timezone")
+      .in("user_id", [...settingsByUser.keys()]);
 
-    if (subError) throw subError;
-    if (!subscriptions || subscriptions.length === 0) {
-      return new Response("No push subscriptions found", { status: 200 });
+    if (subscriptionError) throw new Error(subscriptionError.message);
+    if (!subscriptions?.length) return json({ sent: 0, reason: "no subscriptions" });
+
+    // Only the subscriptions whose device-local time is the requested hour.
+    const due = (subscriptions as PushSubscriptionRow[]).filter((subscription) => {
+      const userSettings = settingsByUser.get(subscription.user_id);
+      if (!userSettings) return false;
+
+      const { hour, weekday } = localClock(subscription.timezone);
+      const requestedHour = Number(userSettings.reminder_time.split(":")[0]);
+      if (!Number.isInteger(requestedHour) || requestedHour !== hour) return false;
+
+      const days = userSettings.reminder_days.map(Number);
+      return days.includes(weekday);
+    });
+
+    if (due.length === 0) return json({ sent: 0, reason: "nothing due this hour" });
+
+    const payload = JSON.stringify({
+      title: "Time to read",
+      body: "Your ten chapters are waiting.",
+      url: "/",
+    });
+
+    const expiredIds: string[] = [];
+
+    const results = await Promise.allSettled(
+      due.map(async (subscription) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: subscription.endpoint,
+              keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+            },
+            payload,
+            { TTL: 3600 },
+          );
+        } catch (error) {
+          const status = (error as { statusCode?: number }).statusCode;
+          // 404/410 mean the browser dropped the subscription — prune it so the
+          // table does not accumulate dead endpoints forever.
+          if (status === 404 || status === 410) {
+            expiredIds.push(subscription.id);
+            return;
+          }
+          throw error;
+        }
+      }),
+    );
+
+    if (expiredIds.length > 0) {
+      await supabase.from("push_subscriptions").delete().in("id", expiredIds);
     }
 
-    // 3. Dispatch notifications
-    const payload = JSON.stringify({
-      title: "Scripture Daily",
-      body: "Time for your 10 chapters! Let's get reading.",
-      url: "/today"
+    const failed = results.filter((result) => result.status === "rejected").length;
+
+    return json({
+      due: due.length,
+      sent: due.length - failed - expiredIds.length,
+      pruned: expiredIds.length,
+      failed,
     });
-
-    const sendPromises = subscriptions.map(async (sub) => {
-      try {
-        await webpush.sendNotification({
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth
-          }
-        }, payload);
-      } catch (err: unknown) {
-        const error = err as { statusCode?: number };
-        if (error.statusCode === 404 || error.statusCode === 410) {
-          // Subscription expired or unsubscribed, remove from DB
-          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-        } else {
-          console.error("Push Error for user", sub.user_id, err);
-        }
-      }
-    });
-
-    await Promise.allSettled(sendPromises);
-
-    return new Response(JSON.stringify({ success: true, count: subscriptions.length }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (err: unknown) {
-    console.error("Cron Job Error:", err);
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+  } catch (error) {
+    console.error("Reminder cron failed:", error);
+    return json(
+      { error: error instanceof Error ? error.message : "Unknown error" },
+      500,
+    );
   }
 }

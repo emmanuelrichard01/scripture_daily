@@ -1,73 +1,65 @@
-import { useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { FullPageSpinner } from "@/components/layout/FullPageSpinner";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
-function getParamFromSearchOrHash(location: { search: string; hash: string }, key: string) {
-  const fromSearch = new URLSearchParams(location.search).get(key);
-  if (fromSearch) return fromSearch;
-
-  const hash = location.hash.startsWith("#") ? location.hash.slice(1) : location.hash;
-  const fromHash = new URLSearchParams(hash).get(key);
-  return fromHash;
-}
-
+/**
+ * Lands the OAuth and email-confirmation redirects.
+ *
+ * The Supabase client parses the session out of the URL on load; this page just
+ * waits for that to settle and then routes onward, so the user never sees the
+ * raw callback URL with its token fragment.
+ */
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const error = getParamFromSearchOrHash(location, "error");
-  const errorDescription = getParamFromSearchOrHash(location, "error_description");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // If the provider returned an error, stay on this page and show message.
-    if (error) return;
+    let cancelled = false;
 
-    // Let the client parse the OAuth response in the URL and persist the session.
-    supabase.auth.getSession().finally(() => {
-      navigate("/", { replace: true });
-    });
-  }, [error, navigate]);
+    void (async () => {
+      // Providers report failures in the hash fragment, not the query string.
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const providerError = hash.get("error_description") ?? hash.get("error");
+      if (providerError) {
+        if (!cancelled) setError(providerError);
+        return;
+      }
+
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (sessionError) {
+        setError(sessionError.message);
+        return;
+      }
+
+      if (data.session) {
+        toast.success("Signed in");
+        navigate("/", { replace: true });
+      } else {
+        navigate("/auth", { replace: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   if (error) {
     return (
-      <div className="min-h-dvh bg-background flex items-center justify-center px-6">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5">
-              <AlertTriangle className="w-5 h-5 text-destructive" aria-hidden="true" />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-lg font-semibold text-foreground">Google sign-in didn’t finish</h1>
-              <p className="mt-1 text-sm text-muted-foreground break-words">
-                {errorDescription || "Please try again."}
-              </p>
-              <div className="mt-5 flex gap-2">
-                <Button asChild className="rounded-xl">
-                  <Link to="/auth">Back to sign in</Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => navigate("/", { replace: true })}
-                >
-                  Go home
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="font-heading text-xl font-semibold">Sign-in didn't complete</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">{error}</p>
+        <Button onClick={() => navigate("/auth", { replace: true })} className="rounded-xl">
+          Try again
+        </Button>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-dvh bg-background flex items-center justify-center px-6">
-      <div className="flex items-center gap-3 text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
-        <span className="text-sm">Finishing sign-in…</span>
-      </div>
-    </div>
-  );
+  return <FullPageSpinner label="Completing sign-in" />;
 }

@@ -1,122 +1,116 @@
 import { useState } from "react";
-import { Calendar, ChevronRight, RefreshCw, Check } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatMediumDate, isISODate, readingDayNumber, todayISO, type ISODate } from "@/lib/date";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface StartDatePickerProps {
-  currentStartDate: string;
-  onUpdateStartDate: (date: string) => void;
+  startDate: ISODate;
+  onChange: (date: ISODate) => void;
 }
 
-export function StartDatePicker({ currentStartDate, onUpdateStartDate }: StartDatePickerProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(currentStartDate);
+/**
+ * Sets the date the reading journey began.
+ *
+ * This affects only the displayed "Day N" counter and the per-day average — it
+ * never moves anyone's place in a list, because positions are derived from
+ * chapters completed rather than from the calendar. The copy says so, since the
+ * obvious fear when changing this is losing progress.
+ */
+export function StartDatePicker({ startDate, onChange }: StartDatePickerProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [draft, setDraft] = useState(startDate);
 
-  const presetOptions = [
-    { label: "Start Fresh Today", value: new Date().toISOString().split("T")[0], description: "Begin from day 1" },
-    { label: "January 1st", value: `${new Date().getFullYear()}-01-01`, description: "Align with calendar year" },
-    { label: "Custom Date", value: "custom", description: "Pick any start date" },
+  const today = todayISO();
+  const presets = [
+    { label: "Today", value: today },
+    { label: "Start of this year", value: `${today.slice(0, 4)}-01-01` },
   ];
 
-  const handleSave = () => {
-    onUpdateStartDate(selectedDate);
-    setIsExpanded(false);
-  };
-
-  const formatDisplayDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const save = () => {
+    if (!isISODate(draft)) {
+      toast.error("Pick a valid date");
+      return;
+    }
+    if (draft > today) {
+      toast.error("Your start date can't be in the future");
+      return;
+    }
+    onChange(draft);
+    setIsOpen(false);
+    toast.success(`Now on day ${readingDayNumber(draft, today).toLocaleString()}`);
   };
 
   return (
-    <div className="card-elevated overflow-hidden">
+    <div>
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+        type="button"
+        onClick={() => {
+          setDraft(startDate);
+          setIsOpen((open) => !open);
+        }}
+        aria-expanded={isOpen}
+        className="flex min-h-[60px] w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-secondary/40 focus-ring"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-track-green/10 flex items-center justify-center">
-            <Calendar className="w-4.5 h-4.5 text-track-green" strokeWidth={1.5} />
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-medium text-foreground">Reading Start Date</p>
-            <p className="text-2xs text-muted-foreground">
-              {formatDisplayDate(currentStartDate)}
-            </p>
-          </div>
-        </div>
-        <ChevronRight 
+        <span>
+          <span className="block text-sm font-medium">Start date</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {formatMediumDate(startDate)}
+            <span aria-hidden="true"> · </span>
+            day {readingDayNumber(startDate, today).toLocaleString()}
+          </span>
+        </span>
+        <ChevronRight
           className={cn(
-            "w-5 h-5 text-muted-foreground transition-transform",
-            isExpanded && "rotate-90"
-          )} 
+            "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+            isOpen && "rotate-90",
+          )}
+          aria-hidden="true"
         />
       </button>
 
-      {isExpanded && (
-        <div className="px-4 pb-4 space-y-3 animate-fade-in border-t border-border/50 pt-4">
-          <p className="text-2xs text-muted-foreground">
-            Choose when your reading journey begins. This affects your day-of-year calculation 
-            while maintaining Horner's reading system.
+      {isOpen && (
+        <div className="space-y-3 border-t border-border/60 px-4 py-4">
+          <p className="text-xs text-muted-foreground">
+            Only the day counter and your daily average change. Your place in each
+            list is untouched.
           </p>
 
-          <div className="space-y-2">
-            {presetOptions.map((option) => (
+          <div className="flex flex-wrap gap-2">
+            {presets.map((preset) => (
               <button
-                key={option.value}
-                onClick={() => {
-                  if (option.value === "custom") {
-                    // Show date input
-                    const input = document.getElementById("custom-date-input");
-                    input?.focus();
-                  } else {
-                    setSelectedDate(option.value);
-                  }
-                }}
+                key={preset.value}
+                type="button"
+                onClick={() => setDraft(preset.value)}
                 className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-xl transition-colors",
-                  selectedDate === option.value
-                    ? "bg-primary/10 border border-primary/20"
-                    : "bg-secondary/50 hover:bg-secondary"
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-colors focus-ring",
+                  draft === preset.value
+                    ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                    : "bg-secondary text-muted-foreground hover:text-foreground",
                 )}
               >
-                <div className="text-left">
-                  <p className="text-sm font-medium text-foreground">{option.label}</p>
-                  <p className="text-2xs text-muted-foreground">{option.description}</p>
-                </div>
-                {selectedDate === option.value && option.value !== "custom" && (
-                  <Check className="w-4 h-4 text-primary" />
-                )}
+                {preset.label}
               </button>
             ))}
           </div>
 
-          {/* Custom date input */}
           <div className="flex gap-2">
+            <label className="sr-only" htmlFor="start-date-input">
+              Custom start date
+            </label>
             <input
-              id="custom-date-input"
+              id="start-date-input"
               type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              className="flex-1 px-3 py-2 rounded-xl bg-secondary text-sm text-foreground border-0 focus:ring-2 focus:ring-primary/20"
+              value={draft}
+              max={today}
+              onChange={(event) => setDraft(event.target.value)}
+              className="h-11 flex-1 rounded-xl border-0 bg-secondary px-3 text-sm focus:ring-2 focus:ring-primary/30"
             />
-            <Button
-              onClick={handleSave}
-              size="sm"
-              className="gap-1.5 bg-foreground text-background hover:bg-foreground/90"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Update
+            <Button onClick={save} className="h-11 rounded-xl font-semibold">
+              Save
             </Button>
           </div>
-
-          <p className="text-2xs text-muted-foreground italic">
-            Note: Your reading progress will be preserved. Only the day calculation changes.
-          </p>
         </div>
       )}
     </div>

@@ -90,6 +90,8 @@ export type Database = {
           endpoint: string
           p256dh: string
           auth: string
+          timezone: string
+          updated_at: string
           created_at: string
         }
         Insert: {
@@ -98,6 +100,8 @@ export type Database = {
           endpoint: string
           p256dh: string
           auth: string
+          timezone?: string
+          updated_at?: string
           created_at?: string
         }
         Update: {
@@ -106,6 +110,8 @@ export type Database = {
           endpoint?: string
           p256dh?: string
           auth?: string
+          timezone?: string
+          updated_at?: string
           created_at?: string
         }
         Relationships: [
@@ -163,6 +169,8 @@ export type Database = {
           reminder_time: string
           reminders_enabled: boolean
           theme: string
+          preferred_translation: string
+          timezone: string
           updated_at: string
           user_id: string
         }
@@ -174,6 +182,8 @@ export type Database = {
           reminder_time?: string
           reminders_enabled?: boolean
           theme?: string
+          preferred_translation?: string
+          timezone?: string
           updated_at?: string
           user_id: string
         }
@@ -185,6 +195,8 @@ export type Database = {
           reminder_time?: string
           reminders_enabled?: boolean
           theme?: string
+          preferred_translation?: string
+          timezone?: string
           updated_at?: string
           user_id?: string
         }

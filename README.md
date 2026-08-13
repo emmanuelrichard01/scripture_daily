@@ -1,122 +1,160 @@
 <div align="center">
-  <img src="public/apple-touch-icon.png" alt="Scripture Daily Logo" width="120" />
-  
+  <img src="public/apple-touch-icon.png" alt="" width="96" />
+
   # Scripture Daily
-  
-  **A premium, offline-first Progressive Web App (PWA) designed to track Professor Grant Horner’s 10-Chapters-a-Day Bible Reading System.**
-  
-  [![React](https://img.shields.io/badge/React-18-blue.svg?style=flat-square&logo=react)](https://reactjs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-  [![Vite](https://img.shields.io/badge/Vite-8.0-purple.svg?style=flat-square&logo=vite)](https://vitejs.dev/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.0-38B2AC.svg?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-  [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E.svg?style=flat-square&logo=supabase)](https://supabase.com/)
+
+  **An offline-first PWA for Professor Grant Horner's 10-list Bible reading system.**
+
+  [![CI](https://github.com/emmanuelrichard01/scripture_daily/actions/workflows/ci.yml/badge.svg)](https://github.com/emmanuelrichard01/scripture_daily/actions/workflows/ci.yml)
+  ![React 18](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
+  ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+  ![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 </div>
 
 ---
 
-## 📖 Overview
+## What it is
 
-**Scripture Daily** is a meticulously crafted application built for serious Bible readers. It digitizes the renowned Grant Horner Bible Reading System—where readers consume 10 chapters a day across 10 distinct biblical lists. 
+Horner's system splits Scripture into ten lists and has you read one chapter from
+each, every day. Because the lists run from 28 to 250 chapters, the daily
+combination of ten chapters doesn't repeat for years.
 
-This project goes far beyond a simple checklist. It features a **"True Horner" V2 architecture** that accurately decouples lists from strict chronological dates, allowing for a completely personalized pace. Whether you read all 10 chapters in a day, or just 1 chapter from List 1, your progress is tracked flawlessly.
+This app tracks that. It works fully offline, syncs across devices when you sign
+in, and reads chapters in-app without sending you elsewhere.
 
-## ✨ Premium Features
+## The core idea: position, not date
 
-- **Offline-First Resilience**: Powered by `workbox` and standard PWA service workers. Instantly log progress locally with zero network latency. The UI never blocks on a network request.
-- **Intelligent Cloud Sync**: When online, the app debounces and batches your local `localStorage` progress and seamlessly pushes it to Supabase in the background.
-- **Versatile Native Bible Reader**: Complete with an elegant sliding drawer and on-the-fly translation switching (supports ESV, NIV, NLT, NASB, LSB, WEB, and KJV directly via the Bolls.life API) so you never have to leave the app to read.
-- **Union Merge Conflict Resolution**: Never lose progress. If you use the app as an unauthenticated "Guest" and later sign in, your local progress is intelligently union-merged with your cloud data.
-- **Micro-Interactions & Haptics**: Uses Framer Motion for buttery-smooth animations, `embla-carousel-react` for native-feeling swipe gestures, and the Web Audio API for iOS-compatible haptic vibration feedback.
-- **Global Settings Context**: A Single Source of Truth architecture ensures that your Theme (Light/Dark/System/Auto), Haptic preferences, and Notification Reminders sync instantly across all your devices.
-- **Accessibility (A11y)**: Fully semantic HTML structure, proper ARIA labeling on complex data visualizations (like the History heatmap), and keyboard navigability.
-- **Shareable Milestones**: Uses `html2canvas` to dynamically render your reading streaks and milestones into beautiful, shareable image cards.
+The one design decision everything else follows from — **a list's bookmark is a
+pure function of how many chapters you've completed in it**, never of the
+calendar:
 
-## 🏗️ The "True Horner" Architecture (V2 Schema)
-
-Traditional apps force the user into a rigid "Day 1, Day 2" calendar structure. This fails when a user misses a day or only finishes half their reading.
-
-**Scripture Daily uses a dynamic `ReadingLog` schema:**
-```typescript
-export type ReadingLog = Record<string, number[]>;
-// Example: { "2026-08-10": [1, 2, 5] }
 ```
-- The keys are the ISO date strings.
-- The values are an array of the `listId`s completed on that exact calendar day.
-- **List Independence**: By aggregating the total occurrences of `listId = 1` across your entire history, the app mathematically derives exactly what chapter you are currently on for the Gospels list, regardless of when you read them.
+position in cycle = (chapters completed mod list length) + 1
+```
 
-When syncing to Supabase, this map is intelligently serialized into a lightweight array of strings (e.g., `["2026-08-10-1", "2026-08-10-2"]`) to maintain high database performance without requiring complex JSONB querying.
+Miss a week and you resume exactly where you stopped, because nothing is indexed
+by date. Horner's own instruction is *"never try to catch up"*; this encodes it
+rather than merely suggesting it. Finishing a list wraps the bookmark to chapter 1
+and increments a cycle counter — cycles accumulate, they never reset.
 
-## 💻 Tech Stack
+Progress is stored as a log of which lists were completed on which local day:
 
-- **Frontend Framework**: React 18, TypeScript, Vite v8
-- **Styling**: Tailwind CSS, PostCSS, `shadcn/ui` components
-- **State Management**: React Context (`ProgressContext`, `SettingsContext`, `AuthContext`)
-- **Animation**: Framer Motion
-- **Database & Auth**: Supabase (PostgreSQL, Row Level Security)
-- **Deployment**: Vercel (Auto-deployments configured)
+```ts
+type ReadingLog = Record<ISODate, number[]>;
+// { "2026-08-12": [1, 2, 5] }  ← lists 1, 2 and 5 read on Aug 12
+```
 
-## 🚀 Getting Started
+Everything else — streaks, per-list positions, the heatmap, cycle counts — is
+derived from that one structure. See `src/lib/progress.ts` and
+`src/lib/readingPlan.ts`; both are pure and unit-tested.
 
-### Prerequisites
-- Node.js >= 18
-- npm or yarn
+## Features
 
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/emmanuelrichard01/scripture_daily.git
-   cd scripture_daily
-   ```
+- **Offline-first.** Progress writes to `localStorage` synchronously; the UI never
+  waits on the network. Chapters you've read are cached by the service worker and
+  stay readable with no connection.
+- **Durable sync.** A write scheduler coalesces rapid edits into one request,
+  retries with exponential backoff, holds writes while offline, and flushes when
+  the page is hidden — so closing the tab mid-session doesn't strand a write.
+- **Union merge.** Sign in on a second device and histories are unioned, never
+  overwritten. A recorded reading is a fact the user asserted; losing one is worse
+  than keeping one they later unchecked.
+- **In-app reader.** Seven translations, adjustable type, cached per chapter.
+- **Community.** Add friends, see their streak and chapter count. Guarded by RLS.
+- **Reminders.** Web Push, dispatched at the right *local* hour per device.
 
-2. Install dependencies (Legacy peer deps required due to Vite 8 / SWC plugin compatibility):
-   ```bash
-   npm install --legacy-peer-deps
-   ```
+## Stack
 
-3. Configure Environment Variables:
-   Create a `.env` file in the root and add your Supabase credentials:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
+React 18 · TypeScript (strict) · Vite 8 · Tailwind · Radix / shadcn ·
+TanStack Query · Supabase (Postgres + RLS + Auth) · Vercel
 
-4. Run the Development Server:
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:8080`.
+## Getting started
 
-## 📂 Project Structure
+```bash
+git clone https://github.com/emmanuelrichard01/scripture_daily.git
+cd scripture_daily
+npm install
+cp .env.example .env      # then fill in your Supabase values
+npm run dev               # http://localhost:8080
+```
+
+Apply the database schema with the Supabase CLI:
+
+```bash
+supabase db push
+```
+
+### Environment
+
+Client values (`VITE_*`) are embedded in the bundle and must be publishable.
+Everything else is server-only and belongs in your hosting platform's environment
+settings — never in the repo. See `.env.example`.
+
+| Variable | Scope | Purpose |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | client | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | client | Anon key (safe to expose; RLS enforces access) |
+| `VITE_VAPID_PUBLIC_KEY` | client | Web Push public key |
+| `VAPID_PRIVATE_KEY` | server | Web Push private key |
+| `SUPABASE_SERVICE_ROLE_KEY` | server | Bypasses RLS — reminder cron only |
+| `CRON_SECRET` | server | Shared secret authorising the cron endpoint |
+
+## Scripts
+
+| Command | Does |
+| --- | --- |
+| `npm run dev` | Dev server on :8080 |
+| `npm run build` | Typecheck, then production build |
+| `npm run typecheck` | `tsc -b` across app, config and API |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright |
+| `npm run verify` | Typecheck + lint + unit tests |
+
+## Layout
 
 ```text
+api/                    Vercel serverless functions
+  bible.ts                Scripture proxy — edge-cached, provider-agnostic
+  cron.ts                 Hourly reminder dispatch, timezone-aware
 src/
-├── components/       # Reusable UI components (shadcn, Onboarding, Cards)
-├── contexts/         # Global state providers (Auth, Progress, Settings)
-├── hooks/            # Custom React hooks (useHaptics, useAudio, useMobile)
-├── integrations/     # Third-party integrations (Supabase types & client)
-├── lib/              # Utility functions, constants, reading plan data
-├── pages/            # Top-level routing components (Index, History, Profile)
-├── index.css         # Global Tailwind directives and CSS variables
-├── App.tsx           # Router and Provider orchestration
-└── main.tsx          # Application entry point
+  lib/                    Pure domain logic. No React, no I/O — all unit-tested.
+    date.ts                 Local-day arithmetic (the timezone boundary)
+    readingPlan.ts          Plan data + cycle engine
+    progress.ts             Reading log: mutations, derivations, merge
+    syncEngine.ts           Debounced, retrying, offline-tolerant writes
+    bible.ts                Fetch + HTML sanitisation
+    storage.ts              Guarded localStorage
+  contexts/               Providers; state only, logic delegated to lib/
+  hooks/                  Context accessors and small behaviours
+  components/             UI, with ui/ holding the Radix primitives
+  pages/                  Route components
+supabase/migrations/    Schema, RLS policies, storage buckets
 ```
 
-## 🔒 Authentication & Database Rules
+### Where the boundaries are
 
-This application uses **Supabase Auth** (Email/Password + OAuth).
-- The `reading_progress` and `user_settings` tables are strictly protected by **Row Level Security (RLS)**.
-- Users can only `SELECT`, `INSERT`, `UPDATE`, and `DELETE` rows where `user_id = auth.uid()`.
+- **`src/lib` never imports React.** Domain rules stay testable without a DOM.
+- **Dates are local, always.** `new Date("2026-08-12")` parses as *UTC* and
+  `toISOString()` emits *UTC* — either one silently shifts a day for most of the
+  world. All date handling goes through `src/lib/date.ts`; nothing else should
+  construct a date from a string.
+- **Third-party HTML is sanitised at the injection point.** `sanitizeVerseHtml`
+  rebuilds verse markup from an allowlist before it reaches
+  `dangerouslySetInnerHTML`.
 
-## 🤝 Contributing
+## Deployment
 
-We welcome contributions! Please follow these steps:
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Ensure your code passes the linting rules (`npm run lint`).
-4. Commit your changes with conventional commits (`git commit -m 'feat: Add amazing feature'`).
-5. Push to the branch (`git push origin feature/amazing-feature`).
-6. Open a Pull Request.
+Vercel, configured by `vercel.json`: SPA fallback, hourly cron, security headers
+(CSP, HSTS, frame-deny), and immutable caching for hashed assets. Set the
+environment variables above in the project settings before the first deploy.
 
-## 📄 License
+## Contributing
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+1. Branch from `main`.
+2. Keep `npm run verify` green.
+3. Conventional commits (`feat:`, `fix:`, `chore:`).
+
+## License
+
+MIT.

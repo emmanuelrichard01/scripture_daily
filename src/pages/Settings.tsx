@@ -1,19 +1,28 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { BottomNav } from "@/components/BottomNav";
-import { Header } from "@/components/Header";
+import {
+  Bell,
+  BellOff,
+  ChevronRight,
+  Cloud,
+  Download,
+  LogIn,
+  LogOut,
+  Monitor,
+  Moon,
+  RotateCcw,
+  Sun,
+  Trash2,
+  Trophy,
+  Upload,
+} from "lucide-react";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { SettingsSection, SettingsRow } from "@/components/SettingsSection";
-import { ReminderPicker } from "@/components/ReminderPicker";
 import { StartDatePicker } from "@/components/StartDatePicker";
+import { ReminderPicker } from "@/components/ReminderPicker";
 import { UserProfile } from "@/components/UserProfile";
-import { useSettings } from "@/hooks/useSettings";
-import { useCloudProgress } from "@/hooks/useCloudProgress";
-import { useCycleMilestones } from "@/hooks/useCycleMilestones";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAutoTheme } from "@/hooks/useAutoTheme";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -31,438 +40,436 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Moon,
-  Sun,
-  Monitor,
-  Sunrise,
-  Trash2,
-  Download,
-  LogOut,
-  LogIn,
-  Cloud,
-  ChevronRight,
-  Bell,
-  BellOff,
-  User,
-  Trophy,
-} from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
+import { useProgress } from "@/hooks/useProgress";
+import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { TRANSLATIONS, type ThemePreference } from "@/contexts/SettingsContext";
+import { todayISO } from "@/lib/date";
 import { toast } from "sonner";
 
-const Settings = () => {
+const THEME_OPTIONS = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+] as const satisfies readonly { value: ThemePreference; label: string; icon: unknown }[];
+
+const APP_VERSION = "1.0.0";
+
+export default function Settings() {
+  const { settings, updateSettings, updateReminders, resetSettings } = useSettings();
   const {
-    settings,
-    updateSettings,
-    updateReminders,
-    requestNotificationPermission,
-  } = useSettings();
-
-  const { totalChaptersRead, streakCount, resetProgress, startDate, updateStartDate, listProgress } = useCloudProgress();
-  const { cycleStats, totalStats } = useCycleMilestones(listProgress);
+    history,
+    startDate,
+    totalChaptersRead,
+    streakCount,
+    listPositions,
+    updateStartDate,
+    resetProgress,
+    importProgress,
+  } = useProgress();
   const { user, signOut } = useAuth();
-  const { isDarkNow } = useAutoTheme();
-  const { isSupported: pushSupported, permission: pushPermission, requestPermission: requestPushPermission } = usePushNotifications();
-  const [showResetDialog, setShowResetDialog] = useState(false);
+  const { restart: restartOnboarding } = useOnboarding();
+  const push = usePushNotifications();
 
-  const handleExportData = () => {
-    const data = {
-      progress: localStorage.getItem("scripture-daily-progress-v2"),
-      settings: localStorage.getItem("horner-settings"),
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const totalCycles = listPositions.reduce((sum, p) => sum + p.completedCycles, 0);
+  const ThemeIcon =
+    THEME_OPTIONS.find((option) => option.value === settings.theme)?.icon ?? Monitor;
+
+  const handleExport = () => {
+    // A self-describing envelope, so a backup taken today can still be
+    // recognised and migrated by a much later version of the app.
+    const backup = {
+      app: "scripture-daily",
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
+      progress: { version: 2, history, startDate, updatedAt: new Date().toISOString() },
+      settings,
     };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `scripture-daily-backup-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `scripture-daily-backup-${todayISO()}.json`;
+    link.click();
     URL.revokeObjectURL(url);
 
-    toast.success("Data exported successfully");
+    toast.success("Backup downloaded");
   };
 
-  const handleResetData = () => {
+  const handleImport = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text()) as { progress?: unknown };
+      if (importProgress(parsed.progress)) {
+        toast.success("Progress restored", {
+          description: "Your backup has been merged in.",
+        });
+      } else {
+        toast.error("That file doesn't contain valid progress data");
+      }
+    } catch {
+      toast.error("Couldn't read that file");
+    }
+  };
+
+  const handleReset = () => {
     resetProgress();
-    localStorage.removeItem("horner-settings");
+    resetSettings();
     setShowResetDialog(false);
-    toast.success("All data has been reset");
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    toast.success("Signed out");
+    toast.success("Everything has been reset");
   };
 
   const handleEnableNotifications = async () => {
-    if (!pushSupported) {
-      toast.error("Notifications not supported on this device");
-      return;
-    }
-
-    const result = await requestPushPermission();
-    if (result.success) {
-      toast.success("Notifications enabled!");
+    const result = await push.requestPermission();
+    if (result.ok) {
+      toast.success("Reminders enabled");
+      updateReminders({ enabled: true });
     } else {
-      toast.error(result.error || "Could not enable notifications");
+      toast.error(result.error);
     }
   };
-
-  const themeIcons = {
-    light: Sun,
-    dark: Moon,
-    system: Monitor,
-    auto: Sunrise,
-  };
-
-  const ThemeIcon = themeIcons[settings.theme];
-
-  // Get lists with completed cycles for milestones display
-  const completedCycleLists = cycleStats.filter(s => s.completedCycles > 0);
 
   return (
-    <div className="min-h-dvh bg-background pb-20">
-      <Header left={<h1 className="text-xl font-heading font-semibold text-foreground">Settings</h1>} />
-
-      <main className="max-w-lg mx-auto px-5 py-6 space-y-5" role="main" aria-label="Settings">
-        {/* User Profile Card */}
-        {user ? (
-          <Link 
-            to="/profile" 
-            className="card-elevated p-5 block hover:bg-secondary/40 transition-all border border-border/60 shadow-md relative overflow-hidden group"
-            aria-label="Edit profile"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
-            <div className="flex items-center justify-between relative z-10">
-              <UserProfile size="lg" showGreeting={true} />
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-track-green/10 text-track-green border border-track-green/20">
-                  <Cloud className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span className="text-[11px] font-bold">Cloud Synced</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <div className="card-elevated p-5 bg-gradient-to-br from-primary/10 via-background to-secondary/30 border border-primary/20 shadow-md flex items-center justify-between">
-            <div>
-              <h3 className="font-heading font-bold text-foreground text-base">Sync Your Reading Progress</h3>
-              <p className="text-xs text-muted-foreground mt-0.5 font-medium">Create a free account to back up streaks & history</p>
-            </div>
-            <Link to="/auth">
-              <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-sm hover:bg-primary/90">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        )}
-
-        {/* Account Section */}
-        <SettingsSection
-          title="Account"
-          description={user ? user.email || "Signed in" : "Sync across devices"}
+    <PageLayout title="Settings">
+      {user ? (
+        <Link
+          to="/profile"
+          className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card p-5 transition-colors hover:bg-secondary/40 focus-ring"
         >
-          {user ? (
-            <>
-              <SettingsRow
-                label="Edit Profile"
-                description="Name, avatar, preferences"
-                action={
-                  <Link to="/profile">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 text-muted-foreground min-h-[44px]"
-                      aria-label="Edit profile"
-                    >
-                      <User className="w-4 h-4" aria-hidden="true" />
-                      <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                    </Button>
-                  </Link>
-                }
-              />
-              <SettingsRow
-                label="Sign Out"
-                action={
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2"
-                    aria-label="Sign out"
-                  >
-                    <LogOut className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                }
-              />
-            </>
-          ) : (
-            <SettingsRow
-              label="Sign In"
-              description="Sync your progress across devices"
-              action={
-                <Link to="/auth">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-muted-foreground min-h-[44px]"
-                    aria-label="Sign in"
-                  >
-                    <LogIn className="w-4 h-4" aria-hidden="true" />
-                    <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                  </Button>
-                </Link>
-              }
-            />
-          )}
-        </SettingsSection>
+          <UserProfile size="lg" />
+          <span className="flex shrink-0 items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2.5 py-1 text-[11px] font-bold text-success">
+              <Cloud className="h-3.5 w-3.5" aria-hidden="true" />
+              Synced
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          </span>
+        </Link>
+      ) : (
+        <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+          <div className="min-w-0">
+            <h2 className="font-heading text-base font-bold">Back up your reading</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              A free account keeps your streak safe across devices.
+            </p>
+          </div>
+          <Button asChild size="sm" className="shrink-0 rounded-xl font-semibold">
+            <Link to="/auth">Sign in</Link>
+          </Button>
+        </div>
+      )}
 
-        {/* Reading Settings */}
+      <div className="space-y-5">
         <SettingsSection title="Reading">
-          <StartDatePicker 
-            currentStartDate={startDate}
-            onUpdateStartDate={updateStartDate}
+          <StartDatePicker startDate={startDate} onChange={updateStartDate} />
+          <SettingsRow
+            label="Translation"
+            description="Used in the in-app reader"
+            action={
+              <Select
+                value={settings.translation}
+                onValueChange={(value) =>
+                  updateSettings({ translation: value as typeof settings.translation })
+                }
+              >
+                <SelectTrigger className="h-11 w-32" aria-label="Bible translation">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRANSLATIONS.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
           />
         </SettingsSection>
 
-        {/* Notifications */}
-        <SettingsSection title="Notifications">
-          {pushSupported ? (
-            <>
-              <SettingsRow
-                label="Push Notifications"
-                description={
-                  pushPermission === "granted" 
-                    ? "Daily reminders enabled" 
-                    : "Get gentle daily reminders"
-                }
-                action={
-                  pushPermission === "granted" ? (
-                    <div className="flex items-center gap-2 text-track-green">
-                      <Bell className="w-4 h-4" aria-hidden="true" />
-                      <span className="text-xs font-medium">Enabled</span>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEnableNotifications}
-                      className="gap-1.5 min-h-[44px]"
-                      aria-label="Enable notifications"
-                    >
-                      <Bell className="w-4 h-4" aria-hidden="true" />
-                      Enable
-                    </Button>
-                  )
-                }
-              />
-              {pushPermission === "granted" && (
-                <ReminderPicker
-                  reminders={settings.reminders}
-                  notificationPermission={settings.notificationPermission}
-                  onUpdate={updateReminders}
-                  onRequestPermission={requestNotificationPermission}
-                />
-              )}
-            </>
-          ) : (
+        <SettingsSection title="Reminders">
+          {!push.isSupported ? (
             <SettingsRow
-              label="Push Notifications"
-              description="Not supported on this device"
+              label="Daily reminder"
+              description="Not supported by this browser"
               action={
-                <BellOff className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                <BellOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               }
             />
+          ) : push.permission === "denied" ? (
+            <SettingsRow
+              label="Daily reminder"
+              description="Blocked — enable notifications for this site in your browser settings"
+              action={
+                <BellOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              }
+            />
+          ) : push.permission !== "granted" ? (
+            <SettingsRow
+              label="Daily reminder"
+              description="A gentle nudge at the time you choose"
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEnableNotifications}
+                  disabled={push.isBusy}
+                  className="h-11 gap-1.5"
+                >
+                  <Bell className="h-4 w-4" aria-hidden="true" />
+                  Enable
+                </Button>
+              }
+            />
+          ) : (
+            <ReminderPicker reminders={settings.reminders} onChange={updateReminders} />
           )}
         </SettingsSection>
 
-        {/* Appearance */}
         <SettingsSection title="Appearance">
           <SettingsRow
             label="Theme"
-            description={settings.theme === "auto" ? (isDarkNow ? "Dark until sunrise" : "Light until sunset") : undefined}
             action={
               <Select
                 value={settings.theme}
-                onValueChange={(value: "light" | "dark" | "system" | "auto") =>
-                  updateSettings({ theme: value })
+                onValueChange={(value) =>
+                  updateSettings({ theme: value as ThemePreference })
                 }
               >
-                <SelectTrigger className="w-32 h-11 border-0 bg-secondary" aria-label="Select theme">
-                  <div className="flex items-center gap-2">
-                    <ThemeIcon className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
-                    <SelectValue />
-                  </div>
+                <SelectTrigger className="h-11 w-32 gap-2" aria-label="Theme">
+                  <ThemeIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="auto">Auto (Sun)</SelectItem>
+                  {THEME_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             }
           />
           <SettingsRow
-            label="Haptic Feedback"
-            description="Vibration on interactions"
+            label="Sound"
+            description="A soft tone when you mark a chapter"
+            action={
+              <Switch
+                checked={settings.soundEffects}
+                onCheckedChange={(checked) => updateSettings({ soundEffects: checked })}
+                aria-label="Sound effects"
+              />
+            }
+          />
+          <SettingsRow
+            label="Vibration"
+            description="Haptic feedback on supported devices"
             action={
               <Switch
                 checked={settings.hapticFeedback}
-                onCheckedChange={(checked) =>
-                  updateSettings({ hapticFeedback: checked })
-                }
-                aria-label="Toggle haptic feedback"
+                onCheckedChange={(checked) => updateSettings({ hapticFeedback: checked })}
+                aria-label="Haptic feedback"
+              />
+            }
+          />
+          <SettingsRow
+            label="Reduce motion"
+            description="Minimise animation throughout the app"
+            action={
+              <Switch
+                checked={settings.reduceMotion}
+                onCheckedChange={(checked) => updateSettings({ reduceMotion: checked })}
+                aria-label="Reduce motion"
               />
             }
           />
         </SettingsSection>
 
-        {/* Milestones */}
-        <SettingsSection
-          title="Milestones"
-          description="Cycle counts across the 10 tracks"
-        >
+        <SettingsSection title="Your reading">
           <SettingsRow
-            label="View Milestones"
-            description="Per-track cycles and quiet progress"
+            label="Milestones"
+            description={`${totalCycles} ${totalCycles === 1 ? "cycle" : "cycles"} completed`}
             action={
-              <Link to="/milestones">
+              <Button asChild variant="ghost" size="sm" className="h-11 gap-1.5">
+                <Link to="/milestones" aria-label="View milestones">
+                  <Trophy className="h-4 w-4" aria-hidden="true" />
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            }
+          />
+          <SettingsRow
+            label="Replay the introduction"
+            description="See the walkthrough again"
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={restartOnboarding}
+                className="h-11 gap-1.5 text-muted-foreground"
+                aria-label="Replay introduction"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            }
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Data">
+          <SettingsRow
+            label="Export a backup"
+            description="Download everything as a JSON file"
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExport}
+                className="h-11 text-muted-foreground"
+                aria-label="Export data"
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            }
+          />
+          <SettingsRow
+            label="Restore a backup"
+            description="Merge a previously exported file"
+            action={
+              <>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void handleImport(file);
+                    event.target.value = ""; // Allow re-picking the same file.
+                  }}
+                />
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="gap-1.5 text-muted-foreground min-h-[44px]"
-                  aria-label="View milestones"
+                  onClick={() => importInputRef.current?.click()}
+                  className="h-11 text-muted-foreground"
+                  aria-label="Restore from backup"
                 >
-                  <Trophy className="w-4 h-4" aria-hidden="true" />
-                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                  <Upload className="h-4 w-4" aria-hidden="true" />
                 </Button>
-              </Link>
+              </>
             }
           />
+          <SettingsRow
+            label="Reset everything"
+            description="Permanently delete all progress"
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResetDialog(true)}
+                className="h-11 text-destructive hover:text-destructive"
+                aria-label="Reset all data"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            }
+          />
+        </SettingsSection>
 
-          {completedCycleLists.length > 0 && (
-            <div className="px-4 py-3 space-y-2" role="list" aria-label="Completed cycles">
-              {completedCycleLists.map((stat) => (
-                <div
-                  key={stat.listId}
-                  className="flex items-center gap-3 py-2"
-                  role="listitem"
+        <SettingsSection title="Account">
+          {user ? (
+            <SettingsRow
+              label="Sign out"
+              description={user.email ?? undefined}
+              action={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    await signOut();
+                    toast.success("Signed out");
+                  }}
+                  className="h-11 gap-1.5 text-muted-foreground"
+                  aria-label="Sign out"
                 >
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: `hsl(var(${stat.colorVar}) / 0.15)` }}
-                    aria-hidden="true"
-                  >
-                    <Trophy
-                      className="w-4 h-4"
-                      style={{ color: `hsl(var(${stat.colorVar}))` }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{stat.listName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Read {stat.completedCycles} {stat.completedCycles === 1 ? "time" : "times"}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              }
+            />
+          ) : (
+            <SettingsRow
+              label="Sign in"
+              description="Sync your progress across devices"
+              action={
+                <Button asChild variant="ghost" size="sm" className="h-11 gap-1.5">
+                  <Link to="/auth" aria-label="Sign in">
+                    <LogIn className="h-4 w-4" aria-hidden="true" />
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+              }
+            />
           )}
         </SettingsSection>
 
-        {/* Data */}
-        <SettingsSection title="Data">
-          <SettingsRow
-            label="Export Data"
-            description="Download backup file"
-            action={
-              <button
-                onClick={handleExportData}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2"
-                aria-label="Export data"
-              >
-                <Download className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
-              </button>
-            }
-          />
-          <SettingsRow
-            label="Reset All Data"
-            description="Delete all progress"
-            action={
-              <button
-                onClick={() => setShowResetDialog(true)}
-                className="flex items-center gap-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors min-h-[44px] px-2"
-                aria-label="Reset all data"
-              >
-                <Trash2 className="w-4 h-4" strokeWidth={1.5} aria-hidden="true" />
-              </button>
-            }
-          />
-        </SettingsSection>
-
-        {/* Stats Summary Widget */}
-        <div className="card-elevated p-5 bg-gradient-to-br from-track-blue/10 via-background to-track-purple/10 border border-border/80 shadow-md relative overflow-hidden" role="region" aria-label="Your progress summary">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-4">
-            Reading Lifetime Summary
+        <div className="rounded-2xl border border-border/70 bg-card p-5">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Lifetime
           </p>
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
-              <p className="text-2xl font-heading font-bold text-foreground">
-                {totalChaptersRead}
-              </p>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Chapters</p>
-            </div>
-            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
-              <p className="text-2xl font-heading font-bold text-track-orange">
-                {streakCount}
-              </p>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Day Streak</p>
-            </div>
-            <div className="bg-background/60 p-3 rounded-2xl border border-border/40 backdrop-blur-sm">
-              <p className="text-2xl font-heading font-bold text-track-yellow">
-                {totalStats.totalCycles}
-              </p>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Cycles</p>
-            </div>
+            {[
+              { value: totalChaptersRead, label: "Chapters" },
+              { value: streakCount, label: "Day streak" },
+              { value: totalCycles, label: "Cycles" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <p className="font-heading text-2xl font-bold tabular-nums">
+                  {stat.value.toLocaleString()}
+                </p>
+                <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* App Info */}
-        <div className="text-center pt-4">
-          <p className="text-xs text-muted-foreground">Scripture Daily v1.0</p>
-          <p className="text-2xs text-muted-foreground/70 mt-0.5">
-            Horner Bible Reading System
-          </p>
-        </div>
-      </main>
+        <p className="pt-2 text-center text-xs text-muted-foreground">
+          Scripture Daily v{APP_VERSION}
+          <br />
+          <span className="text-muted-foreground/70">
+            Professor Grant Horner's reading system
+          </span>
+        </p>
+      </div>
 
-      {/* Reset Confirmation Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent className="max-w-sm mx-4 rounded-2xl">
+        <AlertDialogContent className="max-w-sm rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset all data?</AlertDialogTitle>
+            <AlertDialogTitle>Reset everything?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all your reading progress. This action cannot be undone.
+              This deletes all {totalChaptersRead.toLocaleString()} chapters of recorded
+              progress and resets your preferences. It cannot be undone — export a backup
+              first if you might want it back.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl min-h-[44px]">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="h-11 rounded-xl">Keep my data</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleResetData}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl min-h-[44px]"
+              onClick={handleReset}
+              className="h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <BottomNav />
-    </div>
+    </PageLayout>
   );
-};
-
-export default Settings;
+}

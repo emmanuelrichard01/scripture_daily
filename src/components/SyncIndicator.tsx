@@ -1,107 +1,81 @@
-import { Cloud, CloudOff, Loader2, RefreshCw, WifiOff } from "lucide-react";
+import { Check, CloudOff, Loader2, RefreshCw, WifiOff } from "lucide-react";
+import { formatRelativeTime } from "@/lib/date";
+import type { SyncStatus } from "@/lib/syncEngine";
 import { cn } from "@/lib/utils";
 
-export type SyncStatus = "idle" | "syncing" | "error" | "local" | "offline";
-
 interface SyncIndicatorProps {
-  isSyncing?: boolean;
-  isAuthenticated?: boolean;
-  status?: SyncStatus;
-  lastSyncedAt?: Date | null;
-  onRetry?: () => void;
+  status: SyncStatus;
+  lastSyncedAt: Date | null;
+  isAuthenticated: boolean;
+  onRetry: () => void;
   className?: string;
 }
 
-const relativeTime = (date: Date) => {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 45) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-};
-
+/**
+ * A quiet report on where progress is stored.
+ *
+ * Deliberately understated: sync is background work, and the only state that
+ * warrants the user's attention is a failure they can act on.
+ */
 export function SyncIndicator({
-  isSyncing,
-  isAuthenticated,
   status,
   lastSyncedAt,
+  isAuthenticated,
   onRetry,
   className,
 }: SyncIndicatorProps) {
-  const resolved: SyncStatus =
-    status ?? (!isAuthenticated ? "local" : isSyncing ? "syncing" : "idle");
+  const base = cn("flex items-center gap-1.5 text-[11px] font-medium", className);
 
-  const base = "flex items-center gap-1 text-2xs transition-colors";
-
-  if (resolved === "local") {
+  if (!isAuthenticated) {
     return (
-      <div
-        className={cn(base, "text-muted-foreground", className)}
-        role="status"
-        aria-live="polite"
-      >
-        <CloudOff className="w-3 h-3" strokeWidth={1.5} aria-hidden="true" />
-        <span>Saved on this device</span>
-      </div>
+      <span className={cn(base, "text-muted-foreground")} role="status">
+        <CloudOff className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        On this device
+      </span>
     );
   }
 
-  if (resolved === "syncing") {
-    return (
-      <div
-        className={cn(base, "text-muted-foreground", className)}
-        role="status"
-        aria-live="polite"
-      >
-        <Loader2 className="w-3 h-3 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        <span>Syncing</span>
-      </div>
-    );
-  }
-
-  if (resolved === "offline") {
-    return (
-      <div
-        className={cn(base, "text-muted-foreground", className)}
-        role="status"
-        aria-live="polite"
-      >
-        <WifiOff className="w-3 h-3" strokeWidth={1.5} aria-hidden="true" />
-        <span>Offline — will sync later</span>
-      </div>
-    );
-  }
-
-  if (resolved === "error") {
+  if (status === "error") {
     return (
       <button
         type="button"
         onClick={onRetry}
         className={cn(
           base,
-          "text-destructive rounded-md px-1.5 py-1 min-h-[28px] hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-          className
+          "rounded-md px-2 py-1 text-destructive transition-colors hover:bg-destructive/10 focus-ring",
         )}
-        aria-label="Sync failed. Retry now."
       >
-        <RefreshCw className="w-3 h-3" strokeWidth={1.5} aria-hidden="true" />
-        <span>Sync failed — retry</span>
+        <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        Sync failed — retry
       </button>
     );
   }
 
-  return (
-    <div
-      className={cn(base, "text-success", className)}
-      role="status"
-      aria-live="polite"
-    >
-      <Cloud className="w-3 h-3" strokeWidth={1.5} aria-hidden="true" />
-      <span>
-        Synced{lastSyncedAt ? ` · ${relativeTime(lastSyncedAt)}` : ""}
+  if (status === "offline") {
+    return (
+      <span className={cn(base, "text-muted-foreground")} role="status">
+        <WifiOff className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
+        Offline — saved locally
       </span>
-    </div>
+    );
+  }
+
+  if (status === "syncing" || status === "pending") {
+    return (
+      <span className={cn(base, "text-muted-foreground")} role="status" aria-live="polite">
+        <Loader2
+          className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+        Syncing
+      </span>
+    );
+  }
+
+  return (
+    <span className={cn(base, "text-muted-foreground")} role="status">
+      <Check className="h-3.5 w-3.5 text-success" strokeWidth={2.5} aria-hidden="true" />
+      {lastSyncedAt ? `Synced ${formatRelativeTime(lastSyncedAt)}` : "Synced"}
+    </span>
   );
 }

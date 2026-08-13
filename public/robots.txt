@@ -1,14 +1,9 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Authenticated-only routes have nothing to index.
+Disallow: /auth
+Disallow: /profile
+Disallow: /community
+
+Sitemap: https://scripturedaily.vercel.app/sitemap.xml

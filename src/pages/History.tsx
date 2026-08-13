@@ -1,291 +1,311 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { useCloudProgress } from "@/hooks/useCloudProgress";
-import { ShareableProgressCard } from "@/components/ShareableProgressCard";
-import { readingLists } from "@/lib/readingPlan";
-import { getDateISO } from "@/lib/utils";
-import { ChevronRight, Share2, Filter } from "lucide-react";
-import { LifetimeStats } from "@/components/history/LifetimeStats";
-import { HistoryChart } from "@/components/history/HistoryChart";
+import { ChevronLeft, ChevronRight, LineChart, Share2 } from "lucide-react";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { HornerFacts } from "@/components/history/HornerFacts";
-import { AnimatePresence } from "framer-motion";
+import { useProgress } from "@/hooks/useProgress";
+import { addDays, eachDay, formatShortDate, monthKey, todayISO } from "@/lib/date";
+import { chaptersInMonth } from "@/lib/progress";
+import { CHAPTERS_PER_DAY, readingLists } from "@/lib/readingPlan";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-type ViewMode = "week" | "month";
+// recharts is ~100KB gzipped; only pulled in once there is history to chart.
+const HistoryChart = lazy(() =>
+  import("@/components/history/HistoryChart").then((module) => ({
+    default: module.HistoryChart,
+  })),
+);
+const ShareableProgressCard = lazy(() =>
+  import("@/components/ShareableProgressCard").then((module) => ({
+    default: module.ShareableProgressCard,
+  })),
+);
 
-const History = () => {
-  const { history, totalChaptersRead } = useCloudProgress();
-  const today = useMemo(() => new Date(), []);
-  const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [trackFilter, setTrackFilter] = useState<number | null>(null);
-  const [showShareCard, setShowShareCard] = useState(false);
+type Range = "week" | "month";
 
-  const trackIds = useMemo(
-    () => (trackFilter === null ? readingLists.map((l) => l.id) : [trackFilter]),
-    [trackFilter]
-  );
+export default function History() {
+  const { history, totalChaptersRead, bestStreak, streakCount } = useProgress();
+  const [range, setRange] = useState<Range>("week");
+  const [offset, setOffset] = useState(0);
+  const [listFilter, setListFilter] = useState<number | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
-  const maxPerDay = trackIds.length;
+  const today = todayISO();
 
-  // Calculate weekly/monthly data
   const chartData = useMemo(() => {
-    const data: { label: string; chapters: number; fullDate: string }[] = [];
+    const span = range === "week" ? 7 : 28;
+    // `offset` counts periods back from now; 0 is the current window.
+    const end = addDays(today, offset * span);
+    const start = addDays(end, -(span - 1));
 
-    const countForDay = (dateIso: string) => {
-      const completedListIds = history[dateIso] || [];
-      return trackIds.reduce(
-        (sum, listId) => sum + (completedListIds.includes(listId) ? 1 : 0),
-        0
-      );
+    const countFor = (date: string) => {
+      const day = history[date] ?? [];
+      return listFilter === null ? day.length : day.includes(listFilter) ? 1 : 0;
     };
 
-    if (viewMode === "week") {
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i + weekOffset * 7);
-
-        data.push({
-          label: date.toLocaleDateString("en-US", { weekday: "short" }),
-          chapters: countForDay(getDateISO(date)),
-          fullDate: date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-        });
-      }
-    } else {
-      for (let week = 3; week >= 0; week--) {
-        let weekTotal = 0;
-        const weekStart = new Date(today);
-        weekStart.setDate(weekStart.getDate() - (week + 1) * 7 + 1);
-
-        for (let day = 0; day < 7; day++) {
-          const date = new Date(weekStart);
-          date.setDate(date.getDate() + day);
-          weekTotal += countForDay(getDateISO(date));
-        }
-
-        data.push({
-          label: `Week ${4 - week}`,
-          chapters: weekTotal,
-          fullDate: weekStart.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-        });
-      }
+    if (range === "week") {
+      return eachDay(start, end).map((date) => ({
+        label: new Date(date).toLocaleDateString(undefined, { weekday: "narrow" }),
+        fullDate: date,
+        chapters: countFor(date),
+      }));
     }
 
-    return data;
-  }, [history, viewMode, weekOffset, today, trackIds]);
+    // Four buckets of seven days.
+    return Array.from({ length: 4 }, (_, index) => {
+      const weekStart = addDays(start, index * 7);
+      const chapters = eachDay(weekStart, addDays(weekStart, 6)).reduce(
+        (sum, date) => sum + countFor(date),
+        0,
+      );
+      return { label: `W${index + 1}`, fullDate: weekStart, chapters };
+    });
+  }, [history, range, offset, listFilter, today]);
 
-  // Lifetime summary
-  const lifetime = useMemo(() => {
-    // Unique days read in general
-    const daysSet = new Set<string>();
-    
-    // Total chapters read in the current month
-    let monthChapters = 0;
-
-    const currentMonthStr = getDateISO(today).substring(0, 7); // "YYYY-MM"
-
-    for (const [dateStr, listIds] of Object.entries(history)) {
-      if (listIds.length === 0) continue;
-      
-      const filteredListIds = trackFilter !== null ? listIds.filter(id => id === trackFilter) : listIds;
-      if (filteredListIds.length === 0) continue;
-
-      daysSet.add(dateStr);
-
-      if (dateStr.startsWith(currentMonthStr)) {
-        monthChapters += filteredListIds.length;
-      }
-    }
-
-    const sortedDates = Array.from(daysSet).sort();
-    let best = 0;
-    let run = 0;
-    let previousDate: Date | null = null;
-
-    for (const dateStr of sortedDates) {
-      const d = new Date(dateStr);
-      if (previousDate) {
-        const diffTime = Math.abs(d.getTime() - previousDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) {
-          run += 1;
-        } else {
-          run = 1;
-        }
-      } else {
-        run = 1;
-      }
-      best = Math.max(best, run);
-      previousDate = d;
-    }
-
-    return { bestStreak: best, monthChapters, activeDays: daysSet.size };
-  }, [history, today, trackFilter]);
-
-  // Calculate summary stats for chart
   const stats = useMemo(() => {
-    const totalThisWeek = chartData.reduce((sum, d) => sum + d.chapters, 0);
-    const days = viewMode === "week" ? 7 : 28;
-    const avgPerDay = (totalThisWeek / days).toFixed(1);
-    const completionRate = (
-      (totalThisWeek / (days * maxPerDay)) *
-      100
-    );
+    const total = chartData.reduce((sum, point) => sum + point.chapters, 0);
+    const days = range === "week" ? 7 : 28;
+    const ceiling = listFilter === null ? CHAPTERS_PER_DAY : 1;
+    return {
+      total,
+      averagePerDay: total / days,
+      completionRate: (total / (days * ceiling)) * 100,
+    };
+  }, [chartData, range, listFilter]);
 
-    return { avgPerDay, completionRate, totalThisWeek };
-  }, [chartData, viewMode, maxPerDay]);
+  const activeDays = useMemo(
+    () => Object.values(history).filter((day) => day.length > 0).length,
+    [history],
+  );
+  const thisMonth = useMemo(() => chaptersInMonth(history, monthKey(today)), [history, today]);
+
+  const periodLabel =
+    offset === 0
+      ? `This ${range}`
+      : offset === -1
+        ? `Last ${range}`
+        : `${formatShortDate(chartData[0]?.fullDate ?? today)}`;
+
+  if (totalChaptersRead === 0) {
+    return (
+      <PageLayout title="History">
+        <div className="flex flex-col items-center gap-5 py-20 text-center">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary text-muted-foreground/50"
+            aria-hidden="true"
+          >
+            <LineChart className="h-8 w-8" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="font-display text-lg font-semibold">Nothing charted yet</h2>
+            <p className="mx-auto max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
+              Mark your first chapter and your reading will start appearing here.
+            </p>
+          </div>
+          <Button asChild className="h-11 rounded-xl px-6 font-semibold">
+            <Link to="/">Start reading</Link>
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
-    <div className="min-h-dvh bg-background pb-[88px]">
-      <Header 
-        left={
-          <h1 className="text-xl font-heading font-semibold text-foreground">History</h1>
-        }
-        right={
-          <button
-            onClick={() => setShowShareCard(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors focus-ring active:scale-95"
-            aria-label="Share progress"
-            aria-haspopup="dialog"
-            aria-expanded={showShareCard}
-          >
-            <Share2 className="w-4 h-4" aria-hidden="true" />
-            <span className="text-xs font-semibold">Share</span>
-          </button>
-        }
-      />
-
-      <main className="max-w-lg mx-auto px-5 py-6 flex-1 flex flex-col">
-        {totalChaptersRead === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-20 animate-fade-in">
-            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-muted-foreground/50"
-              >
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold tracking-tight mb-2">No History Yet</h2>
-            <p className="text-sm text-muted-foreground mb-8 max-w-[240px]">
-              Your reading journey will be mapped out here once you complete your first chapter.
-            </p>
-            <Link
-              to="/"
-              className="px-6 py-3 rounded-full bg-foreground text-background font-bold text-sm shadow-md hover:bg-foreground/90 transition-all focus-ring"
-            >
-              Start Reading
-            </Link>
-          </div>
-        ) : (
-          <>
-            <LifetimeStats
-              bestStreak={lifetime.bestStreak}
-              totalChaptersRead={totalChaptersRead}
-              monthChapters={lifetime.monthChapters}
-              activeDays={lifetime.activeDays}
-            />
-
-        {/* Track Filter */}
-        <div 
-          className="flex items-center gap-3 overflow-x-auto pb-4 mb-2 scrollbar-none snap-x"
-          role="radiogroup"
-          aria-label="Filter history by track"
+    <PageLayout
+      title="History"
+      action={
+        <button
+          type="button"
+          onClick={() => setIsSharing(true)}
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary/10 px-3 text-xs font-bold text-primary transition-colors hover:bg-primary/20 focus-ring"
         >
-          <div className="flex items-center gap-2 pl-1 snap-start">
-            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-            <button
-              role="radio"
-              aria-checked={trackFilter === null}
-              onClick={() => setTrackFilter(null)}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-ring ${
-                trackFilter === null
-                  ? "bg-foreground text-background shadow-sm"
-                  : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-              }`}
-            >
-              All Tracks
-            </button>
-          </div>
-          {readingLists.map((list) => (
-            <button
-              key={list.id}
-              role="radio"
-              aria-checked={trackFilter === list.id}
-              onClick={() => setTrackFilter(list.id)}
-              className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all focus-ring flex items-center gap-2 ${
-                trackFilter === list.id
-                  ? "bg-foreground text-background shadow-sm"
-                  : "bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-              }`}
-            >
-              <div 
-                className="w-2 h-2 rounded-full" 
-                style={{ backgroundColor: `hsl(var(${list.colorVar}))` }}
-                aria-hidden="true"
-              />
-              Track {list.id}
-            </button>
+          <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Share
+        </button>
+      }
+    >
+      {/* ── Lifetime ── */}
+      <section aria-label="Lifetime statistics" className="surface mb-6 p-5">
+        <div className="grid grid-cols-2 gap-y-5">
+          {[
+            { value: bestStreak, label: "best streak", unit: pluralUnit(bestStreak, "day") },
+            { value: streakCount, label: "current streak", unit: pluralUnit(streakCount, "day") },
+            { value: thisMonth, label: "this month", unit: "chapters" },
+            { value: activeDays, label: "days read", unit: "total" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="stat-display text-2xl leading-none">
+                {stat.value.toLocaleString()}
+                <span className="ml-1.5 text-xs font-semibold text-muted-foreground">
+                  {stat.unit}
+                </span>
+              </p>
+              <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                {stat.label}
+              </p>
+            </div>
           ))}
         </div>
+      </section>
 
-        <HistoryChart
-          data={chartData}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          weekOffset={weekOffset}
-          setWeekOffset={setWeekOffset}
-          avgPerDay={stats.avgPerDay}
-          completionRate={stats.completionRate}
-          maxPerDay={maxPerDay}
-        />
-
-        {/* Action Link to Progress Page */}
-        <Link
-          to="/progress"
-          className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-8 hover:bg-primary/10 transition-colors focus-ring group"
-          aria-label="View detailed milestones"
+      {/* ── Filter ── */}
+      <div
+        className="scrollbar-none fade-edge-x -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1"
+        role="radiogroup"
+        aria-label="Filter by list"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked={listFilter === null}
+          onClick={() => setListFilter(null)}
+          className={cn(
+            "shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-colors focus-ring",
+            listFilter === null
+              ? "bg-foreground text-background"
+              : "bg-secondary text-muted-foreground hover:text-foreground",
+          )}
         >
-          <div>
-            <h3 className="font-bold text-sm text-foreground">Detailed Milestones</h3>
-            <p className="text-xs text-muted-foreground font-medium mt-0.5">View your trophies and streak data</p>
+          All lists
+        </button>
+
+        {readingLists.map((list) => (
+          <button
+            key={list.id}
+            type="button"
+            role="radio"
+            aria-checked={listFilter === list.id}
+            onClick={() => setListFilter(list.id)}
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-colors focus-ring",
+              listFilter === list.id
+                ? "bg-foreground text-background"
+                : "bg-secondary text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: `hsl(var(${list.colorVar}))` }}
+              aria-hidden="true"
+            />
+            {list.name}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Chart ── */}
+      <section className="surface mb-6 p-5">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="section-label">Reading volume</h2>
+          <div className="flex rounded-xl bg-secondary p-0.5">
+            {(["week", "month"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  setRange(option);
+                  setOffset(0);
+                }}
+                className={cn(
+                  "rounded-[10px] px-3 py-1.5 text-xs font-bold capitalize transition-all focus-ring",
+                  range === option
+                    ? "bg-card shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {option}
+              </button>
+            ))}
           </div>
-          <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-        </Link>
+        </div>
 
-        <HornerFacts />
-          </>
-        )}
-      </main>
+        <div className="mb-4 flex items-end justify-between gap-3">
+          <div>
+            <p className="flex items-baseline gap-1.5">
+              <span className="stat-display text-3xl leading-none">
+                {stats.averagePerDay.toFixed(1)}
+              </span>
+              <span className="text-sm font-semibold text-muted-foreground">ch/day</span>
+            </p>
+            <p
+              className={cn(
+                "mt-1.5 text-xs font-semibold",
+                stats.completionRate >= 70
+                  ? "text-success"
+                  : stats.completionRate >= 40
+                    ? "text-track-yellow"
+                    : "text-muted-foreground",
+              )}
+            >
+              {stats.completionRate.toFixed(0)}% of target · {stats.total} total
+            </p>
+          </div>
 
-      <BottomNav />
+          <div className="flex shrink-0 items-center gap-0.5 rounded-xl bg-secondary p-0.5">
+            <button
+              type="button"
+              onClick={() => setOffset((value) => value - 1)}
+              className="rounded-[10px] p-2 transition-colors hover:bg-card focus-ring"
+              aria-label={`Previous ${range}`}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <span className="min-w-[62px] px-1 text-center text-2xs font-bold">
+              {periodLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOffset((value) => Math.min(0, value + 1))}
+              disabled={offset === 0}
+              className="rounded-[10px] p-2 transition-colors hover:bg-card disabled:opacity-25 focus-ring"
+              aria-label={`Next ${range}`}
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
 
-      {/* Share Card Modal */}
-      <AnimatePresence>
-        {showShareCard && (
-          <ShareableProgressCard
-            streak={lifetime.bestStreak} 
-            totalChapters={totalChaptersRead}
-            onClose={() => setShowShareCard(false)}
+        <Suspense fallback={<div className="skeleton h-[180px]" />}>
+          <HistoryChart
+            data={chartData}
+            maxValue={
+              (listFilter === null ? CHAPTERS_PER_DAY : 1) * (range === "week" ? 1 : 7)
+            }
           />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+        </Suspense>
+      </section>
 
-export default History;
+      <Link
+        to="/milestones"
+        className="surface-interactive mb-8 flex items-center justify-between gap-3 p-4 focus-ring"
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-bold">Milestones</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Cycles completed and what's next
+          </span>
+        </span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>
+
+      <HornerFacts />
+
+      {isSharing && (
+        <Suspense fallback={null}>
+          <ShareableProgressCard
+            streak={bestStreak}
+            totalChapters={totalChaptersRead}
+            activeDays={activeDays}
+            onClose={() => setIsSharing(false)}
+          />
+        </Suspense>
+      )}
+    </PageLayout>
+  );
+}
+
+/** Singular/plural unit label for a stat. */
+function pluralUnit(count: number, unit: string): string {
+  return count === 1 ? unit : `${unit}s`;
+}

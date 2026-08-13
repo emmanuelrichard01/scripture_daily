@@ -1,74 +1,59 @@
 import { useState } from "react";
-import { Lightbulb, Info, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { hornerFacts, readingTips } from "@/lib/readingPlan";
 import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { motion } from "framer-motion";
 
+const SECTIONS = [
+  { id: "about", title: "About the system", items: hornerFacts },
+  { id: "tips", title: "How to sustain it", items: readingTips },
+] as const;
+
+/** Background reading, collapsed by default so it never competes with the data. */
 export function HornerFacts() {
-  const [expandedTip, setExpandedTip] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6 pb-6">
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-primary" />
-          <h2 className="text-base font-bold text-foreground tracking-tight">The System</h2>
-        </div>
-        <div className="grid gap-3">
-          {hornerFacts.map((fact, i) => (
-            <div key={i} className="card-elevated p-4">
-              <h3 className="font-bold text-sm mb-1.5 text-foreground">{fact.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{fact.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+    <section aria-label="About the Horner system" className="space-y-2">
+      {SECTIONS.map((section) => {
+        const isOpen = openId === section.id;
 
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Lightbulb className="w-5 h-5 text-track-yellow" />
-          <h2 className="text-base font-bold text-foreground tracking-tight">Tips for Success</h2>
-        </div>
-        <div className="space-y-2">
-          {readingTips.map((tip, i) => (
-            <Collapsible
-              key={i}
-              open={expandedTip === i}
-              onOpenChange={() => setExpandedTip(expandedTip === i ? null : i)}
+        return (
+          <div
+            key={section.id}
+            className="overflow-hidden rounded-2xl border border-border/70 bg-card"
+          >
+            <button
+              type="button"
+              onClick={() => setOpenId(isOpen ? null : section.id)}
+              aria-expanded={isOpen}
+              aria-controls={`facts-${section.id}`}
+              className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-secondary/40 focus-ring"
             >
-              <CollapsibleTrigger asChild>
-                <button
-                  className={cn(
-                    "w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all focus-ring",
-                    expandedTip === i 
-                      ? "bg-card border-border shadow-sm" 
-                      : "bg-card/50 border-border/50 hover:bg-card hover:border-border"
-                  )}
-                >
-                  <span className="font-semibold text-sm text-foreground">{tip.title}</span>
-                  <motion.div
-                    animate={{ rotate: expandedTip === i ? 180 : 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    className="text-muted-foreground"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </motion.div>
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                <div className="p-4 pt-0 mt-1 text-sm text-muted-foreground leading-relaxed bg-card rounded-b-xl border-x border-b border-border/50 -mt-2">
-                  {tip.description}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ))}
-        </div>
-      </section>
-    </div>
+              <span className="text-sm font-bold">{section.title}</span>
+              <ChevronDown
+                className={cn(
+                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                  isOpen && "rotate-180",
+                )}
+                aria-hidden="true"
+              />
+            </button>
+
+            {isOpen && (
+              <ul id={`facts-${section.id}`} className="space-y-4 border-t border-border/50 p-4">
+                {section.items.map((item) => (
+                  <li key={item.title}>
+                    <h3 className="mb-1 text-sm font-semibold">{item.title}</h3>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </section>
   );
 }

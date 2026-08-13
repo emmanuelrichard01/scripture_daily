@@ -1,338 +1,569 @@
-import { useState, useEffect } from "react";
-import { Users, Search, UserPlus, Check, X, ShieldAlert, Loader2 } from "lucide-react";
-import { Header } from "@/components/Header";
-import { BottomNav } from "@/components/BottomNav";
-import { UserProfile } from "@/components/UserProfile";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Check,
+  Clock,
+  Flame,
+  Search,
+  Trophy,
+  UserMinus,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useProgress } from "@/hooks/useProgress";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  communityKeys,
+  fetchFriends,
+  fetchIncomingRequests,
+  fetchOutgoingRequests,
+  initialsOf,
+  nameOf,
+  removeFriendship,
+  respondToRequest,
+  searchProfiles,
+  sendFriendRequest,
+  type CommunityProfile,
+  type FriendSummary,
+} from "@/lib/community";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import type { Database } from "@/integrations/supabase/types";
 
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
-type Friendship = Database["public"]["Tables"]["friendships"]["Row"];
-type ReadingProgress = Database["public"]["Tables"]["reading_progress"]["Row"];
-
-interface FriendWithProgress {
-  profile: Profile;
-  progress: ReadingProgress | null;
-  friendshipId: string;
-}
-
-const Community = () => {
+export default function Community() {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Profile[]>([]);
-  const [friends, setFriends] = useState<FriendWithProgress[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<{ id: string; profile: Profile }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSearching, setIsSearching] = useState(false);
+  const { totalChaptersRead, streakCount } = useProgress();
+  const queryClient = useQueryClient();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [pendingRemoval, setPendingRemoval] = useState<FriendSummary | null>(null);
+
+  const debouncedSearch = useDebouncedValue(searchTerm.trim(), 350);
+  const userId = user!.id; // RequireAuth guarantees a session on this route.
+
+  const friends = useQuery({
+    queryKey: communityKeys.friends(userId),
+    queryFn: () => fetchFriends(userId),
+  });
+
+  const incoming = useQuery({
+    queryKey: communityKeys.incoming(userId),
+    queryFn: () => fetchIncomingRequests(userId),
+  });
+
+  const outgoing = useQuery({
+    queryKey: communityKeys.outgoing(userId),
+    queryFn: () => fetchOutgoingRequests(userId),
+  });
+
+  const search = useQuery({
+    queryKey: communityKeys.search(userId, debouncedSearch),
+    queryFn: () => searchProfiles(userId, debouncedSearch),
+    enabled: debouncedSearch.length >= 2,
+  });
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["community"] });
+  };
+
+  const add = useMutation({
+    mutationFn: (receiverId: string) => sendFriendRequest(userId, receiverId),
+    onSuccess: () => {
+      toast.success("Request sent");
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const respond = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "accepted" | "rejected" }) =>
+      respondToRequest(id, status).then(() => status),
+    onSuccess: (status) => {
+      toast.success(status === "accepted" ? "You're now reading together" : "Request declined");
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: removeFriendship,
+    onSuccess: () => {
+      toast.success("Removed");
+      setPendingRemoval(null);
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  /** User ids already in some relationship, so search can show the right state. */
+  const relationshipState = useMemo(() => {
+    const map = new Map<string, "friend" | "requested" | "incoming">();
+    for (const friend of friends.data ?? []) map.set(friend.profile.userId, "friend");
+    for (const request of outgoing.data ?? []) map.set(request.profile.userId, "requested");
+    for (const request of incoming.data ?? []) map.set(request.profile.userId, "incoming");
+    return map;
+  }, [friends.data, outgoing.data, incoming.data]);
+
+  // Keep the page live when someone accepts a request or logs a reading.
   useEffect(() => {
-    if (user) {
-      fetchCommunityData();
-    }
-  }, [user]);
+    const channel = supabase
+      .channel(`community:${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () =>
+        queryClient.invalidateQueries({ queryKey: ["community"] }),
+      )
+      .subscribe();
 
-  const fetchCommunityData = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      // 1. Fetch pending requests (where I am the receiver)
-      const { data: requestsData, error: reqError } = await supabase
-        .from("friendships")
-        .select("id, sender_id")
-        .eq("receiver_id", user.id)
-        .eq("status", "pending");
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 
-      if (reqError) throw reqError;
+  // Memoised so the fallback `[]` is not a fresh array each render, which would
+  // invalidate every downstream memo that depends on it.
+  const friendList = useMemo(() => friends.data ?? [], [friends.data]);
+  const activeToday = useMemo(
+    () => friendList.filter((friend) => friend.readToday),
+    [friendList],
+  );
 
-      const pendingIds = requestsData?.map(r => r.sender_id) || [];
-      if (pendingIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("user_id", pendingIds);
-        
-        if (profiles) {
-          const formatted = requestsData.map(r => ({
-            id: r.id,
-            profile: profiles.find(p => p.user_id === r.sender_id) as Profile
-          })).filter(r => r.profile);
-          setPendingRequests(formatted);
-        }
-      } else {
-        setPendingRequests([]);
-      }
-
-      // 2. Fetch accepted friends (where I am sender OR receiver)
-      const { data: friendsData, error: friendsError } = await supabase
-        .from("friendships")
-        .select("id, sender_id, receiver_id")
-        .eq("status", "accepted")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
-
-      if (friendsError) throw friendsError;
-
-      const friendUserIds = friendsData?.map(f => f.sender_id === user.id ? f.receiver_id : f.sender_id) || [];
-      
-      if (friendUserIds.length > 0) {
-        // Fetch profiles
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("*")
-          .in("user_id", friendUserIds);
-
-        // Fetch their progress (which RLS now allows!)
-        const { data: progress } = await supabase
-          .from("reading_progress")
-          .select("*")
-          .in("user_id", friendUserIds);
-
-        if (profiles) {
-          const formatted = profiles.map(profile => {
-            const friendship = friendsData.find(f => f.sender_id === profile.user_id || f.receiver_id === profile.user_id);
-            const userProgress = progress?.find(p => p.user_id === profile.user_id) || null;
-            return {
-              profile,
-              progress: userProgress,
-              friendshipId: friendship!.id
-            };
-          });
-          setFriends(formatted);
-        }
-      } else {
-        setFriends([]);
-      }
-    } catch (error) {
-      console.error("Error fetching community data:", error);
-      toast.error("Failed to load community data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim() || !user) return;
-    
-    setIsSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .ilike("display_name", `%${searchQuery}%`)
-        .neq("user_id", user.id)
-        .limit(10);
-
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error("Search error:", error);
-      toast.error("Failed to search users");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const sendFriendRequest = async (receiverId: string) => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from("friendships")
-        .insert({
-          sender_id: user.id,
-          receiver_id: receiverId,
-          status: "pending"
-        });
-
-      if (error) {
-        if (error.code === '23505') {
-          toast("Request already sent or received");
-        } else {
-          throw error;
-        }
-      } else {
-        toast.success("Friend request sent!");
-        setSearchResults(prev => prev.filter(p => p.user_id !== receiverId));
-      }
-    } catch (error) {
-      console.error("Send request error:", error);
-      toast.error("Failed to send request");
-    }
-  };
-
-  const handleRequestResponse = async (friendshipId: string, status: 'accepted' | 'rejected') => {
-    try {
-      const { error } = await supabase
-        .from("friendships")
-        .update({ status })
-        .eq("id", friendshipId);
-
-      if (error) throw error;
-      
-      toast.success(`Request ${status}`);
-      fetchCommunityData();
-    } catch (error) {
-      console.error("Response error:", error);
-      toast.error("Failed to respond to request");
-    }
-  };
-
-  const getInitials = (name: string | null) => {
-    if (!name) return "U";
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  if (!user) {
-    return (
-      <div className="min-h-dvh bg-background pb-24 flex flex-col items-center justify-center p-6 text-center">
-        <Header left={<h1 className="font-heading text-xl font-semibold">Community</h1>} />
-        <ShieldAlert className="w-16 h-16 text-muted-foreground mb-4 opacity-50" />
-        <h2 className="text-xl font-semibold mb-2">Sign in Required</h2>
-        <p className="text-muted-foreground max-w-sm mb-6">
-          You need an account to connect with friends and share reading progress.
-        </p>
-        <BottomNav />
-      </div>
-    );
-  }
+  /**
+   * Standings including the signed-in reader, so the board is a shared
+   * comparison rather than a list of other people.
+   */
+  const standings = useMemo(() => {
+    const rows = [
+      ...friendList.map((friend) => ({
+        key: friend.profile.userId,
+        name: nameOf(friend.profile),
+        chapters: friend.chapters,
+        streak: friend.streak,
+        isSelf: false,
+        profile: friend.profile as CommunityProfile | null,
+      })),
+      {
+        key: "self",
+        name: "You",
+        chapters: totalChaptersRead,
+        streak: streakCount,
+        isSelf: true,
+        profile: null,
+      },
+    ];
+    return rows.sort((a, b) => b.chapters - a.chapters);
+  }, [friendList, totalChaptersRead, streakCount]);
 
   return (
-    <div className="min-h-dvh bg-background pb-24 text-foreground">
-      <Header left={<h1 className="font-heading text-xl font-semibold">Community</h1>} right={<UserProfile user={user} />} />
-      
-      <main className="max-w-md mx-auto px-6 py-6 fade-in">
-        <div className="mb-8">
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search by display name..."
-              className="pl-10 h-12 rounded-2xl bg-secondary/50 border-transparent focus:bg-background"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />}
-          </form>
-          
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className="mt-4 p-4 rounded-2xl glass border border-border/50 animate-fade-in">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Results</h3>
-              <div className="space-y-3">
-                {searchResults.map(profile => (
-                  <div key={profile.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10 border border-border/50">
-                        <AvatarImage src={profile.avatar_url || ""} />
-                        <AvatarFallback>{getInitials(profile.display_name)}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium text-sm">{profile.display_name || "Unknown User"}</span>
-                    </div>
-                    <Button size="sm" variant="secondary" className="rounded-xl h-8 px-3" onClick={() => sendFriendRequest(profile.user_id)}>
-                      <UserPlus className="w-4 h-4 mr-1.5" /> Add
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+    <PageLayout title="Community">
+      <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+        Reading alongside others makes the habit stick. Add friends to see how
+        their reading is going — and let them see yours.
+      </p>
 
-        {/* Pending Requests */}
-        {pendingRequests.length > 0 && (
-          <section className="mb-8 animate-slide-up">
-            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-track-orange" />
-              Pending Requests
-            </h2>
-            <div className="space-y-3">
-              {pendingRequests.map(req => (
-                <div key={req.id} className="flex items-center justify-between p-3 rounded-2xl glass-card">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10 border border-border/50">
-                      <AvatarImage src={req.profile.avatar_url || ""} />
-                      <AvatarFallback>{getInitials(req.profile.display_name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-sm">{req.profile.display_name || "Unknown User"}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-success hover:bg-success/10 hover:text-success" onClick={() => handleRequestResponse(req.id, 'accepted')}>
-                      <Check className="w-4 h-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleRequestResponse(req.id, 'rejected')}>
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+      {/* ── Search ── */}
+      <div className="relative mb-6">
+        <Search
+          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Find someone by name"
+          aria-label="Search readers by display name"
+          className="h-12 rounded-2xl border-border/60 bg-card pl-11 shadow-sm"
+        />
+      </div>
+
+      {debouncedSearch.length >= 2 && (
+        <section aria-label="Search results" className="mb-8">
+          {search.isPending ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className="skeleton h-16 rounded-2xl" />
               ))}
             </div>
-          </section>
-        )}
-
-        {/* Friends List */}
-        <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            Your Friends
-          </h2>
-          
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
-            </div>
-          ) : friends.length > 0 ? (
-            <div className="grid gap-3">
-              {friends.map(friend => {
-                const isTodayActive = friend.progress && friend.progress.updated_at && format(new Date(friend.progress.updated_at), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                
+          ) : search.data?.length ? (
+            <ul className="space-y-2">
+              {search.data.map((profile) => {
+                const state = relationshipState.get(profile.userId);
                 return (
-                  <div key={friend.friendshipId} className="flex items-center justify-between p-4 rounded-2xl glass-card relative overflow-hidden group">
-                    <div className="flex items-center gap-3 z-10">
-                      <Avatar className="w-12 h-12 border border-border/50">
-                        <AvatarImage src={friend.profile.avatar_url || ""} />
-                        <AvatarFallback>{getInitials(friend.profile.display_name)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium text-sm leading-none mb-1">{friend.profile.display_name || "Unknown User"}</h3>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          Streak: {friend.progress?.streak_count || 0}
-                          <span className="w-1 h-1 rounded-full bg-border" />
-                          Chapters: {friend.progress?.total_chapters_read || 0}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Status indicator */}
-                    <div className="z-10 flex flex-col items-end">
-                      {isTodayActive ? (
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-success px-2 py-1 bg-success/10 rounded-full">Active Today</span>
-                      ) : (
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground px-2 py-1 bg-secondary rounded-full">Idle</span>
-                      )}
-                    </div>
-                  </div>
-                )
+                  <li
+                    key={profile.userId}
+                    className="surface flex items-center justify-between gap-3 p-3"
+                  >
+                    <PersonRow profile={profile} />
+
+                    {state === "friend" ? (
+                      <span className="shrink-0 text-xs font-semibold text-success">
+                        Friends
+                      </span>
+                    ) : state === "requested" ? (
+                      <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                        Requested
+                      </span>
+                    ) : state === "incoming" ? (
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                        Awaiting you
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => add.mutate(profile.userId)}
+                        disabled={add.isPending}
+                        className="h-9 shrink-0 gap-1.5 rounded-xl font-semibold"
+                      >
+                        <UserPlus className="h-4 w-4" aria-hidden="true" />
+                        Add
+                      </Button>
+                    )}
+                  </li>
+                );
               })}
-            </div>
+            </ul>
           ) : (
-            <div className="text-center p-8 glass rounded-2xl border border-dashed border-border/50">
-              <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">You haven't added any friends yet.</p>
-              <p className="text-xs text-muted-foreground mt-1">Search for a name above to get started.</p>
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <p className="text-sm font-medium">No one found</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nobody matches "{debouncedSearch}". They may not have set a display
+                name yet.
+              </p>
             </div>
           )}
         </section>
-      </main>
+      )}
 
-      <BottomNav />
+      {/* ── Incoming requests ── */}
+      {incoming.data && incoming.data.length > 0 && (
+        <section aria-labelledby="requests-heading" className="mb-8">
+          <h2 id="requests-heading" className="section-label mb-2.5 flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-track-orange" aria-hidden="true" />
+            {incoming.data.length} request{incoming.data.length === 1 ? "" : "s"}
+          </h2>
+
+          <ul className="space-y-2">
+            {incoming.data.map((request) => (
+              <li
+                key={request.friendshipId}
+                className="surface flex items-center justify-between gap-3 p-3"
+              >
+                <PersonRow profile={request.profile} />
+
+                <div className="flex shrink-0 gap-1.5">
+                  <Button
+                    size="icon"
+                    onClick={() =>
+                      respond.mutate({ id: request.friendshipId, status: "accepted" })
+                    }
+                    disabled={respond.isPending}
+                    className="h-9 w-9 rounded-xl bg-success text-success-foreground hover:bg-success/90"
+                    aria-label={`Accept ${nameOf(request.profile)}`}
+                  >
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      respond.mutate({ id: request.friendshipId, status: "rejected" })
+                    }
+                    disabled={respond.isPending}
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive"
+                    aria-label={`Decline ${nameOf(request.profile)}`}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Today ── */}
+      {friendList.length > 0 && (
+        <section aria-labelledby="today-heading" className="mb-8">
+          <h2 id="today-heading" className="section-label mb-2.5">
+            Today
+          </h2>
+
+          <div className="surface p-5">
+            {activeToday.length > 0 ? (
+              <>
+                <div className="mb-3 flex -space-x-2">
+                  {activeToday.slice(0, 6).map((friend) => (
+                    <Avatar
+                      key={friend.friendshipId}
+                      className="h-9 w-9 border-2 border-card"
+                    >
+                      <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
+                      <AvatarFallback className="text-xs font-bold">
+                        {initialsOf(friend.profile)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {activeToday.length > 6 && (
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-secondary text-2xs font-bold">
+                      +{activeToday.length - 6}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm">
+                  <span className="font-semibold">
+                    {activeToday.length} of {friendList.length}
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    {activeToday.length === 1 ? "friend has" : "friends have"} read today.
+                  </span>
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No one has logged a reading yet today. Be the first.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Standings ── */}
+      {friendList.length > 0 && (
+        <section aria-labelledby="standings-heading" className="mb-8">
+          <h2 id="standings-heading" className="section-label mb-2.5 flex items-center gap-2">
+            <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
+            Chapters read
+          </h2>
+
+          <ol className="surface divide-y divide-border/60 overflow-hidden">
+            {standings.map((row, index) => (
+              <li
+                key={row.key}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3",
+                  row.isSelf && "bg-primary/[0.06]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-5 shrink-0 text-center text-sm font-bold tabular-nums",
+                    index === 0 ? "text-track-yellow" : "text-muted-foreground",
+                  )}
+                >
+                  {index + 1}
+                </span>
+
+                {row.profile ? (
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={row.profile.avatarUrl ?? undefined} alt="" />
+                    <AvatarFallback className="text-2xs font-bold">
+                      {initialsOf(row.profile)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-2xs font-bold text-primary">
+                    You
+                  </span>
+                )}
+
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-sm",
+                    row.isSelf ? "font-bold" : "font-medium",
+                  )}
+                >
+                  {row.name}
+                </span>
+
+                {row.streak > 0 && (
+                  <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-track-orange">
+                    <Flame className="h-3.5 w-3.5" aria-hidden="true" />
+                    {row.streak}
+                  </span>
+                )}
+
+                <span className="w-14 shrink-0 text-right text-sm font-bold tabular-nums">
+                  {row.chapters.toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ── Friends ── */}
+      <section aria-labelledby="friends-heading">
+        <h2 id="friends-heading" className="section-label mb-2.5 flex items-center gap-2">
+          <Users className="h-3.5 w-3.5" aria-hidden="true" />
+          {friendList.length > 0 ? `${friendList.length} friends` : "Friends"}
+        </h2>
+
+        {friends.isPending ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="skeleton h-[72px] rounded-2xl" />
+            ))}
+          </div>
+        ) : friendList.length > 0 ? (
+          <ul className="space-y-2">
+            {friendList.map((friend) => (
+              <li
+                key={friend.friendshipId}
+                className="surface flex items-center justify-between gap-3 p-4"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-11 w-11">
+                      <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
+                      <AvatarFallback className="font-bold">
+                        {initialsOf(friend.profile)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {friend.readToday && (
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-success"
+                        aria-label="Read today"
+                      />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{nameOf(friend.profile)}</p>
+                    <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="tabular-nums">
+                        {friend.chapters.toLocaleString()} chapters
+                      </span>
+                      {friend.streak > 0 && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="flex items-center gap-1 font-semibold text-track-orange">
+                            <Flame className="h-3 w-3" aria-hidden="true" />
+                            {friend.streak}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setPendingRemoval(friend)}
+                  className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
+                  aria-label={`Remove ${nameOf(friend.profile)}`}
+                >
+                  <UserMinus className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center">
+            <Users
+              className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            <p className="text-sm font-semibold">No friends yet</p>
+            <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-muted-foreground">
+              Search for someone by their display name above. They'll need to accept
+              before either of you can see the other's progress.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* ── Sent requests ── */}
+      {outgoing.data && outgoing.data.length > 0 && (
+        <section aria-labelledby="sent-heading" className="mt-8">
+          <h2 id="sent-heading" className="section-label mb-2.5">
+            Awaiting a reply
+          </h2>
+
+          <ul className="space-y-2">
+            {outgoing.data.map((request) => (
+              <li
+                key={request.friendshipId}
+                className="surface flex items-center justify-between gap-3 p-3"
+              >
+                <PersonRow profile={request.profile} muted />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => remove.mutate(request.friendshipId)}
+                  disabled={remove.isPending}
+                  className="h-9 shrink-0 rounded-xl text-xs text-muted-foreground"
+                >
+                  Withdraw
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <AlertDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+      >
+        <AlertDialogContent className="max-w-sm rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove {pendingRemoval ? nameOf(pendingRemoval.profile) : "this friend"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll both stop seeing each other's reading progress. You can send a
+              new request later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="h-11 rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingRemoval && remove.mutate(pendingRemoval.friendshipId)}
+              className="h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageLayout>
+  );
+}
+
+/** Avatar plus name, shared by search results and request rows. */
+function PersonRow({ profile, muted = false }: { profile: CommunityProfile; muted?: boolean }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <Avatar className="h-10 w-10 shrink-0">
+        <AvatarImage src={profile.avatarUrl ?? undefined} alt="" />
+        <AvatarFallback className="text-xs font-bold">{initialsOf(profile)}</AvatarFallback>
+      </Avatar>
+      <span
+        className={cn(
+          "min-w-0 truncate text-sm font-medium",
+          muted && "text-muted-foreground",
+        )}
+      >
+        {nameOf(profile)}
+      </span>
     </div>
   );
-};
-
-export default Community;
+}

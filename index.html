@@ -16,7 +16,7 @@
     <meta property="og:url" content="https://scripturedaily.app/" />
     <meta property="og:title" content="Scripture Daily — Daily Bible Reading with Horner's System" />
     <meta property="og:description" content="A quiet companion for disciplined, lifelong engagement with God's Word. Read 10 chapters daily with the proven Horner reading system." />
-    <meta property="og:image" content="/pwa-512x512.svg" />
+    <meta property="og:image" content="/icon-512.png" />
     <meta property="og:site_name" content="Scripture Daily" />
     <meta property="og:locale" content="en_US" />
 
@@ -25,20 +25,21 @@
     <meta name="twitter:url" content="https://scripturedaily.app/" />
     <meta name="twitter:title" content="Scripture Daily — Daily Bible Reading" />
     <meta name="twitter:description" content="Track your daily Bible reading with Professor Horner's 10-list system. Build a lifelong habit of engaging with Scripture." />
-    <meta name="twitter:image" content="/pwa-512x512.svg" />
+    <meta name="twitter:image" content="/icon-512.png" />
     
     <!-- PWA & Mobile -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Scripture Daily" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1a1a1f" media="(prefers-color-scheme: dark)" />
+    <!-- Single tag, updated at runtime by SettingsProvider to match the resolved theme. -->
+    <meta name="theme-color" content="#faf8f5" />
     <meta name="format-detection" content="telephone=no" />
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" href="/pwa-192x192.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     
     <!-- Canonical -->
     <link rel="canonical" href="https://scripturedaily.app/" />
@@ -64,10 +65,46 @@
       }
     }
     </script>
+
+    <!--
+      Applies the saved theme before first paint.
+
+      React applies the theme in an effect, which runs after the browser has
+      already painted the default light background — producing a white flash on
+      every cold load for dark-mode users. This blocking inline script runs
+      before the body renders and closes that gap. It is deliberately tiny and
+      failure-tolerant: any error falls through to the light default.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("scripture-daily-settings-v1");
+          var theme = stored ? JSON.parse(stored).theme : "system";
+          var dark =
+            theme === "dark" ||
+            (theme !== "light" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+            var meta = document.querySelector('meta[name="theme-color"]');
+            if (meta) meta.content = "#0f1019";
+          }
+        } catch (e) {
+          /* Light theme is the default; nothing to do. */
+        }
+      })();
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="font-family: system-ui, sans-serif; padding: 2rem; text-align: center">
+        Scripture Daily needs JavaScript to track your reading. Please enable it
+        and reload.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

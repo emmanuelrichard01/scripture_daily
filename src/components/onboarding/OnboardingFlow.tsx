@@ -1,217 +1,300 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useEmblaCarousel from "embla-carousel-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Book, Layers, ArrowRight, Sparkles, LogIn, ChevronRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { readingLists } from "@/lib/readingPlan";
+import { cn } from "@/lib/utils";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
-const ONBOARDING_KEY = "horner-onboarding-complete";
-
+/**
+ * First-run walkthrough.
+ *
+ * Each step carries a purpose-built illustration rather than a generic icon,
+ * because the thing that needs explaining — ten independent lists advancing at
+ * different rates — is genuinely spatial and hard to convey in a sentence.
+ *
+ * A plain step index rather than a carousel library: four static panels do not
+ * justify Embla's bundle cost or its imperative API.
+ */
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false });
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [step, setStep] = useState(0);
   const navigate = useNavigate();
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    onSelect();
-    emblaApi.on("select", onSelect);
-    emblaApi.on("reInit", onSelect);
-  }, [emblaApi, onSelect]);
 
   const steps = [
     {
       id: "welcome",
-      icon: Sparkles,
-      title: "Welcome to Scripture Daily",
-      description: "A thoughtful approach to reading the Bible, based on Professor Grant Horner's system.",
-      color: "text-track-blue",
-      bgColor: "bg-track-blue/10",
+      art: <WelcomeArt />,
+      title: "Ten chapters a day",
+      body: "Professor Grant Horner's reading system takes you through the whole Bible, again and again, without ever losing your place.",
     },
     {
-      id: "system",
-      icon: Layers,
-      title: "10 Reading Tracks",
-      description: "The system divides Scripture into 10 lists—Gospels, Epistles, Psalms, Proverbs, and more.",
-      color: "text-track-purple",
-      bgColor: "bg-track-purple/10",
+      id: "lists",
+      art: <ListsArt />,
+      title: "Ten lists, one chapter each",
+      body: "Scripture is split across ten lists — Gospels, Pentateuch, Psalms, Proverbs and more. Each day you read one chapter from every list.",
     },
     {
-      id: "cycle",
-      icon: Book,
-      title: "Unique Daily Combinations",
-      description: "Because each list has different lengths (28-250 days), you'll encounter unique chapter combinations. The pattern won't repeat for years.",
-      color: "text-track-green",
-      bgColor: "bg-track-green/10",
+      id: "combinations",
+      art: <CombinationsArt />,
+      title: "The pairings never repeat",
+      body: "The lists run from 28 to 250 chapters, so they cycle at different rates. The particular ten chapters you read today won't recur for years.",
     },
     {
-      id: "auth",
-      icon: Check,
-      title: "Ready to Begin?",
-      description: "Sign in to save your progress to the cloud, or continue as a guest to save locally.",
-      color: "text-foreground",
-      bgColor: "bg-primary/10",
-    }
-  ];
+      id: "pace",
+      art: <PaceArt />,
+      title: "Miss a day? Just carry on",
+      body: "Your place is remembered per list, never by the calendar. There's nothing to catch up on and no streak to repair — you pick up exactly where you stopped.",
+    },
+  ] as const;
 
-  const handleNext = () => {
-    if (emblaApi) emblaApi.scrollNext();
-  };
+  const isLast = step === steps.length - 1;
+  const current = steps[step];
 
-  const handleGuest = () => {
-    localStorage.setItem(ONBOARDING_KEY, "true");
+  const finish = (destination?: string) => {
     onComplete();
-  };
-
-  const handleSignUp = () => {
-    localStorage.setItem(ONBOARDING_KEY, "true");
-    onComplete();
-    navigate("/auth");
+    if (destination) navigate(destination);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col supports-[height:100cqh]:h-[100cqh] supports-[height:100svh]:h-[100svh]">
-      {/* Skip button */}
-      <div className="flex justify-end p-4 h-16">
-        <AnimatePresence>
-          {selectedIndex < steps.length - 1 && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleGuest}
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-xl hover:bg-secondary active:scale-95"
-              aria-label="Skip onboarding"
-            >
-              Skip
-            </motion.button>
-          )}
-        </AnimatePresence>
+    <div className="flex min-h-dvh flex-col bg-background">
+      <div className="safe-top flex h-14 items-center justify-end px-5">
+        {!isLast && (
+          <button
+            type="button"
+            onClick={() => finish()}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+          >
+            Skip
+          </button>
+        )}
       </div>
 
-      {/* Carousel */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-hidden" ref={emblaRef}>
-          <div className="flex h-full touch-pan-y">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              const isLast = index === steps.length - 1;
-              return (
-                <div 
-                  key={step.id} 
-                  className="flex-[0_0_100%] min-w-0 flex flex-col items-center justify-center px-8"
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 20 }}
-                    className={`w-20 h-20 rounded-3xl ${step.bgColor} flex items-center justify-center mb-8 border border-border/50 shadow-sm`}
-                  >
-                    <Icon className={`w-10 h-10 ${step.color}`} strokeWidth={1.5} />
-                  </motion.div>
-                  
-                  <h2 className="text-2xl font-bold text-foreground mb-4 text-center tracking-tight">
-                    {step.title}
-                  </h2>
-                  
-                  <p className="text-base text-muted-foreground text-center leading-relaxed max-w-xs">
-                    {step.description}
-                  </p>
-
-                  {isLast && (
-                    <div className="w-full max-w-xs space-y-3 mt-12">
-                      <Button
-                        onClick={handleSignUp}
-                        className="w-full h-12 text-base font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm"
-                      >
-                        Create Account
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleGuest}
-                        className="w-full h-12 text-base font-medium rounded-xl border-border bg-transparent hover:bg-secondary hover:scale-[1.02] active:scale-[0.98] transition-all"
-                      >
-                        Continue as Guest
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+        {/* Keyed so the illustration re-mounts and re-animates per step. */}
+        <div key={current.id} className="animate-rise mb-10">
+          {current.art}
         </div>
+
+        <h1
+          key={`${current.id}-title`}
+          className="animate-rise mb-3 max-w-sm text-balance font-display text-[1.75rem] font-semibold leading-tight tracking-tight"
+          style={{ animationDelay: "60ms" }}
+        >
+          {current.title}
+        </h1>
+
+        <p
+          key={`${current.id}-body`}
+          className="animate-rise max-w-sm text-pretty leading-relaxed text-muted-foreground"
+          style={{ animationDelay: "120ms" }}
+        >
+          {current.body}
+        </p>
       </div>
 
-      {/* Navigation Footer */}
-      <div className="p-8 pb-12 flex flex-col items-center gap-8">
-        {/* Pagination Dots */}
-        <div className="flex gap-2.5">
-          {steps.map((_, index) => (
+      <div className="safe-bottom flex flex-col items-center gap-6 px-8 pb-10 pt-8">
+        <div className="flex gap-2" role="tablist" aria-label="Walkthrough steps">
+          {steps.map((item, index) => (
             <button
-              key={index}
-              className={`h-2 transition-all duration-300 rounded-full ${
-                index === selectedIndex
-                  ? "w-8 bg-primary"
-                  : "w-2 bg-primary/20 hover:bg-primary/40"
-              }`}
-              onClick={() => emblaApi?.scrollTo(index)}
-              aria-label={`Go to slide ${index + 1}`}
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={index === step}
+              aria-label={`Step ${index + 1}: ${item.title}`}
+              onClick={() => setStep(index)}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300 ease-out-expo focus-ring",
+                index === step ? "w-7 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/40",
+              )}
             />
           ))}
         </div>
 
-        {/* Next Button */}
-        <AnimatePresence mode="wait">
-          {selectedIndex < steps.length - 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="w-full max-w-xs"
+        {isLast ? (
+          <div className="w-full max-w-xs space-y-2.5">
+            <Button
+              onClick={() => finish()}
+              className="h-13 w-full rounded-2xl text-base font-bold shadow-md"
             >
-              <Button
-                onClick={handleNext}
-                className="w-full h-14 rounded-2xl bg-foreground text-background hover:bg-foreground/90 text-lg font-medium group active:scale-95 transition-all shadow-lg shadow-foreground/10"
-              >
-                Continue
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Start reading
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => finish("/auth")}
+              className="h-11 w-full rounded-2xl text-sm font-medium text-muted-foreground"
+            >
+              Create an account to sync
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={() => setStep((value) => value + 1)}
+            className="h-13 w-full max-w-xs gap-2 rounded-2xl text-base font-bold shadow-md"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        )}
       </div>
     </div>
   );
 }
 
-export function useOnboarding() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+/* ────────────────────────────── Illustrations ──────────────────────────────
+ *
+ * Inline SVG rather than image assets: they inherit theme colours through
+ * `currentColor` and the CSS custom properties, stay crisp at any density, and
+ * add nothing to the network payload.
+ */
 
-  useEffect(() => {
-    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY) === "true";
-    if (!hasCompletedOnboarding) {
-      setShowOnboarding(true);
-    }
-    // Artificial small delay to prevent flash of unstyled content
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+/**
+ * The app mark itself, haloed by the ten list colours.
+ *
+ * The opening step is where the product introduces itself, so it leads with the
+ * icon the user will see on their home screen rather than an abstract drawing —
+ * it ties the walkthrough to the thing they just installed.
+ */
+function WelcomeArt() {
+  const RADIUS = 74;
 
-  const completeOnboarding = () => {
-    setShowOnboarding(false);
-  };
+  return (
+    <div className="relative flex h-[168px] w-[168px] items-center justify-center">
+      {/* Ten dots on a ring, one per list, in list order. */}
+      <svg
+        className="absolute inset-0"
+        width="168"
+        height="168"
+        viewBox="0 0 168 168"
+        fill="none"
+        aria-hidden="true"
+      >
+        {readingLists.map((list, index) => {
+          // Start at 12 o'clock and step clockwise.
+          const angle = (index / readingLists.length) * Math.PI * 2 - Math.PI / 2;
+          return (
+            <circle
+              key={list.id}
+              cx={84 + Math.cos(angle) * RADIUS}
+              cy={84 + Math.sin(angle) * RADIUS}
+              r="6"
+              fill={`hsl(var(${list.colorVar}))`}
+            />
+          );
+        })}
+      </svg>
 
-  return { showOnboarding, isLoading, completeOnboarding };
+      <img
+        src="/icon-192.png"
+        alt=""
+        width={96}
+        height={96}
+        className="h-24 w-24 rounded-[1.4rem] shadow-lg"
+      />
+    </div>
+  );
+}
+
+/** Ten stacked bars at proportional lengths — the lists and their sizes. */
+function ListsArt() {
+  const longest = Math.max(...readingLists.map((list) => list.totalChapters));
+
+  return (
+    <svg width="200" height="140" viewBox="0 0 200 140" fill="none" aria-hidden="true">
+      {readingLists.map((list, index) => {
+        const width = 24 + (list.totalChapters / longest) * 152;
+        return (
+          <g key={list.id}>
+            <rect
+              x="12"
+              y={8 + index * 13}
+              width={width}
+              height="8"
+              rx="4"
+              fill={`hsl(var(${list.colorVar}))`}
+            />
+            {/* The chapter you read today: the leading edge of every list. */}
+            <circle cx="16" cy={12 + index * 13} r="2.5" fill="hsl(var(--card))" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/** Offset markers drifting apart — why combinations don't repeat. */
+function CombinationsArt() {
+  const rows = [0, 1, 2, 3, 4];
+
+  return (
+    <svg width="200" height="140" viewBox="0 0 200 140" fill="none" aria-hidden="true">
+      {rows.map((row) => (
+        <g key={row}>
+          <line
+            x1="12"
+            y1={22 + row * 24}
+            x2="188"
+            y2={22 + row * 24}
+            stroke="hsl(var(--border))"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          {[0, 1, 2, 3].map((tick) => (
+            <circle
+              key={tick}
+              // Each list advances at its own rate, so the markers fan out.
+              // Spacing is bounded so the widest row still lands inside the
+              // line rather than clipping at the viewBox edge.
+              cx={22 + tick * 42 + row * 8}
+              cy={22 + row * 24}
+              r="5"
+              fill={`hsl(var(${readingLists[row * 2].colorVar}))`}
+              opacity={tick === 0 ? 1 : 0.75 - tick * 0.15}
+            />
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/** A path with a gap that simply continues — missing a day costs nothing. */
+function PaceArt() {
+  return (
+    <svg width="200" height="130" viewBox="0 0 200 130" fill="none" aria-hidden="true">
+      <path
+        d="M16 88c22 0 22-46 44-46s22 46 44 46 22-46 44-46 22 46 36 46"
+        stroke="hsl(var(--border))"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      {[16, 60, 104, 148, 184].map((x, index) => {
+        const skipped = index === 2;
+        return (
+          <circle
+            key={x}
+            cx={x}
+            cy={index % 2 === 0 ? 88 : 42}
+            r={skipped ? 6 : 8}
+            fill={skipped ? "hsl(var(--background))" : "hsl(var(--primary))"}
+            stroke={skipped ? "hsl(var(--border))" : "none"}
+            strokeWidth="2.5"
+            strokeDasharray={skipped ? "3 3" : undefined}
+          />
+        );
+      })}
+      <text
+        x="104"
+        y="122"
+        textAnchor="middle"
+        className="fill-muted-foreground"
+        fontSize="11"
+        fontWeight="600"
+      >
+        a missed day, and the path continues
+      </text>
+    </svg>
+  );
 }
