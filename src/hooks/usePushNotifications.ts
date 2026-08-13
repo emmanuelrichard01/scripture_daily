@@ -21,6 +21,23 @@ function encodeKey(buffer: ArrayBuffer | null): string {
   return window.btoa(binary);
 }
 
+/**
+ * Whether an existing subscription was created with `expected`.
+ *
+ * `options.applicationServerKey` is only populated in browsers that implement
+ * `PushSubscriptionOptions`; where it is absent we assume a match rather than
+ * unsubscribing on every call, since a needless resubscribe is worse than a
+ * missed rotation on a browser that cannot tell us either way.
+ */
+function hasMatchingKey(subscription: PushSubscription, expected: Uint8Array): boolean {
+  const stored = subscription.options?.applicationServerKey;
+  if (!stored) return true;
+
+  const storedBytes = new Uint8Array(stored as ArrayBuffer);
+  if (storedBytes.length !== expected.length) return false;
+  return storedBytes.every((byte, index) => byte === expected[index]);
+}
+
 type PermissionResult = { ok: true } | { ok: false; error: string };
 
 /**
@@ -51,12 +68,32 @@ export function usePushNotifications() {
     if (!user || !VAPID_PUBLIC_KEY) return;
 
     const registration = await navigator.serviceWorker.ready;
-    const existing = await registration.pushManager.getSubscription();
+    const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+    let existing = await registration.pushManager.getSubscription();
+
+    /*
+     * A subscription is cryptographically bound to the VAPID key it was created
+     * with. After the server's keypair is rotated, the browser still hands back
+     * the *old* subscription — reusing it would store an endpoint the new
+     * private key can never sign for, and every push would silently fail.
+     *
+     * So compare the stored key against the current one and, on a mismatch,
+     * tear the old subscription down before making a new one.
+     */
+    if (existing && !hasMatchingKey(existing, applicationServerKey)) {
+      // Drop the dead row too, or the cron keeps trying an endpoint we can no
+      // longer authenticate against until it happens to 410.
+      await supabase.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
+      await existing.unsubscribe();
+      existing = null;
+    }
+
     const subscription =
       existing ??
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey,
       }));
 
     await supabase.from("push_subscriptions").upsert(
