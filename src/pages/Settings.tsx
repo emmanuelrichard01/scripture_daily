@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Cloud,
   Download,
+  Languages,
   LogIn,
   LogOut,
   Monitor,
@@ -45,7 +46,7 @@ import { useProgress } from "@/hooks/useProgress";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { TRANSLATIONS, type ThemePreference } from "@/contexts/SettingsContext";
+import { translationInfo, type ThemePreference } from "@/contexts/SettingsContext";
 import { todayISO } from "@/lib/date";
 import { toast } from "sonner";
 
@@ -77,6 +78,7 @@ export default function Settings() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const totalCycles = listPositions.reduce((sum, p) => sum + p.completedCycles, 0);
+  const translation = translationInfo(settings.translation);
   const ThemeIcon =
     THEME_OPTIONS.find((option) => option.value === settings.theme)?.icon ?? Monitor;
 
@@ -168,27 +170,20 @@ export default function Settings() {
       <div className="space-y-5">
         <SettingsSection title="Reading">
           <StartDatePicker startDate={startDate} onChange={updateStartDate} />
+          {/*
+            Read-only on purpose. Translation is chosen in the reader, beside
+            the verse that prompts the change — a Select here duplicated that
+            control three taps from any scripture, which is where it used to
+            live and why it was easy to miss.
+          */}
           <SettingsRow
             label="Translation"
-            description="Used in the in-app reader"
+            description={`${translation.name} · change it in the reader`}
             action={
-              <Select
-                value={settings.translation}
-                onValueChange={(value) =>
-                  updateSettings({ translation: value as typeof settings.translation })
-                }
-              >
-                <SelectTrigger className="h-11 w-32" aria-label="Bible translation">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TRANSLATIONS.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <span className="flex h-11 items-center gap-2 rounded-xl bg-secondary/70 px-3 text-xs font-bold tracking-tight">
+                <Languages className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                {translation.id}
+              </span>
             }
           />
         </SettingsSection>

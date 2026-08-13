@@ -69,6 +69,25 @@ export default function Today() {
     [todaysReadings],
   );
 
+  /**
+   * The next unread list *other than* the one already open, so the reader can
+   * offer to carry straight on once a chapter is marked.
+   */
+  const nextAfterOpen = useMemo(() => {
+    if (openListId === null) return null;
+    const candidate = todaysReadings.find(
+      (reading) => !reading.completed && reading.listId !== openListId,
+    );
+    return candidate
+      ? {
+          listId: candidate.listId,
+          listName: candidate.listName,
+          book: candidate.book,
+          chapter: candidate.chapter,
+        }
+      : null;
+  }, [todaysReadings, openListId]);
+
   const handleToggle = (listId: number) => {
     const wasComplete = completedTodayListIds.has(listId);
 
@@ -279,6 +298,8 @@ export default function Today() {
           chapter={openReading.chapter}
           isCompleted={openReading.completed}
           onToggleComplete={() => handleToggle(openReading.listId)}
+          nextUp={nextAfterOpen}
+          onAdvance={setOpenListId}
         />
       )}
     </div>

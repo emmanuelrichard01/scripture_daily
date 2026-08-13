@@ -83,6 +83,42 @@ export type Database = {
           }
         ]
       }
+      nudges: {
+        Row: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          receiver_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          receiver_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nudges_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nudges_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       push_subscriptions: {
         Row: {
           id: string

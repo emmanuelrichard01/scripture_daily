@@ -162,6 +162,20 @@ export function activeDays(history: ReadingLog): ISODate[] {
 }
 
 /**
+ * The most recent local day with a recorded reading, or `null`.
+ *
+ * Published to the server so friends can be shown an accurate "read today"
+ * without exposing the reading log itself. The alternative — inferring it from
+ * the row's `updated_at` — was wrong twice over: it is a UTC instant, so it
+ * flipped days for anyone far from Greenwich, and it advances on *any* write,
+ * so changing a start date marked you as having read.
+ */
+export function lastReadDate(history: ReadingLog): ISODate | null {
+  const days = activeDays(history);
+  return days.length > 0 ? days[days.length - 1] : null;
+}
+
+/**
  * The current consecutive-day streak.
  *
  * Today counts if read, but an unread today does **not** break a streak that

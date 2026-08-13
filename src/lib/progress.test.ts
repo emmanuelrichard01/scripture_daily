@@ -10,6 +10,7 @@ import {
   deriveStreak,
   deriveTotalChapters,
   deserializeLog,
+  lastReadDate,
   mergeLogs,
   mergeProgress,
   parseProgress,
@@ -321,5 +322,25 @@ describe("createEmptyProgress", () => {
     expect(state.history).toEqual({});
     expect(state.startDate).toBe("2026-08-12");
     expect(state.version).toBe(2);
+  });
+});
+
+describe("lastReadDate", () => {
+  it("returns the most recent day with a reading", () => {
+    const history: ReadingLog = {
+      "2026-08-10": [1],
+      "2026-08-12": [2, 3],
+      "2026-08-11": [4],
+    };
+    expect(lastReadDate(history)).toBe("2026-08-12");
+  });
+
+  it("ignores days whose readings were all unticked", () => {
+    const history: ReadingLog = { "2026-08-10": [1], "2026-08-12": [] };
+    expect(lastReadDate(history)).toBe("2026-08-10");
+  });
+
+  it("is null before anything has been read", () => {
+    expect(lastReadDate({})).toBeNull();
   });
 });

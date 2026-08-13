@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { useMemo, useState } from "react";
+import { BookOpen, Check, ChevronDown } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { Reader } from "@/components/reader/Reader";
 import { useProgress } from "@/hooks/useProgress";
 import { useFeedback } from "@/hooks/useFeedback";
 import { chapterAtPosition, getList, CHAPTERS_PER_DAY } from "@/lib/readingPlan";
@@ -77,11 +78,23 @@ function ChapterGrid({
 }
 
 export default function Lists() {
-  const { listPositions, completedTodayListIds, toggleReading } = useProgress();
+  const { listPositions, todaysReadings, completedTodayListIds, toggleReading } =
+    useProgress();
   const feedback = useFeedback();
   const [openListId, setOpenListId] = useState<number | null>(null);
+  const [readingListId, setReadingListId] = useState<number | null>(null);
 
   const today = todayISO();
+
+  /**
+   * The page listed every chapter in the plan but gave no way to read one — the
+   * only route into the reader was the Today screen. Opening from here uses the
+   * same today's-reading entry, so marking a chapter complete stays correct.
+   */
+  const openReading = useMemo(
+    () => todaysReadings.find((reading) => reading.listId === readingListId) ?? null,
+    [todaysReadings, readingListId],
+  );
 
   const handleMarkRead = (listId: number) => {
     if (!completedTodayListIds.has(listId)) {
@@ -207,6 +220,31 @@ export default function Lists() {
                       </span>
                     </div>
 
+                    <button
+                      type="button"
+                      onClick={() => setReadingListId(list.id)}
+                      className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-3 text-left transition-colors hover:bg-secondary/50 focus-ring"
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <BookOpen
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-2xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                            Read now
+                          </span>
+                          <span className="block truncate text-sm font-semibold">
+                            {shown.book} {shown.chapter}
+                          </span>
+                        </span>
+                      </span>
+                      <ChevronDown
+                        className="h-4 w-4 shrink-0 -rotate-90 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </button>
+
                     {list.books.map((book, bookIndex) => (
                       <div key={book.name} className="mb-4 last:mb-0">
                         <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -243,6 +281,21 @@ export default function Lists() {
           );
         })}
       </ul>
+
+      {openReading && (
+        <Reader
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) setReadingListId(null);
+          }}
+          listId={openReading.listId}
+          listName={openReading.listName}
+          book={openReading.book}
+          chapter={openReading.chapter}
+          isCompleted={openReading.completed}
+          onToggleComplete={() => handleMarkRead(openReading.listId)}
+        />
+      )}
     </PageLayout>
   );
 }

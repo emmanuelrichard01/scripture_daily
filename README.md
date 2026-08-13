@@ -59,8 +59,11 @@ derived from that one structure. See `src/lib/progress.ts` and
 - **Union merge.** Sign in on a second device and histories are unioned, never
   overwritten. A recorded reading is a fact the user asserted; losing one is worse
   than keeping one they later unchecked.
-- **In-app reader.** Seven translations, adjustable type, cached per chapter.
-- **Community.** Add friends, see their streak and chapter count. Guarded by RLS.
+- **In-app reader.** Seven translations switched from the reader itself, a
+  chapter picker for the whole list, adjustable type, swipe and arrow-key
+  paging, verse copy/share, and per-chapter caching.
+- **Community.** Add friends by name or invite link, see who has read and when,
+  and send an encouragement when someone goes quiet. Guarded by RLS.
 - **Reminders.** Web Push, dispatched at the right *local* hour per device.
 
 ## Stack
@@ -114,15 +117,18 @@ settings — never in the repo. See `.env.example`.
 ## Layout
 
 ```text
-api/                    Vercel serverless functions
-  bible.ts                Scripture proxy — edge-cached, provider-agnostic
-  cron.ts                 Hourly reminder dispatch, timezone-aware
+api/                    Vercel functions
+  bible.ts                Scripture proxy — edge runtime, edge-cached
+  cron.ts                 Hourly reminder dispatch, timezone-aware (node)
+  nudge.ts                Friend encouragement push, rate-limited (node)
 src/
   lib/                    Pure domain logic. No React, no I/O — all unit-tested.
     date.ts                 Local-day arithmetic (the timezone boundary)
     readingPlan.ts          Plan data + cycle engine
     progress.ts             Reading log: mutations, derivations, merge
     syncEngine.ts           Debounced, retrying, offline-tolerant writes
+    friends.ts              Community types + display logic (pure)
+    community.ts            Community data access (Supabase)
     bible.ts                Fetch + HTML sanitisation
     storage.ts              Guarded localStorage
   contexts/               Providers; state only, logic delegated to lib/
@@ -142,6 +148,12 @@ supabase/migrations/    Schema, RLS policies, storage buckets
 - **Third-party HTML is sanitised at the injection point.** `sanitizeVerseHtml`
   rebuilds verse markup from an allowlist before it reaches
   `dangerouslySetInnerHTML`.
+- **Two handler shapes in `api/`, and they are not interchangeable.** The *edge*
+  runtime takes `(request: Request) => Response`; the *Node* runtime takes
+  `(req, res)` and **discards a returned value**. A Node function written in the
+  Web style runs, builds a response, returns it into the void and never writes
+  to `res` — so the request hangs until the gateway times out rather than
+  failing loudly. `cron.ts` shipped that way and no reminder was ever delivered.
 
 ## Deployment
 
@@ -190,8 +202,13 @@ supabase db push
 ```
 
 The app reads columns and policies that only exist after this runs — notably
-`push_subscriptions.timezone` (reminders) and the `are_friends` policy
-(friend progress visibility). The migration is idempotent.
+`push_subscriptions.timezone` (reminders), the `are_friends` policy (friend
+progress visibility), and the `nudges` table (encouragements, and the ledger
+its rate limit is enforced against). The migrations are idempotent.
+
+`nudges` is readable by its two parties and writable by nobody: rows are
+inserted only by `/api/nudge` under the service role. A cooldown enforced
+against a table the client can write to is not a cooldown.
 
 ## Contributing
 

@@ -1,10 +1,9 @@
-import { Minus, Plus } from "lucide-react";
+import { Copy, Minus, Plus, Share2 } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
-import { TRANSLATIONS } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
 const FONT_SIZE_MIN = 14;
-const FONT_SIZE_MAX = 24;
+const FONT_SIZE_MAX = 26;
 
 const LINE_HEIGHTS = [
   { label: "Snug", value: 1.5 },
@@ -12,16 +11,33 @@ const LINE_HEIGHTS = [
   { label: "Airy", value: 2 },
 ] as const;
 
+const MARGINS = [
+  { label: "Narrow", value: "narrow" },
+  { label: "Normal", value: "normal" },
+  { label: "Wide", value: "wide" },
+] as const;
+
+interface ReaderSettingsPanelProps {
+  /** Reference of the chapter on screen, for the chapter-level actions. */
+  reference: string;
+  onCopyChapter: () => void;
+  onShareChapter: () => void;
+}
+
 /**
- * Typography and translation controls for the reader.
+ * Typography and whole-chapter actions.
  *
- * Split out of `Reader` because the reader is already the most complex
- * component in the app, and these controls are self-contained — they read and
- * write settings directly rather than being threaded through props.
+ * Translation used to live here behind a `Type` icon, which put a content
+ * decision inside a formatting menu. It now has its own control in the header;
+ * this panel is purely about how the page looks and what you can do with it.
  */
-export function ReaderSettingsPanel() {
-  const { settings, updateSettings, updateTypography } = useSettings();
-  const { typography, translation } = settings;
+export function ReaderSettingsPanel({
+  reference,
+  onCopyChapter,
+  onShareChapter,
+}: ReaderSettingsPanelProps) {
+  const { settings, updateTypography } = useSettings();
+  const { typography } = settings;
 
   return (
     <div className="space-y-5">
@@ -38,7 +54,7 @@ export function ReaderSettingsPanel() {
             type="button"
             disabled={typography.fontSize <= FONT_SIZE_MIN}
             onClick={() => updateTypography({ fontSize: typography.fontSize - 1 })}
-            className="rounded-lg p-2 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
+            className="rounded-lg p-2.5 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
             aria-label="Decrease text size"
           >
             <Minus className="h-4 w-4" aria-hidden="true" />
@@ -46,7 +62,10 @@ export function ReaderSettingsPanel() {
 
           {/* A live preview at the chosen size is more legible than a number. */}
           <span
-            className="flex-1 text-center leading-none text-muted-foreground"
+            className={cn(
+              "flex-1 text-center leading-none text-muted-foreground",
+              typography.fontFamily === "serif" ? "font-serif" : "font-sans",
+            )}
             style={{ fontSize: `${typography.fontSize}px` }}
             aria-hidden="true"
           >
@@ -57,7 +76,7 @@ export function ReaderSettingsPanel() {
             type="button"
             disabled={typography.fontSize >= FONT_SIZE_MAX}
             onClick={() => updateTypography({ fontSize: typography.fontSize + 1 })}
-            className="rounded-lg p-2 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
+            className="rounded-lg p-2.5 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
             aria-label="Increase text size"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -80,7 +99,7 @@ export function ReaderSettingsPanel() {
               onClick={() => updateTypography({ fontFamily: face.id })}
               style={{ fontFamily: face.css }}
               className={cn(
-                "rounded-lg py-2 text-sm transition-all focus-ring",
+                "rounded-lg py-2.5 text-sm transition-all focus-ring",
                 typography.fontFamily === face.id
                   ? "bg-background font-semibold shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
@@ -101,10 +120,10 @@ export function ReaderSettingsPanel() {
               type="button"
               onClick={() => updateTypography({ lineHeight: option.value })}
               className={cn(
-                "rounded-lg py-2 text-xs font-medium transition-all focus-ring",
+                "rounded-lg py-2.5 text-xs transition-all focus-ring",
                 typography.lineHeight === option.value
                   ? "bg-background font-semibold shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "font-medium text-muted-foreground hover:text-foreground",
               )}
             >
               {option.label}
@@ -114,31 +133,46 @@ export function ReaderSettingsPanel() {
       </section>
 
       <section className="space-y-2">
-        <span className="section-label">Translation</span>
-        {/* A grid rather than a select: seven options fit, and seeing them all
-            at once beats opening a menu to compare. */}
-        <div className="grid grid-cols-4 gap-1.5">
-          {TRANSLATIONS.map((option) => (
+        <span className="section-label">Margins</span>
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-secondary/70 p-1">
+          {MARGINS.map((option) => (
             <button
-              key={option.id}
+              key={option.value}
               type="button"
-              onClick={() => updateSettings({ translation: option.id })}
-              title={option.name}
+              onClick={() => updateTypography({ margin: option.value })}
               className={cn(
-                "rounded-lg py-2 text-xs font-bold transition-all focus-ring",
-                translation === option.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-secondary/70 text-muted-foreground hover:text-foreground",
+                "rounded-lg py-2.5 text-xs transition-all focus-ring",
+                typography.margin === option.value
+                  ? "bg-background font-semibold shadow-sm"
+                  : "font-medium text-muted-foreground hover:text-foreground",
               )}
             >
-              {option.id}
+              {option.label}
             </button>
           ))}
         </div>
-        <p className="pt-0.5 text-2xs leading-relaxed text-muted-foreground">
-          Horner suggests staying in one translation for a whole cycle so its
-          phrasing settles into memory.
-        </p>
+      </section>
+
+      <section className="space-y-2">
+        <span className="section-label">{reference}</span>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onCopyChapter}
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary/70 py-3 text-xs font-semibold transition-colors hover:bg-secondary focus-ring"
+          >
+            <Copy className="h-4 w-4" aria-hidden="true" />
+            Copy chapter
+          </button>
+          <button
+            type="button"
+            onClick={onShareChapter}
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary/70 py-3 text-xs font-semibold transition-colors hover:bg-secondary focus-ring"
+          >
+            <Share2 className="h-4 w-4" aria-hidden="true" />
+            Share chapter
+          </button>
+        </div>
       </section>
     </div>
   );

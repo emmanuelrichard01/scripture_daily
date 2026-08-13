@@ -3,33 +3,26 @@
  *
  * Every Supabase call for friendships lives here so the page components stay
  * declarative, and so the query keys are defined once rather than being
- * restated (and mistyped) at each call site.
+ * restated (and mistyped) at each call site. The types and the pure display
+ * helpers live in `friends.ts` and are re-exported below, so a caller has one
+ * import to reach for.
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { todayISO, type ISODate } from "@/lib/date";
+import { daysBetween, todayISO, type ISODate } from "@/lib/date";
+import { isUserId, type CommunityProfile, type FriendSummary, type PendingRequest } from "@/lib/friends";
 
-export interface CommunityProfile {
-  readonly userId: string;
-  readonly displayName: string | null;
-  readonly avatarUrl: string | null;
-}
-
-export interface FriendSummary {
-  readonly friendshipId: string;
-  readonly profile: CommunityProfile;
-  readonly streak: number;
-  readonly chapters: number;
-  /** Local date of their most recent recorded reading, if any. */
-  readonly lastReadDate: ISODate | null;
-  /** Whether they have logged anything today. */
-  readonly readToday: boolean;
-}
-
-export interface PendingRequest {
-  readonly friendshipId: string;
-  readonly profile: CommunityProfile;
-}
+export type { CommunityProfile, FriendSummary, PendingRequest } from "@/lib/friends";
+export {
+  activityLabel,
+  couldUseEncouragement,
+  firstNameOf,
+  initialsOf,
+  inviteLinkFor,
+  isUserId,
+  nameOf,
+  recentWindow,
+} from "@/lib/friends";
 
 /** Query keys, centralised so invalidation cannot drift from the queries. */
 export const communityKeys = {
@@ -37,6 +30,7 @@ export const communityKeys = {
   incoming: (userId: string) => ["community", "incoming", userId] as const,
   outgoing: (userId: string) => ["community", "outgoing", userId] as const,
   search: (userId: string, term: string) => ["community", "search", userId, term] as const,
+  profile: (profileId: string) => ["community", "profile", profileId] as const,
 };
 
 interface ProfileRow {
@@ -75,7 +69,7 @@ async function fetchProfiles(userIds: readonly string[]): Promise<Map<string, Co
 export async function fetchFriends(userId: string): Promise<FriendSummary[]> {
   const { data: friendships, error } = await supabase
     .from("friendships")
-    .select("id, sender_id, receiver_id")
+    .select("id, sender_id, receiver_id, updated_at")
     .eq("status", "accepted")
     .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
 
@@ -90,7 +84,7 @@ export async function fetchFriends(userId: string): Promise<FriendSummary[]> {
     fetchProfiles(friendIds),
     supabase
       .from("reading_progress")
-      .select("user_id, streak_count, total_chapters_read, updated_at")
+      .select("user_id, streak_count, total_chapters_read, last_read_date")
       .in("user_id", friendIds),
   ]);
 
@@ -101,18 +95,21 @@ export async function fetchFriends(userId: string): Promise<FriendSummary[]> {
   const today = todayISO();
 
   return friendships
-    .map((friendship) => {
+    .map((friendship): FriendSummary | null => {
       const friendId =
         friendship.sender_id === userId ? friendship.receiver_id : friendship.sender_id;
       const profile = profiles.get(friendId);
       if (!profile) return null;
 
       const progress = progressByUser.get(friendId);
-      // `updated_at` is a UTC timestamp; sliced to a date it is close enough for
-      // an "active today" badge, and it is the only signal RLS exposes.
-      const lastReadDate = progress?.updated_at
-        ? (progress.updated_at.slice(0, 10) as ISODate)
-        : null;
+      /*
+       * `last_read_date` is a local calendar date the client derives from its
+       * own reading log. The previous implementation sliced `updated_at`, a UTC
+       * timestamp that also advances on unrelated writes — so friends showed as
+       * having read when they had merely changed a setting, and the day rolled
+       * over at the wrong hour for anyone outside UTC.
+       */
+      const lastReadDate = (progress?.last_read_date as ISODate | null) ?? null;
 
       return {
         friendshipId: friendship.id,
@@ -121,17 +118,37 @@ export async function fetchFriends(userId: string): Promise<FriendSummary[]> {
         chapters: progress?.total_chapters_read ?? 0,
         lastReadDate,
         readToday: lastReadDate === today,
-      } satisfies FriendSummary;
+        daysSinceRead: lastReadDate ? daysBetween(lastReadDate, today) : null,
+        since: friendship.updated_at ?? null,
+      };
     })
     .filter((entry): entry is FriendSummary => entry !== null)
     .sort((a, b) => b.chapters - a.chapters);
+}
+
+/** One profile by user id, for an invite link that names who sent it. */
+export async function fetchProfileById(
+  userId: string,
+): Promise<CommunityProfile | null> {
+  // The id comes off a URL, so it is untrusted input; a malformed one would
+  // otherwise reach Postgres as a uuid cast error rather than an empty result.
+  if (!isUserId(userId)) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id, display_name, avatar_url")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ? toProfile(data) : null;
 }
 
 /** Requests waiting on this user's response. */
 export async function fetchIncomingRequests(userId: string): Promise<PendingRequest[]> {
   const { data, error } = await supabase
     .from("friendships")
-    .select("id, sender_id")
+    .select("id, sender_id, created_at")
     .eq("receiver_id", userId)
     .eq("status", "pending");
 
@@ -141,9 +158,11 @@ export async function fetchIncomingRequests(userId: string): Promise<PendingRequ
   const profiles = await fetchProfiles(data.map((row) => row.sender_id));
 
   return data
-    .map((row) => {
+    .map((row): PendingRequest | null => {
       const profile = profiles.get(row.sender_id);
-      return profile ? { friendshipId: row.id, profile } : null;
+      return profile
+        ? { friendshipId: row.id, profile, sentAt: row.created_at ?? null }
+        : null;
     })
     .filter((entry): entry is PendingRequest => entry !== null);
 }
@@ -158,7 +177,7 @@ export async function fetchIncomingRequests(userId: string): Promise<PendingRequ
 export async function fetchOutgoingRequests(userId: string): Promise<PendingRequest[]> {
   const { data, error } = await supabase
     .from("friendships")
-    .select("id, receiver_id")
+    .select("id, receiver_id, created_at")
     .eq("sender_id", userId)
     .eq("status", "pending");
 
@@ -168,9 +187,11 @@ export async function fetchOutgoingRequests(userId: string): Promise<PendingRequ
   const profiles = await fetchProfiles(data.map((row) => row.receiver_id));
 
   return data
-    .map((row) => {
+    .map((row): PendingRequest | null => {
       const profile = profiles.get(row.receiver_id);
-      return profile ? { friendshipId: row.id, profile } : null;
+      return profile
+        ? { friendshipId: row.id, profile, sentAt: row.created_at ?? null }
+        : null;
     })
     .filter((entry): entry is PendingRequest => entry !== null);
 }
@@ -225,18 +246,31 @@ export async function removeFriendship(friendshipId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Display name, falling back to something readable rather than blank. */
-export function nameOf(profile: CommunityProfile): string {
-  return profile.displayName?.trim() || "Unnamed reader";
-}
+/**
+ * Sends a friend an encouragement push.
+ *
+ * Goes through the app's own API rather than straight to Supabase: delivering a
+ * push needs the VAPID private key and the recipient's subscription rows, and
+ * neither may ever reach the browser. The endpoint re-checks the friendship
+ * server-side, so a caller cannot notify a stranger by editing the id.
+ */
+export async function sendNudge(friendId: string): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Sign in again to send encouragement.");
 
-export function initialsOf(profile: CommunityProfile): string {
-  const name = profile.displayName?.trim();
-  if (!name) return "?";
+  const response = await fetch("/api/nudge", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ friendId }),
+  });
 
-  const parts = name.split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error ?? "Couldn't send that right now.");
   }
-  return name.slice(0, 2).toUpperCase();
 }

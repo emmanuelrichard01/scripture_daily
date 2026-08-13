@@ -64,6 +64,17 @@ export default {
           cyan: "hsl(var(--track-cyan))",
         },
       },
+      /*
+       * Tailwind 3's default scale has no 4.5 or 13 step, so `h-4.5` and `h-13`
+       * — used across the reader, onboarding, lists and calendar — compiled to
+       * nothing at all. Buttons meant to stand 52px tall fell back to the
+       * component default and 18px icons rendered at their intrinsic size.
+       */
+      spacing: {
+        4.5: "1.125rem",
+        13: "3.25rem",
+        15: "3.75rem",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -99,11 +110,22 @@ export default {
           from: { opacity: "0", transform: "scale(0.96)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        // Sheets and action bars that rise from the bottom edge.
+        "slide-up": {
+          from: { opacity: "0", transform: "translateY(100%)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 250ms var(--ease-out)",
         "accordion-up": "accordion-up 200ms var(--ease-out)",
         "scale-in": "scale-in 200ms var(--ease-spring)",
+        "fade-in": "fade-in 200ms var(--ease-out)",
+        "slide-up": "slide-up 280ms var(--ease-out)",
       },
     },
   },

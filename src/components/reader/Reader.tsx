@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowRight,
   Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  Languages,
   RefreshCw,
   Share2,
   Sparkles,
@@ -14,19 +16,39 @@ import {
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ReaderSheet } from "@/components/reader/ReaderSheet";
 import { ReaderSettingsPanel } from "@/components/reader/ReaderSettingsPanel";
+import { TranslationPicker } from "@/components/reader/TranslationPicker";
+import { ChapterPicker } from "@/components/reader/ChapterPicker";
 import { useSettings } from "@/hooks/useSettings";
 import { useFeedback } from "@/hooks/useFeedback";
+import { translationInfo } from "@/contexts/SettingsContext";
 import {
   chapterAtPosition,
   getList,
   positionOfChapter,
   type ChapterRef,
 } from "@/lib/readingPlan";
-import { BibleApiError, chapterQueryKey, fetchChapter } from "@/lib/bible";
+import { BibleApiError, chapterQueryKey, fetchChapter, type Verse } from "@/lib/bible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+/** Which contained sheet is open, if any. */
+type ActiveSheet = "translation" | "typography" | "chapters" | null;
+
+const MARGIN_CLASS = {
+  narrow: "px-4",
+  normal: "px-6",
+  wide: "px-9",
+} as const;
+
+/** A swipe must be this long, and this much more horizontal than vertical. */
+const SWIPE_MIN_DISTANCE = 60;
+const SWIPE_RATIO = 1.6;
+
+/** How far a pointer may travel, and how long it may rest, and still be a tap. */
+const TAP_SLOP = 10;
+const TAP_MAX_MS = 700;
 
 interface ReaderProps {
   isOpen: boolean;
@@ -38,15 +60,25 @@ interface ReaderProps {
   chapter: number;
   isCompleted: boolean;
   onToggleComplete: () => void;
+  /**
+   * The next list still unread today. When present, finishing this chapter
+   * offers to carry straight on instead of dropping back to the list screen.
+   */
+  nextUp?: { listId: number; listName: string; book: string; chapter: number } | null;
+  onAdvance?: (listId: number) => void;
 }
 
 /**
  * The in-app scripture reader.
  *
- * Beyond rendering text it does three things the previous version did not: it
- * lets you move through the list's sequence instead of stranding you on a
- * single chapter, it gets out of the way while you read, and it lets you act on
- * an individual verse.
+ * Four things drive the layout. Translation is a first-class header control
+ * rather than a row buried in Settings, because switching translation is a
+ * reading decision made mid-verse. The chapter reference is a button, so you
+ * can jump anywhere in the list instead of stepping one chapter at a time. Only
+ * the header hides while you read — the footer holds the one action the screen
+ * exists to produce, and hiding it meant scrolling back up to mark a chapter
+ * you had just finished. And verse taps yield to text selection, so selecting a
+ * phrase no longer collapses into a verse highlight.
  */
 export function Reader({
   isOpen,
@@ -57,6 +89,8 @@ export function Reader({
   chapter,
   isCompleted,
   onToggleComplete,
+  nextUp,
+  onAdvance,
 }: ReaderProps) {
   const { settings } = useSettings();
   const feedback = useFeedback();
@@ -75,9 +109,18 @@ export function Reader({
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isImmersive, setIsImmersive] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const pressStart = useRef<{
+    x: number;
+    y: number;
+    lastX: number;
+    lastY: number;
+    time: number;
+  } | null>(null);
 
   // Reopening returns to today's chapter rather than wherever the last session
   // wandered off to.
@@ -122,23 +165,28 @@ export function Reader({
     }
   }, [isOpen, list, position, translation, verses, queryClient]);
 
+  const resetView = useCallback(() => {
+    setSelectedVerse(null);
+    setIsImmersive(false);
+    lastScrollTop.current = 0;
+    viewportRef.current?.scrollTo({ top: 0 });
+    setScrollProgress(0);
+  }, []);
+
   const goTo = useCallback(
     (next: number) => {
       feedback.haptic("light");
       setPosition(next);
-      setSelectedVerse(null);
-      setIsImmersive(false);
-      lastScrollTop.current = 0;
-      viewportRef.current?.scrollTo({ top: 0 });
-      setScrollProgress(0);
+      resetView();
     },
-    [feedback],
+    [feedback, resetView],
   );
 
+  // Changing translation re-renders a different text at the same reference;
+  // scroll position from the old one is meaningless.
   useEffect(() => {
-    viewportRef.current?.scrollTo({ top: 0 });
-    setScrollProgress(0);
-  }, [translation]);
+    resetView();
+  }, [translation, resetView]);
 
   // Arrow keys are the natural affordance for paging, and the reader is a modal
   // surface so it can claim them unambiguously.
@@ -147,6 +195,9 @@ export function Reader({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // A sheet is open and owns the keyboard.
+      if (activeSheet !== null) return;
+
       if (event.key === "ArrowRight") goTo(position + 1);
       else if (event.key === "ArrowLeft") goTo(position - 1);
       else if (event.key === "Escape" && selectedVerse !== null) {
@@ -157,14 +208,14 @@ export function Reader({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isOpen, position, goTo, selectedVerse]);
+  }, [isOpen, position, goTo, selectedVerse, activeSheet]);
 
   /**
-   * Tracks reading position and hides the chrome while scrolling down.
+   * Tracks reading position and hides the header while scrolling down.
    *
-   * The header and footer return the instant you scroll back up, so controls
-   * are never more than a flick away — hiding them permanently would trade one
-   * annoyance for another.
+   * The footer deliberately stays put. It carries "Mark as read" — the single
+   * action the reader exists to produce — and hiding it meant finishing a
+   * chapter and then having to scroll back up to record it.
    */
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
@@ -178,42 +229,113 @@ export function Reader({
     }
   };
 
+  /** True while the reader has an active text selection. */
+  const hasTextSelection = () => {
+    const selection = window.getSelection();
+    return Boolean(selection && !selection.isCollapsed);
+  };
+
+  /**
+   * Whether the gesture that produced a click was a tap rather than a drag.
+   *
+   * Selection state alone is not a reliable discriminator: a `Selection` can
+   * report `isCollapsed === false` while `toString()` is empty, and browsers
+   * differ on whether the selection survives to the click. Measuring the
+   * pointer is unambiguous — a drag to select text moves; a tap does not.
+   */
+  const wasTap = () => {
+    const press = pressStart.current;
+    if (!press) return true; // Keyboard or synthetic activation.
+
+    const moved = Math.hypot(
+      press.lastX - press.x,
+      press.lastY - press.y,
+    );
+    return moved < TAP_SLOP && Date.now() - press.time < TAP_MAX_MS;
+  };
+
+  const handlePointerDown = (event: React.PointerEvent) => {
+    pressStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      time: Date.now(),
+    };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent) => {
+    const press = pressStart.current;
+    if (!press) return;
+    press.lastX = event.clientX;
+    press.lastY = event.clientY;
+  };
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    const touch = event.touches[0];
+    touchStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || activeSheet !== null) return;
+    // Dragging to select text ends as a horizontal gesture too; paging away
+    // from a selection the reader just made would be maddening.
+    if (hasTextSelection()) return;
+
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) {
+      return;
+    }
+
+    goTo(position + (dx < 0 ? 1 : -1));
+  };
+
   const handleMarkRead = () => {
     if (!isCompleted) feedback.chapterComplete();
     onToggleComplete();
   };
 
   const reference = current ? `${current.book} ${current.chapter}` : "";
+  const translationMeta = translationInfo(translation);
 
   /** Formats a verse for the clipboard or the share sheet. */
   const citationFor = (verseNumber: number, html: string) =>
-    `"${html.replace(/<[^>]+>/g, "")}" — ${reference}:${verseNumber} (${translation})`;
+    `"${stripTags(html)}" — ${reference}:${verseNumber} (${translation})`;
 
-  const copyVerse = async (verseNumber: number, html: string) => {
+  /** The whole chapter as plain text, verse numbers inline. */
+  const chapterText = (source: readonly Verse[]) =>
+    `${reference} (${translation})\n\n${source
+      .map((verse) => `${verse.verse}. ${stripTags(verse.text)}`)
+      .join("\n")}`;
+
+  const copyText = async (payload: string, success: string) => {
     try {
-      await navigator.clipboard.writeText(citationFor(verseNumber, html));
+      await navigator.clipboard.writeText(payload);
       feedback.haptic("light");
-      toast.success("Verse copied");
+      toast.success(success);
     } catch {
       toast.error("Your browser blocked clipboard access");
     }
-    setSelectedVerse(null);
   };
 
-  const shareVerse = async (verseNumber: number, html: string) => {
-    const payload = citationFor(verseNumber, html);
+  const shareText = async (payload: string) => {
     try {
       if (navigator.share) await navigator.share({ text: payload });
       else {
         await navigator.clipboard.writeText(payload);
-        toast.success("Verse copied");
+        toast.success("Copied to your clipboard");
       }
     } catch (shareError) {
       // Dismissing the share sheet is not a failure.
       if (shareError instanceof DOMException && shareError.name === "AbortError") return;
-      toast.error("Couldn't share that verse");
+      toast.error("Couldn't share that");
     }
-    setSelectedVerse(null);
   };
 
   const errorMessage =
@@ -228,6 +350,7 @@ export function Reader({
 
   const previous = chapterAtPosition(list, position - 1);
   const next = chapterAtPosition(list, position + 1);
+  const selected = verses?.find((verse) => verse.verse === selectedVerse) ?? null;
 
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange}>
@@ -251,52 +374,7 @@ export function Reader({
             isImmersive && "-translate-y-full",
           )}
         >
-          <div className="mx-auto flex h-16 max-w-2xl items-center gap-1 px-3">
-            <button
-              type="button"
-              onClick={() => goTo(position - 1)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
-              aria-label={`Previous chapter, ${previous.book} ${previous.chapter}`}
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            <div className="min-w-0 flex-1 px-1 text-center">
-              <p className="truncate font-display text-lg font-semibold tracking-tight">
-                {reference}
-              </p>
-              <p className="truncate text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                {isOnTodaysChapter ? listName : `${listName} · browsing`}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => goTo(position + 1)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
-              aria-label={`Next chapter, ${next.book} ${next.chapter}`}
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </button>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
-                  aria-label="Reading settings"
-                >
-                  <Type className="h-[18px] w-[18px]" aria-hidden="true" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                className="z-[120] w-[19rem] rounded-2xl p-4 shadow-lg"
-              >
-                <ReaderSettingsPanel />
-              </PopoverContent>
-            </Popover>
-
+          <div className="mx-auto flex h-16 max-w-2xl items-center gap-1 px-2.5">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -305,15 +383,78 @@ export function Reader({
             >
               <X className="h-[18px] w-[18px]" aria-hidden="true" />
             </button>
+
+            {/* Reference stepper. The label is a button because paging one
+                chapter at a time cannot answer "take me back to Genesis 1". */}
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => goTo(position - 1)}
+                className="flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+                aria-label={`Previous chapter, ${previous.book} ${previous.chapter}`}
+              >
+                <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSheet("chapters")}
+                className="min-w-0 rounded-lg px-1.5 py-1 text-center transition-colors hover:bg-secondary focus-ring"
+                aria-haspopup="dialog"
+              >
+                <span className="block truncate font-display text-base font-semibold leading-tight tracking-tight">
+                  {reference}
+                </span>
+                <span className="mt-0.5 block truncate text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  {isOnTodaysChapter ? listName : `${listName} · browsing`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => goTo(position + 1)}
+                className="flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+                aria-label={`Next chapter, ${next.book} ${next.chapter}`}
+              >
+                <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
+              </button>
+            </div>
+
+            {/* Translation, promoted to the header. It shows the current choice
+                at a glance, which the old typography-menu placement did not. */}
+            <button
+              type="button"
+              onClick={() => setActiveSheet("translation")}
+              className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-secondary/80 px-2.5 text-xs font-bold tracking-tight transition-colors hover:bg-secondary focus-ring"
+              aria-haspopup="dialog"
+              aria-label={`Translation: ${translationMeta.name}. Change translation`}
+            >
+              <Languages className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              {translation}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSheet("typography")}
+              className="flex h-10 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+              aria-haspopup="dialog"
+              aria-label="Text appearance and chapter actions"
+            >
+              <Type className="h-[18px] w-[18px]" aria-hidden="true" />
+            </button>
           </div>
         </header>
 
         <div
           ref={viewportRef}
           onScroll={handleScroll}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
           className="flex-1 overflow-y-auto overscroll-contain"
         >
-          <div className="mx-auto max-w-2xl px-6 pb-40 pt-8">
+          <div className={cn("mx-auto max-w-2xl pb-40 pt-8", MARGIN_CLASS[typography.margin])}>
             {isPending && (
               <div className="space-y-3.5" aria-hidden="true">
                 {[97, 91, 99, 86, 94, 100, 88, 96, 92, 79].map((width, index) => (
@@ -334,31 +475,53 @@ export function Reader({
                 <p className="max-w-xs text-sm font-medium text-muted-foreground">
                   {errorMessage}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void refetch()}
-                  disabled={isFetching}
-                  className="gap-2 rounded-xl"
-                >
-                  <RefreshCw
-                    className={cn("h-4 w-4", isFetching && "animate-spin")}
-                    aria-hidden="true"
-                  />
-                  Try again
-                </Button>
+
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refetch()}
+                    disabled={isFetching}
+                    className="gap-2 rounded-xl"
+                  >
+                    <RefreshCw
+                      className={cn("h-4 w-4", isFetching && "animate-spin")}
+                      aria-hidden="true"
+                    />
+                    Try again
+                  </Button>
+
+                  {/* Not every translation carries every book, and the message
+                      says so — so offer the fix rather than only naming it. */}
+                  {!isOffline && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveSheet("translation")}
+                      className="gap-2 rounded-xl"
+                    >
+                      <Languages className="h-4 w-4" aria-hidden="true" />
+                      Try another translation
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 
             {verses && (
               <>
-                <p className="mb-7 text-center font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  {reference}
-                </p>
+                <div className="mb-7 text-center">
+                  <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    {reference}
+                  </p>
+                  <p className="mt-1 text-2xs font-medium text-muted-foreground/70">
+                    {translationMeta.name}
+                  </p>
+                </div>
 
                 <article
                   className={cn(
-                    "text-pretty",
+                    "text-pretty selection:bg-primary/20",
                     typography.fontFamily === "serif" ? "font-serif" : "font-sans",
                   )}
                   style={{
@@ -370,50 +533,40 @@ export function Reader({
                     const isSelected = selectedVerse === verse.verse;
 
                     return (
-                      <span key={verse.verse}>
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setSelectedVerse(isSelected ? null : verse.verse)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedVerse(isSelected ? null : verse.verse);
-                            }
-                          }}
-                          className={cn(
-                            "cursor-pointer rounded-[3px] transition-colors duration-200",
-                            isSelected ? "bg-primary/15" : "hover:bg-primary/[0.06]",
-                          )}
-                          aria-label={`Verse ${verse.verse}`}
-                          aria-pressed={isSelected}
-                        >
-                          <sup className="mr-1 select-none align-super font-sans text-[0.6em] font-bold text-primary">
-                            {verse.verse}
-                          </sup>
-                          {/* Sanitised in fetchChapter: text plus <i>/<b> only. */}
-                          <span dangerouslySetInnerHTML={{ __html: verse.text }} />
-                        </span>{" "}
-                        {isSelected && (
-                          <span className="my-3 flex justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void copyVerse(verse.verse, verse.text)}
-                              className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 font-sans text-xs font-semibold transition-colors hover:bg-accent focus-ring"
-                            >
-                              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                              Copy
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void shareVerse(verse.verse, verse.text)}
-                              className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 font-sans text-xs font-semibold transition-colors hover:bg-accent focus-ring"
-                            >
-                              <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                              Share
-                            </button>
-                          </span>
+                      <span
+                        key={verse.verse}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          // A drag to select text ends in a click on the last
+                          // verse touched. Honouring it would wipe the
+                          // selection the reader just made, which is why
+                          // selecting a phrase used to be impossible here.
+                          if (!wasTap() || hasTextSelection()) return;
+                          setSelectedVerse(isSelected ? null : verse.verse);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            // Keyboard activation is never a drag.
+                            pressStart.current = null;
+                            setSelectedVerse(isSelected ? null : verse.verse);
+                          }
+                        }}
+                        className={cn(
+                          "rounded-[3px] transition-colors duration-200",
+                          isSelected
+                            ? "bg-primary/15"
+                            : "hover:bg-primary/[0.06] focus-visible:bg-primary/[0.08]",
                         )}
+                        aria-label={`Verse ${verse.verse}`}
+                        aria-pressed={isSelected}
+                      >
+                        <sup className="mr-1 select-none align-super font-sans text-[0.6em] font-bold text-primary">
+                          {verse.verse}
+                        </sup>
+                        {/* Sanitised in fetchChapter: text plus <i>/<b>/<br>. */}
+                        <span dangerouslySetInnerHTML={{ __html: verse.text }} />{" "}
                       </span>
                     );
                   })}
@@ -452,14 +605,85 @@ export function Reader({
           </div>
         </div>
 
-        <footer
-          className={cn(
-            "glass safe-bottom absolute inset-x-0 bottom-0 z-20 border-t border-border/50 transition-transform duration-300 ease-out-expo",
-            isImmersive && "translate-y-full",
-          )}
-        >
+        {/* Verse actions, as a bar rather than inline buttons. Injecting
+            controls between verses reflowed the paragraph and shifted the text
+            out from under the reader's finger. */}
+        {selected && (
+          <div className="absolute inset-x-0 bottom-0 z-30 mb-[4.75rem] px-4 animate-slide-up">
+            <div className="mx-auto flex max-w-2xl items-center gap-2 rounded-2xl border border-border/60 bg-popover p-2 shadow-lg">
+              <span className="ml-1.5 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
+                v{selected.verse}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  void copyText(citationFor(selected.verse, selected.text), "Verse copied")
+                }
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-accent focus-ring"
+              >
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={() => void shareText(citationFor(selected.verse, selected.text))}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-accent focus-ring"
+              >
+                <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                Share
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedVerse(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary focus-ring"
+                aria-label="Dismiss verse actions"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <footer className="glass safe-bottom absolute inset-x-0 bottom-0 z-20 border-t border-border/50">
           <div className="mx-auto max-w-2xl p-4">
-            {isOnTodaysChapter ? (
+            {!isOnTodaysChapter ? (
+              // Browsing away from today's chapter: offer the way back rather
+              // than a Mark button that would credit the wrong chapter.
+              <Button
+                variant="outline"
+                onClick={() => goTo(homePosition ?? 1)}
+                className="h-13 w-full rounded-2xl text-base font-semibold"
+              >
+                Back to today's chapter
+              </Button>
+            ) : isCompleted && nextUp && onAdvance ? (
+              // Finished, and there is more to read today. Carrying straight on
+              // beats closing the reader and hunting for the next card.
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleMarkRead}
+                  className="h-13 shrink-0 gap-2 rounded-2xl px-4 font-semibold"
+                  aria-label="Undo mark as read"
+                >
+                  <Check className="h-5 w-5 text-success" aria-hidden="true" />
+                </Button>
+                <Button
+                  onClick={() => onAdvance(nextUp.listId)}
+                  className="h-13 min-w-0 flex-1 justify-between gap-2 rounded-2xl px-4 text-left shadow-md"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-2xs font-bold uppercase tracking-[0.08em] opacity-75">
+                      Next · {nextUp.listName}
+                    </span>
+                    <span className="block truncate font-display text-sm font-semibold">
+                      {nextUp.book} {nextUp.chapter}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+                </Button>
+              </div>
+            ) : (
               <Button
                 onClick={handleMarkRead}
                 variant={isCompleted ? "secondary" : "default"}
@@ -480,20 +704,61 @@ export function Reader({
                   </>
                 )}
               </Button>
-            ) : (
-              // Browsing away from today's chapter: offer the way back rather
-              // than a Mark button that would credit the wrong chapter.
-              <Button
-                variant="outline"
-                onClick={() => goTo(homePosition ?? 1)}
-                className="h-13 w-full rounded-2xl text-base font-semibold"
-              >
-                Back to today's chapter
-              </Button>
             )}
           </div>
         </footer>
+
+        <ReaderSheet
+          open={activeSheet === "translation"}
+          onClose={() => setActiveSheet(null)}
+          title="Translation"
+          description="Applies to every chapter you read."
+        >
+          <TranslationPicker onSelected={() => setActiveSheet(null)} />
+        </ReaderSheet>
+
+        <ReaderSheet
+          open={activeSheet === "typography"}
+          onClose={() => setActiveSheet(null)}
+          title="Appearance"
+        >
+          <ReaderSettingsPanel
+            reference={reference}
+            onCopyChapter={() => {
+              if (!verses) return;
+              setActiveSheet(null);
+              void copyText(chapterText(verses), `${reference} copied`);
+            }}
+            onShareChapter={() => {
+              if (!verses) return;
+              setActiveSheet(null);
+              void shareText(chapterText(verses));
+            }}
+          />
+        </ReaderSheet>
+
+        <ReaderSheet
+          open={activeSheet === "chapters"}
+          onClose={() => setActiveSheet(null)}
+          title={listName}
+          description={`${list.totalChapters} chapters in this list. Today's reading is marked.`}
+        >
+          <ChapterPicker
+            list={list}
+            position={position}
+            homePosition={homePosition}
+            onSelect={(next) => {
+              setActiveSheet(null);
+              goTo(next);
+            }}
+          />
+        </ReaderSheet>
       </DrawerContent>
     </Drawer>
   );
+}
+
+/** Verse markup is a tiny allowlisted subset, so a regex is sufficient here. */
+function stripTags(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }

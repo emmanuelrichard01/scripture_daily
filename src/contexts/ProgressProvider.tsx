@@ -16,6 +16,7 @@ import {
   deriveStreak,
   deriveTotalChapters,
   deserializeLog,
+  lastReadDate,
   mergeProgress,
   parseProgress,
   serializeLog,
@@ -125,6 +126,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           completed_readings: serializeLog(payload.history),
           total_chapters_read: deriveTotalChapters(payload.history),
           streak_count: deriveStreak(payload.history),
+          // The column existed from the first migration but was never written,
+          // so the Community page had to guess at it from `updated_at`.
+          last_read_date: lastReadDate(payload.history),
           updated_at: payload.updatedAt,
         },
         { onConflict: "user_id" },

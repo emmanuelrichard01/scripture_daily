@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BookOpen,
   Check,
   Clock,
   Flame,
+  Hand,
+  Link2,
   Search,
+  Sparkles,
   Trophy,
   UserMinus,
   UserPlus,
@@ -30,32 +35,43 @@ import { useProgress } from "@/hooks/useProgress";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  activityLabel,
   communityKeys,
+  couldUseEncouragement,
   fetchFriends,
   fetchIncomingRequests,
   fetchOutgoingRequests,
+  fetchProfileById,
+  firstNameOf,
   initialsOf,
+  inviteLinkFor,
+  isUserId,
   nameOf,
   removeFriendship,
   respondToRequest,
   searchProfiles,
   sendFriendRequest,
+  sendNudge,
   type CommunityProfile,
   type FriendSummary,
 } from "@/lib/community";
-import { cn } from "@/lib/utils";
+import { cn, pluralize } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Community() {
   const { user } = useAuth();
-  const { totalChaptersRead, streakCount } = useProgress();
+  const { totalChaptersRead, streakCount, completedToday } = useProgress();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingRemoval, setPendingRemoval] = useState<FriendSummary | null>(null);
 
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 350);
   const userId = user!.id; // RequireAuth guarantees a session on this route.
+
+  /** `?add=<uuid>` from a shared invite link. */
+  const invitedId = searchParams.get("add");
 
   const friends = useQuery({
     queryKey: communityKeys.friends(userId),
@@ -78,14 +94,29 @@ export default function Community() {
     enabled: debouncedSearch.length >= 2,
   });
 
+  const invited = useQuery({
+    queryKey: communityKeys.profile(invitedId ?? ""),
+    queryFn: () => fetchProfileById(invitedId!),
+    // Following your own link is a no-op rather than an error state.
+    enabled: Boolean(invitedId) && isUserId(invitedId!) && invitedId !== userId,
+  });
+
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["community"] });
+  };
+
+  const dismissInvite = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("add");
+    setSearchParams(next, { replace: true });
   };
 
   const add = useMutation({
     mutationFn: (receiverId: string) => sendFriendRequest(userId, receiverId),
     onSuccess: () => {
-      toast.success("Request sent");
+      toast.success("Request sent", {
+        description: "They'll see it next time they open the app.",
+      });
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -107,6 +138,14 @@ export default function Community() {
       toast.success("Removed");
       setPendingRemoval(null);
       invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const nudge = useMutation({
+    mutationFn: ({ friendId }: { friendId: string; name: string }) => sendNudge(friendId),
+    onSuccess: (_result, variables) => {
+      toast.success(`Sent ${variables.name} some encouragement`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -153,6 +192,7 @@ export default function Community() {
         name: nameOf(friend.profile),
         chapters: friend.chapters,
         streak: friend.streak,
+        readToday: friend.readToday,
         isSelf: false,
         profile: friend.profile as CommunityProfile | null,
       })),
@@ -161,19 +201,189 @@ export default function Community() {
         name: "You",
         chapters: totalChaptersRead,
         streak: streakCount,
+        readToday: completedToday > 0,
         isSelf: true,
         profile: null,
       },
     ];
     return rows.sort((a, b) => b.chapters - a.chapters);
-  }, [friendList, totalChaptersRead, streakCount]);
+  }, [friendList, totalChaptersRead, streakCount, completedToday]);
+
+  /** Everyone's totals combined — the number that makes a circle feel like one. */
+  const circle = useMemo(() => {
+    const chapters = friendList.reduce(
+      (sum, friend) => sum + friend.chapters,
+      totalChaptersRead,
+    );
+    const longest = friendList.reduce(
+      (best, friend) => Math.max(best, friend.streak),
+      streakCount,
+    );
+    const readingToday = activeToday.length + (completedToday > 0 ? 1 : 0);
+    return { chapters, longest, readingToday, people: friendList.length + 1 };
+  }, [friendList, activeToday, totalChaptersRead, streakCount, completedToday]);
+
+  const copyInvite = async () => {
+    try {
+      const link = inviteLinkFor(userId);
+      if (navigator.share) {
+        await navigator.share({
+          title: "Read the Bible with me",
+          text: "I'm reading ten chapters a day on Scripture Daily. Join me.",
+          url: link,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(link);
+      toast.success("Invite link copied");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error("Couldn't share your invite link");
+    }
+  };
+
+  const hasCircle = friendList.length > 0;
+  const invitedState = invited.data ? relationshipState.get(invited.data.userId) : undefined;
 
   return (
     <PageLayout title="Community">
-      <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-        Reading alongside others makes the habit stick. Add friends to see how
-        their reading is going — and let them see yours.
-      </p>
+      {/* ── An invite link someone followed ── */}
+      {invited.data && (
+        <section className="surface-raised mb-5 border-primary/30 bg-primary/[0.04] p-5">
+          <div className="flex items-center gap-3.5">
+            <Avatar className="h-12 w-12 shrink-0">
+              <AvatarImage src={invited.data.avatarUrl ?? undefined} alt="" />
+              <AvatarFallback className="font-bold">
+                {initialsOf(invited.data)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-base font-semibold">
+                {nameOf(invited.data)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {invitedState === "friend"
+                  ? "You're already reading together."
+                  : invitedState === "requested"
+                    ? "Your request is waiting for them."
+                    : "invited you to read together."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            {!invitedState && (
+              <Button
+                onClick={() => {
+                  add.mutate(invited.data!.userId);
+                  dismissInvite();
+                }}
+                disabled={add.isPending}
+                className="h-11 flex-1 gap-2 rounded-xl font-semibold"
+              >
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                Accept invitation
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              onClick={dismissInvite}
+              className={cn("h-11 rounded-xl", !invitedState ? "px-4" : "flex-1")}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* ── The circle at a glance ── */}
+      <section
+        className="surface-raised relative mb-5 overflow-hidden p-5"
+        aria-label="Your reading circle"
+      >
+        <div
+          className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-primary/10 blur-3xl"
+          aria-hidden="true"
+        />
+
+        {hasCircle ? (
+          <div className="relative">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display text-lg font-semibold leading-snug">
+                  {circle.readingToday === circle.people
+                    ? "Everyone has read today"
+                    : `${circle.readingToday} of ${circle.people} have read today`}
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {circle.readingToday === circle.people
+                    ? "Your whole circle is through today's chapters."
+                    : "You're reading the same plan, at your own pace."}
+                </p>
+              </div>
+
+              {activeToday.length > 0 && (
+                <div className="flex shrink-0 -space-x-2.5" aria-hidden="true">
+                  {activeToday.slice(0, 4).map((friend) => (
+                    <Avatar
+                      key={friend.friendshipId}
+                      className="h-9 w-9 border-2 border-card"
+                    >
+                      <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
+                      <AvatarFallback className="text-xs font-bold">
+                        {initialsOf(friend.profile)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {activeToday.length > 4 && (
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-secondary text-2xs font-bold">
+                      +{activeToday.length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 grid grid-cols-3 divide-x divide-border/60 rounded-xl bg-secondary/40 py-3">
+              {[
+                { value: circle.chapters.toLocaleString(), label: "chapters together" },
+                { value: circle.people.toLocaleString(), label: pluralize(circle.people, "reader") },
+                { value: circle.longest.toLocaleString(), label: "longest streak" },
+              ].map((stat) => (
+                <div key={stat.label} className="px-2 text-center">
+                  <p className="stat-display text-lg leading-none">{stat.value}</p>
+                  <p className="mt-1.5 text-2xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="relative">
+            <h2 className="font-display text-lg font-semibold leading-snug">
+              Reading is easier together
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              Horner's plan asks for ten chapters a day, every day. People who
+              read alongside someone else stay with it far longer than people who
+              don't. Invite one person.
+            </p>
+          </div>
+        )}
+
+        <Button
+          onClick={() => void copyInvite()}
+          variant={hasCircle ? "outline" : "default"}
+          className={cn(
+            "mt-4 h-12 w-full gap-2 rounded-xl font-semibold",
+            !hasCircle && "shadow-md",
+          )}
+        >
+          <Link2 className="h-4 w-4" aria-hidden="true" />
+          Share your invite link
+        </Button>
+      </section>
 
       {/* ── Search ── */}
       <div className="relative mb-6">
@@ -241,9 +451,9 @@ export default function Community() {
           ) : (
             <div className="rounded-2xl border border-dashed border-border p-8 text-center">
               <p className="text-sm font-medium">No one found</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mx-auto mt-1 max-w-[17rem] text-xs leading-relaxed text-muted-foreground">
                 Nobody matches "{debouncedSearch}". They may not have set a display
-                name yet.
+                name yet — an invite link works regardless.
               </p>
             </div>
           )}
@@ -255,7 +465,7 @@ export default function Community() {
         <section aria-labelledby="requests-heading" className="mb-8">
           <h2 id="requests-heading" className="section-label mb-2.5 flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-track-orange" aria-hidden="true" />
-            {incoming.data.length} request{incoming.data.length === 1 ? "" : "s"}
+            {incoming.data.length} {pluralize(incoming.data.length, "request")}
           </h2>
 
           <ul className="space-y-2">
@@ -297,54 +507,8 @@ export default function Community() {
         </section>
       )}
 
-      {/* ── Today ── */}
-      {friendList.length > 0 && (
-        <section aria-labelledby="today-heading" className="mb-8">
-          <h2 id="today-heading" className="section-label mb-2.5">
-            Today
-          </h2>
-
-          <div className="surface p-5">
-            {activeToday.length > 0 ? (
-              <>
-                <div className="mb-3 flex -space-x-2">
-                  {activeToday.slice(0, 6).map((friend) => (
-                    <Avatar
-                      key={friend.friendshipId}
-                      className="h-9 w-9 border-2 border-card"
-                    >
-                      <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
-                      <AvatarFallback className="text-xs font-bold">
-                        {initialsOf(friend.profile)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {activeToday.length > 6 && (
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-secondary text-2xs font-bold">
-                      +{activeToday.length - 6}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm">
-                  <span className="font-semibold">
-                    {activeToday.length} of {friendList.length}
-                  </span>{" "}
-                  <span className="text-muted-foreground">
-                    {activeToday.length === 1 ? "friend has" : "friends have"} read today.
-                  </span>
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No one has logged a reading yet today. Be the first.
-              </p>
-            )}
-          </div>
-        </section>
-      )}
-
       {/* ── Standings ── */}
-      {friendList.length > 0 && (
+      {hasCircle && (
         <section aria-labelledby="standings-heading" className="mb-8">
           <h2 id="standings-heading" className="section-label mb-2.5 flex items-center gap-2">
             <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
@@ -369,18 +533,26 @@ export default function Community() {
                   {index + 1}
                 </span>
 
-                {row.profile ? (
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={row.profile.avatarUrl ?? undefined} alt="" />
-                    <AvatarFallback className="text-2xs font-bold">
-                      {initialsOf(row.profile)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-2xs font-bold text-primary">
-                    You
-                  </span>
-                )}
+                <span className="relative shrink-0">
+                  {row.profile ? (
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={row.profile.avatarUrl ?? undefined} alt="" />
+                      <AvatarFallback className="text-2xs font-bold">
+                        {initialsOf(row.profile)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-2xs font-bold text-primary">
+                      You
+                    </span>
+                  )}
+                  {row.readToday && (
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-success"
+                      aria-label="Read today"
+                    />
+                  )}
+                </span>
 
                 <span
                   className={cn(
@@ -411,80 +583,115 @@ export default function Community() {
       <section aria-labelledby="friends-heading">
         <h2 id="friends-heading" className="section-label mb-2.5 flex items-center gap-2">
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
-          {friendList.length > 0 ? `${friendList.length} friends` : "Friends"}
+          {hasCircle ? `${friendList.length} ${pluralize(friendList.length, "friend")}` : "Friends"}
         </h2>
 
         {friends.isPending ? (
           <div className="space-y-2">
             {[0, 1, 2].map((index) => (
-              <div key={index} className="skeleton h-[72px] rounded-2xl" />
+              <div key={index} className="skeleton h-[84px] rounded-2xl" />
             ))}
           </div>
-        ) : friendList.length > 0 ? (
+        ) : hasCircle ? (
           <ul className="space-y-2">
             {friendList.map((friend) => (
-              <li
-                key={friend.friendshipId}
-                className="surface flex items-center justify-between gap-3 p-4"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="relative shrink-0">
-                    <Avatar className="h-11 w-11">
-                      <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
-                      <AvatarFallback className="font-bold">
-                        {initialsOf(friend.profile)}
-                      </AvatarFallback>
-                    </Avatar>
-                    {friend.readToday && (
-                      <span
-                        className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-success"
-                        aria-label="Read today"
-                      />
-                    )}
+              <li key={friend.friendshipId} className="surface p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="relative shrink-0">
+                      <Avatar className="h-11 w-11">
+                        <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
+                        <AvatarFallback className="font-bold">
+                          {initialsOf(friend.profile)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {friend.readToday && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-success"
+                          aria-label="Read today"
+                        />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {nameOf(friend.profile)}
+                      </p>
+                      <p
+                        className={cn(
+                          "mt-0.5 truncate text-xs",
+                          friend.readToday ? "font-medium text-success" : "text-muted-foreground",
+                        )}
+                      >
+                        {activityLabel(friend)}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{nameOf(friend.profile)}</p>
-                    <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="tabular-nums">
-                        {friend.chapters.toLocaleString()} chapters
-                      </span>
-                      {friend.streak > 0 && (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span className="flex items-center gap-1 font-semibold text-track-orange">
-                            <Flame className="h-3 w-3" aria-hidden="true" />
-                            {friend.streak}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setPendingRemoval(friend)}
+                    className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
+                    aria-label={`Remove ${nameOf(friend.profile)}`}
+                  >
+                    <UserMinus className="h-4 w-4" aria-hidden="true" />
+                  </Button>
                 </div>
 
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setPendingRemoval(friend)}
-                  className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
-                  aria-label={`Remove ${nameOf(friend.profile)}`}
-                >
-                  <UserMinus className="h-4 w-4" aria-hidden="true" />
-                </Button>
+                <div className="mt-3 flex items-center gap-2 border-t border-border/50 pt-3">
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="tabular-nums">
+                      {friend.chapters.toLocaleString()}
+                    </span>
+                  </span>
+
+                  {friend.streak > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-semibold text-track-orange">
+                      <Flame className="h-3.5 w-3.5" aria-hidden="true" />
+                      {friend.streak}
+                    </span>
+                  )}
+
+                  <span className="flex-1" />
+
+                  {/* Only offered once someone has actually gone quiet. An
+                      always-present nudge button turns into noise, and nudging
+                      someone who read an hour ago is just a poke. */}
+                  {couldUseEncouragement(friend) && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        nudge.mutate({
+                          friendId: friend.profile.userId,
+                          name: firstNameOf(friend.profile),
+                        })
+                      }
+                      disabled={nudge.isPending}
+                      className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-primary hover:bg-primary/10"
+                    >
+                      <Hand className="h-3.5 w-3.5" aria-hidden="true" />
+                      Encourage
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         ) : (
-          <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center">
-            <Users
-              className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30"
+          <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+            <Sparkles
+              className="mx-auto mb-3 h-9 w-9 text-muted-foreground/30"
               strokeWidth={1.5}
               aria-hidden="true"
             />
             <p className="text-sm font-semibold">No friends yet</p>
-            <p className="mx-auto mt-1 max-w-[15rem] text-xs leading-relaxed text-muted-foreground">
-              Search for someone by their display name above. They'll need to accept
-              before either of you can see the other's progress.
+            <p className="mx-auto mt-1.5 max-w-[17rem] text-xs leading-relaxed text-muted-foreground">
+              Share your invite link, or search for someone by their display name.
+              Either way they'll need to accept before you can see each other's
+              reading.
             </p>
           </div>
         )}

@@ -8,6 +8,7 @@
 import {
   DEFAULT_TRANSLATION,
   TRANSLATIONS,
+  type ReaderMargin,
   type Settings,
   type ThemePreference,
   type TranslationId,
@@ -27,8 +28,10 @@ export const DEFAULT_SETTINGS: Settings = {
   soundEffects: true,
   reduceMotion: false,
   translation: DEFAULT_TRANSLATION,
-  typography: { fontSize: 18, fontFamily: "serif", lineHeight: 1.75 },
+  typography: { fontSize: 18, fontFamily: "serif", lineHeight: 1.75, margin: "normal" },
 };
+
+const VALID_MARGINS = new Set<ReaderMargin>(["narrow", "normal", "wide"]);
 
 /**
  * Coerces persisted or remote settings into a valid object.
@@ -71,13 +74,16 @@ export function parseSettings(input: unknown): Settings | null {
     typography: {
       fontSize:
         typeof typography.fontSize === "number"
-          ? Math.min(24, Math.max(14, Math.round(typography.fontSize)))
+          ? Math.min(26, Math.max(14, Math.round(typography.fontSize)))
           : DEFAULT_SETTINGS.typography.fontSize,
       fontFamily: typography.fontFamily === "sans" ? "sans" : "serif",
       lineHeight:
         typeof typography.lineHeight === "number"
           ? Math.min(2.2, Math.max(1.4, typography.lineHeight))
           : DEFAULT_SETTINGS.typography.lineHeight,
+      margin: VALID_MARGINS.has(typography.margin as ReaderMargin)
+        ? (typography.margin as ReaderMargin)
+        : DEFAULT_SETTINGS.typography.margin,
     },
   };
 }
