@@ -155,10 +155,31 @@ What each part is for:
 | Setting | Why |
 | --- | --- |
 | `rewrites` → `/((?!api/).*)` | SPA fallback. Without it, refreshing `/history` or any deep link 404s. The negative lookahead keeps `/api/*` routed to the functions. |
-| `crons` → `0 * * * *` | Runs hourly; the handler decides whose local reminder time it currently is, so one schedule covers every timezone. |
 | `Cache-Control` on `/assets/(.*)` | Build output is content-hashed, so it is safe to cache permanently. |
 | `Cache-Control` on `/sw.js` | Must always revalidate, or a cached service worker pins users to an old build forever. |
 | `Content-Security-Policy` | `connect-src` covers Supabase REST plus `wss:` for realtime. `'unsafe-inline'` on `style-src` is required by the inline styles that carry per-list accent colours. |
+
+### Reminders
+
+`/api/cron` is triggered hourly by `.github/workflows/reminders.yml`, not by a
+Vercel cron. The handler needs to run every hour so it can catch each user's
+*local* reminder time, and Vercel's Hobby plan caps cron jobs at one run per
+day — which would mean only users in a single timezone were ever reminded.
+
+Configure it under the repository's **Settings → Secrets and variables →
+Actions**:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `PRODUCTION_URL` | Variable | `https://your-app.vercel.app` |
+| `CRON_SECRET` | Secret | Must match the `CRON_SECRET` set in Vercel |
+
+Run it once by hand from the Actions tab (**Send reading reminders → Run
+workflow**) to check the wiring. It prints the endpoint's JSON summary — how
+many reminders were due, sent, and pruned.
+
+On the Pro plan you can move this back into `vercel.json` as a `crons` entry
+with the same `0 * * * *` schedule and delete the workflow.
 
 ### Database
 
