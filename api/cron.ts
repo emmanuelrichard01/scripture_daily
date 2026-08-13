@@ -1,16 +1,24 @@
 /**
- * Daily reminder dispatch, invoked by Vercel Cron once an hour.
+ * Daily reminder dispatch, invoked hourly by `.github/workflows/reminders.yml`.
  *
- * The previous version sent to *every* user with reminders enabled on every
- * run, ignoring both their chosen time and their timezone — its own comment
- * conceded this. Someone in Sydney who asked for 07:00 got pushed at whatever
- * hour the cron happened to fire.
+ * The handler runs every hour and, for each subscription, resolves the device's
+ * local clock and sends only when the local hour matches the user's requested
+ * hour and the local weekday is one they selected. One schedule therefore
+ * covers every timezone — someone in Sydney who asked for 07:00 gets pushed at
+ * their 07:00, not at whatever hour the schedule happened to fire.
  *
- * This runs hourly and, for each subscription, resolves the device's local
- * clock and sends only when the local hour matches the user's requested hour
- * and the local weekday is one they selected.
+ * ## Handler signature
+ *
+ * Vercel's **Node.js** runtime calls functions with `(req, res)` and ignores a
+ * returned value. This file previously exported a Web-style
+ * `(request: Request) => Response` handler, which is only the contract for the
+ * *edge* runtime (see `bible.ts`). The function ran, built a `Response`,
+ * returned it into the void and never wrote to `res` — so every request hung
+ * until the gateway gave up. `curl` reported `(28) Operation timed out … 0
+ * bytes received`, and reminders had never been delivered in production.
  */
 
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
@@ -58,23 +66,26 @@ function localClock(timeZone: string): { hour: number; weekday: number } {
   };
 }
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+/** Writes a JSON body. Every exit from the handler goes through this. */
+function send(response: ServerResponse, status: number, body: unknown): void {
+  response.statusCode = status;
+  response.setHeader("content-type", "application/json");
+  response.end(JSON.stringify(body));
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+export default async function handler(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  if (request.method !== "GET") return send(response, 405, { error: "Method not allowed" });
 
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return json({ error: "CRON_SECRET is not configured" }, 500);
+  if (!cronSecret) return send(response, 500, { error: "CRON_SECRET is not configured" });
 
-  // Vercel Cron sends this header; without the check anyone could trigger a
-  // fan-out of push notifications to the entire user base.
-  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return json({ error: "Unauthorized" }, 401);
+  // Without this check anyone could trigger a fan-out of push notifications to
+  // the entire user base.
+  if (request.headers.authorization !== `Bearer ${cronSecret}`) {
+    return send(response, 401, { error: "Unauthorized" });
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -83,10 +94,10 @@ export default async function handler(request: Request): Promise<Response> {
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    return json({ error: "Supabase service credentials are not configured" }, 500);
+    return send(response, 500, { error: "Supabase service credentials are not configured" });
   }
   if (!vapidPublic || !vapidPrivate) {
-    return json({ error: "VAPID keys are not configured" }, 500);
+    return send(response, 500, { error: "VAPID keys are not configured" });
   }
 
   webpush.setVapidDetails(
@@ -108,7 +119,9 @@ export default async function handler(request: Request): Promise<Response> {
       .eq("reminders_enabled", true);
 
     if (settingsError) throw new Error(settingsError.message);
-    if (!settings?.length) return json({ sent: 0, reason: "no reminders enabled" });
+    if (!settings?.length) {
+      return send(response, 200, { sent: 0, reason: "no reminders enabled" });
+    }
 
     const settingsByUser = new Map<string, UserSettings>(
       (settings as UserSettings[]).map((row) => [row.user_id, row]),
@@ -120,7 +133,9 @@ export default async function handler(request: Request): Promise<Response> {
       .in("user_id", [...settingsByUser.keys()]);
 
     if (subscriptionError) throw new Error(subscriptionError.message);
-    if (!subscriptions?.length) return json({ sent: 0, reason: "no subscriptions" });
+    if (!subscriptions?.length) {
+      return send(response, 200, { sent: 0, reason: "no subscriptions" });
+    }
 
     // Only the subscriptions whose device-local time is the requested hour.
     const due = (subscriptions as PushSubscriptionRow[]).filter((subscription) => {
@@ -135,7 +150,9 @@ export default async function handler(request: Request): Promise<Response> {
       return days.includes(weekday);
     });
 
-    if (due.length === 0) return json({ sent: 0, reason: "nothing due this hour" });
+    if (due.length === 0) {
+      return send(response, 200, { sent: 0, reason: "nothing due this hour" });
+    }
 
     const payload = JSON.stringify({
       title: "Time to read",
@@ -175,7 +192,7 @@ export default async function handler(request: Request): Promise<Response> {
 
     const failed = results.filter((result) => result.status === "rejected").length;
 
-    return json({
+    return send(response, 200, {
       due: due.length,
       sent: due.length - failed - expiredIds.length,
       pruned: expiredIds.length,
@@ -183,9 +200,8 @@ export default async function handler(request: Request): Promise<Response> {
     });
   } catch (error) {
     console.error("Reminder cron failed:", error);
-    return json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      500,
-    );
+    return send(response, 500, {
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }
