@@ -145,9 +145,32 @@ supabase/migrations/    Schema, RLS policies, storage buckets
 
 ## Deployment
 
-Vercel, configured by `vercel.json`: SPA fallback, hourly cron, security headers
-(CSP, HSTS, frame-deny), and immutable caching for hashed assets. Set the
-environment variables above in the project settings before the first deploy.
+Vercel, configured by `vercel.json`. Set the environment variables above in the
+project settings **before** the first deploy — the `VITE_*` values are inlined at
+build time, so adding them later requires a redeploy, not just a restart.
+
+Vercel's schema rejects unknown keys, so `vercel.json` can carry no comments.
+What each part is for:
+
+| Setting | Why |
+| --- | --- |
+| `rewrites` → `/((?!api/).*)` | SPA fallback. Without it, refreshing `/history` or any deep link 404s. The negative lookahead keeps `/api/*` routed to the functions. |
+| `crons` → `0 * * * *` | Runs hourly; the handler decides whose local reminder time it currently is, so one schedule covers every timezone. |
+| `Cache-Control` on `/assets/(.*)` | Build output is content-hashed, so it is safe to cache permanently. |
+| `Cache-Control` on `/sw.js` | Must always revalidate, or a cached service worker pins users to an old build forever. |
+| `Content-Security-Policy` | `connect-src` covers Supabase REST plus `wss:` for realtime. `'unsafe-inline'` on `style-src` is required by the inline styles that carry per-list accent colours. |
+
+### Database
+
+Apply migrations before or alongside the first deploy:
+
+```bash
+supabase db push
+```
+
+The app reads columns and policies that only exist after this runs — notably
+`push_subscriptions.timezone` (reminders) and the `are_friends` policy
+(friend progress visibility). The migration is idempotent.
 
 ## Contributing
 
