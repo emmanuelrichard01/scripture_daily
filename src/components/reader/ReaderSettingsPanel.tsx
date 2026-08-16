@@ -54,7 +54,7 @@ export function ReaderSettingsPanel({
             type="button"
             disabled={typography.fontSize <= FONT_SIZE_MIN}
             onClick={() => updateTypography({ fontSize: typography.fontSize - 1 })}
-            className="rounded-lg p-2.5 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-background disabled:opacity-30 focus-ring cursor-pointer"
             aria-label="Decrease text size"
           >
             <Minus className="h-4 w-4" aria-hidden="true" />
@@ -63,7 +63,7 @@ export function ReaderSettingsPanel({
           {/* A live preview at the chosen size is more legible than a number. */}
           <span
             className={cn(
-              "flex-1 text-center leading-none text-muted-foreground",
+              "flex-1 text-center font-bold leading-none text-muted-foreground",
               typography.fontFamily === "serif" ? "font-serif" : "font-sans",
             )}
             style={{ fontSize: `${typography.fontSize}px` }}
@@ -76,7 +76,7 @@ export function ReaderSettingsPanel({
             type="button"
             disabled={typography.fontSize >= FONT_SIZE_MAX}
             onClick={() => updateTypography({ fontSize: typography.fontSize + 1 })}
-            className="rounded-lg p-2.5 transition-colors hover:bg-background disabled:opacity-30 focus-ring"
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-background disabled:opacity-30 focus-ring cursor-pointer"
             aria-label="Increase text size"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -99,9 +99,9 @@ export function ReaderSettingsPanel({
               onClick={() => updateTypography({ fontFamily: face.id })}
               style={{ fontFamily: face.css }}
               className={cn(
-                "rounded-lg py-2.5 text-sm transition-all focus-ring",
+                "rounded-lg py-2 text-sm transition-all focus-ring cursor-pointer",
                 typography.fontFamily === face.id
-                  ? "bg-background font-semibold shadow-sm"
+                  ? "bg-background font-semibold shadow-xs text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -120,9 +120,9 @@ export function ReaderSettingsPanel({
               type="button"
               onClick={() => updateTypography({ lineHeight: option.value })}
               className={cn(
-                "rounded-lg py-2.5 text-xs transition-all focus-ring",
+                "rounded-lg py-2 text-xs transition-all focus-ring cursor-pointer",
                 typography.lineHeight === option.value
-                  ? "bg-background font-semibold shadow-sm"
+                  ? "bg-background font-semibold shadow-xs text-foreground"
                   : "font-medium text-muted-foreground hover:text-foreground",
               )}
             >
@@ -141,9 +141,9 @@ export function ReaderSettingsPanel({
               type="button"
               onClick={() => updateTypography({ margin: option.value })}
               className={cn(
-                "rounded-lg py-2.5 text-xs transition-all focus-ring",
+                "rounded-lg py-2 text-xs transition-all focus-ring cursor-pointer",
                 typography.margin === option.value
-                  ? "bg-background font-semibold shadow-sm"
+                  ? "bg-background font-semibold shadow-xs text-foreground"
                   : "font-medium text-muted-foreground hover:text-foreground",
               )}
             >
@@ -159,18 +159,18 @@ export function ReaderSettingsPanel({
           <button
             type="button"
             onClick={onCopyChapter}
-            className="flex items-center justify-center gap-2 rounded-xl bg-secondary/70 py-3 text-xs font-semibold transition-colors hover:bg-secondary focus-ring"
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-2.5 text-xs font-semibold transition-colors hover:bg-secondary/80 focus-ring cursor-pointer"
           >
-            <Copy className="h-4 w-4" aria-hidden="true" />
-            Copy chapter
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Copy chapter</span>
           </button>
           <button
             type="button"
             onClick={onShareChapter}
-            className="flex items-center justify-center gap-2 rounded-xl bg-secondary/70 py-3 text-xs font-semibold transition-colors hover:bg-secondary focus-ring"
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-2.5 text-xs font-semibold transition-colors hover:bg-secondary/80 focus-ring cursor-pointer"
           >
-            <Share2 className="h-4 w-4" aria-hidden="true" />
-            Share chapter
+            <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Share chapter</span>
           </button>
         </div>
       </section>

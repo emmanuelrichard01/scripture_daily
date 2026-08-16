@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, LineChart, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, LineChart, Share2, Trophy } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { HornerFacts } from "@/components/history/HornerFacts";
 import { useProgress } from "@/hooks/useProgress";
@@ -118,40 +118,69 @@ export default function History() {
         <button
           type="button"
           onClick={() => setIsSharing(true)}
-          className="flex h-9 items-center gap-1.5 rounded-xl bg-primary/10 px-3 text-xs font-bold text-primary transition-colors hover:bg-primary/20 focus-ring"
+          className="flex h-9 items-center gap-1.5 rounded-xl bg-secondary px-3 text-xs font-bold text-foreground transition-colors hover:bg-secondary/80 focus-ring cursor-pointer"
         >
-          <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Share
+          <Share2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          <span>Share</span>
         </button>
       }
     >
-      {/* ── Lifetime ── */}
-      <section aria-label="Lifetime statistics" className="surface mb-6 p-5">
-        <div className="grid grid-cols-2 gap-y-5">
-          {[
-            { value: bestStreak, label: "best streak", unit: pluralUnit(bestStreak, "day") },
-            { value: streakCount, label: "current streak", unit: pluralUnit(streakCount, "day") },
-            { value: thisMonth, label: "this month", unit: "chapters" },
-            { value: activeDays, label: "days read", unit: "total" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <p className="stat-display text-2xl leading-none">
-                {stat.value.toLocaleString()}
-                <span className="ml-1.5 text-xs font-semibold text-muted-foreground">
-                  {stat.unit}
-                </span>
-              </p>
-              <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                {stat.label}
-              </p>
-            </div>
-          ))}
+      {/* ── Lifetime Snapshot (Clean 4-Metric Grid) ── */}
+      <section aria-label="Lifetime statistics" className="surface mb-5 p-5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="stat-display text-2xl leading-none">
+              {streakCount}
+              <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                {pluralUnit(streakCount, "day")}
+              </span>
+            </p>
+            <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              current streak
+            </p>
+          </div>
+
+          <div>
+            <p className="stat-display text-2xl leading-none">
+              {bestStreak}
+              <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                {pluralUnit(bestStreak, "day")}
+              </span>
+            </p>
+            <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              best record
+            </p>
+          </div>
+
+          <div>
+            <p className="stat-display text-2xl leading-none">
+              {thisMonth}
+              <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                ch
+              </span>
+            </p>
+            <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              this month
+            </p>
+          </div>
+
+          <div>
+            <p className="stat-display text-2xl leading-none">
+              {activeDays}
+              <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                {pluralUnit(activeDays, "day")}
+              </span>
+            </p>
+            <p className="mt-1 text-2xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              days read
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ── Filter ── */}
+      {/* ── Track Filter Pills ── */}
       <div
-        className="scrollbar-none fade-edge-x -mx-5 mb-4 flex gap-2 overflow-x-auto px-5 pb-1"
+        className="scrollbar-none fade-edge-x -mx-5 mb-4 flex gap-1.5 overflow-x-auto px-5 pb-1"
         role="radiogroup"
         aria-label="Filter by list"
       >
@@ -161,7 +190,7 @@ export default function History() {
           aria-checked={listFilter === null}
           onClick={() => setListFilter(null)}
           className={cn(
-            "shrink-0 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-colors focus-ring",
+            "shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.68rem] font-bold transition-colors cursor-pointer focus-ring",
             listFilter === null
               ? "bg-foreground text-background"
               : "bg-secondary text-muted-foreground hover:text-foreground",
@@ -178,7 +207,7 @@ export default function History() {
             aria-checked={listFilter === list.id}
             onClick={() => setListFilter(list.id)}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition-colors focus-ring",
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[0.68rem] font-bold transition-colors cursor-pointer focus-ring",
               listFilter === list.id
                 ? "bg-foreground text-background"
                 : "bg-secondary text-muted-foreground hover:text-foreground",
@@ -189,16 +218,16 @@ export default function History() {
               style={{ backgroundColor: `hsl(var(${list.colorVar}))` }}
               aria-hidden="true"
             />
-            {list.name}
+            <span>{list.name}</span>
           </button>
         ))}
       </div>
 
-      {/* ── Chart ── */}
-      <section className="surface mb-6 p-5">
-        <div className="mb-5 flex items-center justify-between">
+      {/* ── Reading Volume Chart ── */}
+      <section className="surface mb-5 p-5">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="section-label">Reading volume</h2>
-          <div className="flex rounded-xl bg-secondary p-0.5">
+          <div className="flex rounded-lg bg-secondary/80 p-0.5">
             {(["week", "month"] as const).map((option) => (
               <button
                 key={option}
@@ -208,9 +237,9 @@ export default function History() {
                   setOffset(0);
                 }}
                 className={cn(
-                  "rounded-[10px] px-3 py-1.5 text-xs font-bold capitalize transition-all focus-ring",
+                  "rounded-md px-2.5 py-1 text-xs font-bold capitalize transition-colors cursor-pointer focus-ring",
                   range === option
-                    ? "bg-card shadow-sm"
+                    ? "bg-card text-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -230,7 +259,7 @@ export default function History() {
             </p>
             <p
               className={cn(
-                "mt-1.5 text-xs font-semibold",
+                "mt-1 text-xs font-semibold",
                 stats.completionRate >= 70
                   ? "text-success"
                   : stats.completionRate >= 40
@@ -242,23 +271,23 @@ export default function History() {
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-0.5 rounded-xl bg-secondary p-0.5">
+          <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-secondary/80 p-0.5">
             <button
               type="button"
               onClick={() => setOffset((value) => value - 1)}
-              className="rounded-[10px] p-2 transition-colors hover:bg-card focus-ring"
+              className="rounded-md p-1.5 transition-colors hover:bg-card focus-ring cursor-pointer"
               aria-label={`Previous ${range}`}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
-            <span className="min-w-[62px] px-1 text-center text-2xs font-bold">
+            <span className="min-w-[64px] px-1 text-center text-[0.68rem] font-bold">
               {periodLabel}
             </span>
             <button
               type="button"
               onClick={() => setOffset((value) => Math.min(0, value + 1))}
               disabled={offset === 0}
-              className="rounded-[10px] p-2 transition-colors hover:bg-card disabled:opacity-25 focus-ring"
+              className="rounded-md p-1.5 transition-colors hover:bg-card disabled:opacity-25 focus-ring cursor-pointer"
               aria-label={`Next ${range}`}
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -266,7 +295,7 @@ export default function History() {
           </div>
         </div>
 
-        <Suspense fallback={<div className="skeleton h-[180px]" />}>
+        <Suspense fallback={<div className="skeleton h-[180px] rounded-xl" />}>
           <HistoryChart
             data={chartData}
             maxValue={
@@ -276,25 +305,33 @@ export default function History() {
         </Suspense>
       </section>
 
+      {/* ── Milestones Gateway ── */}
       <Link
         to="/milestones"
-        className="surface-interactive mb-8 flex items-center justify-between gap-3 p-4 focus-ring"
+        className="surface-interactive mb-6 flex items-center justify-between gap-3 p-4 focus-ring"
       >
-        <span className="min-w-0">
-          <span className="block text-sm font-bold">Milestones</span>
-          <span className="mt-0.5 block text-xs text-muted-foreground">
-            Cycles completed and what's next
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-foreground">
+            <Trophy className="h-4.5 w-4.5" aria-hidden="true" />
           </span>
-        </span>
-        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold leading-tight">Milestones & Horizons</h3>
+            <p className="text-xs text-muted-foreground">
+              Track cycle completion records and upcoming achievements
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </Link>
 
+      {/* ── Background & Tips Accordions ── */}
       <HornerFacts />
 
       {isSharing && (
         <Suspense fallback={null}>
           <ShareableProgressCard
             streak={bestStreak}
+            currentStreak={streakCount}
             totalChapters={totalChaptersRead}
             activeDays={activeDays}
             onClose={() => setIsSharing(false)}

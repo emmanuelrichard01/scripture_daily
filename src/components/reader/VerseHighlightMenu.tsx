@@ -75,7 +75,7 @@ export function VerseHighlightMenu({
 
   return (
     <div
-      className="animate-rise rounded-2xl border border-border/80 bg-popover/95 p-3 shadow-xl backdrop-blur-md"
+      className="animate-rise rounded-2xl border border-border bg-popover p-3 shadow-lg"
       role="dialog"
       aria-label={`Highlight options for ${reference}`}
     >
@@ -87,7 +87,7 @@ export function VerseHighlightMenu({
           type="button"
           onClick={onClose}
           aria-label="Close menu"
-          className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground cursor-pointer focus-ring"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -100,7 +100,7 @@ export function VerseHighlightMenu({
             <span className="text-2xs font-bold uppercase tracking-wider text-muted-foreground">
               Highlight:
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {(Object.keys(HIGHLIGHT_PALETTE) as HighlightColor[]).map((color) => {
                 const palette = HIGHLIGHT_PALETTE[color];
                 const isSelected = currentHighlight?.color === color;
@@ -114,12 +114,12 @@ export function VerseHighlightMenu({
                     }}
                     aria-label={`Highlight with ${palette.name}`}
                     className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 focus-ring",
+                      "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-95 focus-ring cursor-pointer",
                       palette.pillClass,
                       isSelected && "ring-2 ring-foreground ring-offset-2 ring-offset-background",
                     )}
                   >
-                    {isSelected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {isSelected && <Check className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />}
                   </button>
                 );
               })}
@@ -132,7 +132,7 @@ export function VerseHighlightMenu({
                     toast.success("Highlight removed");
                   }}
                   aria-label="Remove highlight"
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer focus-ring"
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
@@ -156,28 +156,28 @@ export function VerseHighlightMenu({
               variant="outline"
               size="sm"
               onClick={() => setIsEditingNote(true)}
-              className="h-8 flex-1 gap-1.5 rounded-xl text-xs font-semibold"
+              className="h-8 flex-1 gap-1.5 rounded-lg text-xs font-semibold cursor-pointer"
             >
               <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-              {currentHighlight?.note ? "Edit note" : "Add note"}
+              <span>{currentHighlight?.note ? "Edit note" : "Add note"}</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              className="h-8 gap-1.5 rounded-xl text-xs font-semibold"
+              className="h-8 gap-1.5 rounded-lg text-xs font-semibold cursor-pointer"
             >
               <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-              Copy
+              <span>Copy</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleShare}
-              className="h-8 gap-1.5 rounded-xl text-xs font-semibold"
+              className="h-8 gap-1.5 rounded-lg text-xs font-semibold cursor-pointer"
             >
               <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Share
+              <span>Share</span>
             </Button>
           </div>
         </div>

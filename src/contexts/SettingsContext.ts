@@ -91,6 +91,7 @@ export interface Settings {
   readonly hapticFeedback: boolean;
   readonly soundEffects: boolean;
   readonly reduceMotion: boolean;
+  readonly immersiveReader: boolean;
   readonly translation: TranslationId;
   readonly typography: ReaderTypography;
 }

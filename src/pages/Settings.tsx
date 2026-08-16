@@ -298,6 +298,17 @@ export default function Settings() {
               />
             }
           />
+          <SettingsRow
+            label="Immersive reader"
+            description="Hide the header when scrolling down"
+            action={
+              <Switch
+                checked={settings.immersiveReader}
+                onCheckedChange={(checked) => updateSettings({ immersiveReader: checked })}
+                aria-label="Immersive reader"
+              />
+            }
+          />
         </SettingsSection>
 
         <SettingsSection title="Your reading">

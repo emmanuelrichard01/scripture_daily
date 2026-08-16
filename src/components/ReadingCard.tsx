@@ -9,10 +9,10 @@ interface ReadingCardProps {
 }
 
 /**
- * Modern Apple-grade Reading Card for today's 10 chapters.
+ * Serene, dignified Reading Card for today's 10 chapters.
  *
- * Features list track color spine, cycle progression badge, estimated reading time,
- * and tactile spring checkmark with zero invalid nested buttons.
+ * Features persistent list track color spine, cycle progression badge,
+ * clean typography without strikethroughs, and crisp checkmark confirmation.
  */
 export function ReadingCard({ reading, onToggle, onOpenReader }: ReadingCardProps) {
   const { completed, listName, listId, book, chapter, colorVar, progressPercent } = reading;
@@ -22,42 +22,35 @@ export function ReadingCard({ reading, onToggle, onOpenReader }: ReadingCardProp
   return (
     <div
       className={cn(
-        "group relative flex items-stretch overflow-hidden rounded-2xl border transition-all duration-200 ease-out-expo",
+        "group relative flex items-stretch overflow-hidden rounded-2xl border transition-colors duration-200",
         completed
-          ? "border-success/30 bg-success/[0.05]"
-          : "border-border/60 bg-card shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-border",
+          ? "border-border/30 bg-card/60 opacity-80 hover:opacity-100 hover:border-border/60"
+          : "border-border/50 bg-card hover:border-border/80",
       )}
     >
-      {/* List accent spine with vertical cycle progress gauge */}
+      {/* List accent spine - always preserves track color identity */}
       <div
-        className="relative w-1.5 shrink-0 overflow-hidden"
-        style={{ backgroundColor: completed ? "hsl(var(--success) / 0.3)" : accent }}
+        className="relative w-1 shrink-0 overflow-hidden"
+        style={{ backgroundColor: accent }}
         aria-hidden="true"
-      >
-        {!completed && (
-          <div
-            className="absolute inset-x-0 bottom-0 bg-black/30 dark:bg-black/50 transition-all duration-300"
-            style={{ height: `${100 - progressPercent}%` }}
-          />
-        )}
-      </div>
+      />
 
-      {/* Spring check button */}
+      {/* Check button */}
       <button
         type="button"
         onClick={onToggle}
         role="checkbox"
         aria-checked={completed}
-        aria-label={`Mark ${reference} from ${listName} as read`}
+        aria-label={`Mark ${reference} from ${listName} as ${completed ? "unread" : "read"}`}
         className={cn(
-          "my-auto ml-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-spring focus-ring",
+          "my-auto ml-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 focus-ring cursor-pointer",
           completed
-            ? "bg-success text-success-foreground shadow-sm scale-100"
-            : "border border-border/80 bg-secondary/50 text-muted-foreground hover:scale-105 hover:border-transparent active:scale-90",
+            ? "bg-success text-success-foreground"
+            : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 active:scale-95",
         )}
       >
         {completed ? (
-          <Check className="h-5 w-5" strokeWidth={2.75} aria-hidden="true" />
+          <Check className="h-4 w-4" strokeWidth={2.75} aria-hidden="true" />
         ) : (
           <span className="text-xs font-bold tabular-nums" aria-hidden="true">
             {listId}
@@ -69,36 +62,49 @@ export function ReadingCard({ reading, onToggle, onOpenReader }: ReadingCardProp
       <button
         type="button"
         onClick={onOpenReader}
-        className="flex min-h-[76px] flex-1 items-center justify-between px-3.5 py-3 text-left focus-ring"
+        className="flex min-h-[4.25rem] flex-1 items-center justify-between px-3.5 py-2.5 text-left focus-ring cursor-pointer"
         aria-label={`Read ${reference}`}
       >
-        <span className="min-w-0 flex-1 pr-2">
-          <span className="mb-0.5 flex items-center gap-1.5">
+        <span className="min-w-0 flex-1 pr-3">
+          <span className="mb-0.5 flex items-center gap-1.5 flex-wrap">
             <span
-              className="text-2xs font-bold uppercase tracking-[0.08em]"
-              style={{ color: completed ? undefined : accent }}
+              className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wider bg-secondary/80"
+              style={{ color: accent }}
             >
-              <span className={completed ? "text-success/80" : undefined}>{listName}</span>
+              {listName}
             </span>
-            <span className="text-3xs text-muted-foreground">·</span>
-            <span className="text-3xs font-semibold text-muted-foreground tabular-nums">
+            <span className="text-3xs text-muted-foreground/40">·</span>
+            <span className="text-[0.62rem] font-medium text-muted-foreground tabular-nums">
               {progressPercent}% cycle
             </span>
           </span>
 
           <span
             className={cn(
-              "block truncate font-display text-[1.0625rem] font-semibold leading-snug tracking-tight",
-              completed ? "text-success" : "text-foreground",
+              "block truncate font-display text-[1.1rem] sm:text-[1.15rem] font-semibold leading-snug tracking-tight transition-colors",
+              completed ? "text-muted-foreground/90 font-medium" : "text-foreground group-hover:text-primary",
             )}
           >
             {reference}
           </span>
         </span>
 
-        <span className="flex shrink-0 items-center gap-1 rounded-lg bg-secondary/40 px-2 py-1 text-3xs font-semibold text-muted-foreground group-hover:bg-secondary/70">
-          <Clock className="h-3 w-3" />
-          <span>~3m</span>
+        <span
+          className={cn(
+            "flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-wider transition-colors",
+            completed
+              ? "bg-success/10 text-success font-bold"
+              : "bg-secondary text-muted-foreground group-hover:text-foreground",
+          )}
+        >
+          {completed ? (
+            <span>Read</span>
+          ) : (
+            <>
+              <Clock className="h-3 w-3" />
+              <span>~3m</span>
+            </>
+          )}
         </span>
       </button>
     </div>

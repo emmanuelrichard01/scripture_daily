@@ -20,10 +20,6 @@ interface PageLayoutProps {
 
 /**
  * Shared page chrome: glass header, constrained column, bottom nav.
- *
- * Every page previously hand-rolled this, which is why the bottom padding that
- * clears the nav bar varied between `pb-20`, `pb-24` and `pb-[88px]` — the
- * first of which left content stranded underneath the nav.
  */
 export function PageLayout({
   title,
@@ -35,44 +31,47 @@ export function PageLayout({
   className,
 }: PageLayoutProps) {
   const navigate = useNavigate();
-  const maxWidth = width === "narrow" ? "max-w-md" : "max-w-lg";
+  const maxWidth = width === "narrow" ? "max-w-md" : "max-w-xl";
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <header className="glass safe-top sticky top-0 z-40 border-b border-border/50">
-        <div className={cn("mx-auto flex h-14 items-center justify-between gap-3 px-5", maxWidth)}>
-          <div className="flex min-w-0 items-center gap-1">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col selection:bg-primary/20">
+      <header className="glass safe-top sticky top-0 z-40">
+        <div className={cn("mx-auto flex h-14 items-center justify-between gap-3 px-6", maxWidth)}>
+          <div className="flex min-w-0 items-center">
             {showBack && (
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="-ml-2.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-secondary active:scale-95 focus-ring"
+                className="-ml-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary active:scale-90 focus-ring"
                 aria-label="Go back"
               >
-                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                <ArrowLeft className="h-6 w-6" aria-hidden="true" />
               </button>
             )}
-            <h1 className="truncate font-display text-xl font-semibold tracking-tight">
-              {title}
-            </h1>
           </div>
-
           {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
         </div>
       </header>
 
       <main
         className={cn(
-          // Bottom padding clears the 66px nav plus the iOS home indicator.
-          "mx-auto px-5 pb-28 pt-6",
+          // Bottom padding clears the 68px nav pill + extra space + iOS home indicator.
+          "mx-auto flex w-full flex-1 flex-col px-6 pb-40 pt-4",
           maxWidth,
           className,
         )}
       >
-        {description && (
-          <p className="mb-6 text-sm leading-relaxed text-muted-foreground">{description}</p>
-        )}
-        {children}
+        <div className="mb-10 animate-rise">
+          <h1 className="font-display text-[2.75rem] leading-none font-bold tracking-tight text-foreground">
+            {title}
+          </h1>
+          {description && (
+            <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">{description}</p>
+          )}
+        </div>
+        <div className="flex flex-col gap-6 w-full relative">
+          {children}
+        </div>
       </main>
 
       <BottomNav />

@@ -19,12 +19,20 @@ export function ProgressRing({
   const clamped = Math.min(100, Math.max(0, progress));
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  // Draw the full circle, then hide the unfinished portion via dash offset.
   const offset = circumference - (clamped / 100) * circumference;
 
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+    <div
+      className="relative shrink-0 flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        className="relative z-10 -rotate-90"
+        aria-hidden="true"
+      >
+        {/* Background Track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -33,6 +41,8 @@ export function ProgressRing({
           strokeWidth={strokeWidth}
           className="stroke-secondary"
         />
+
+        {/* Solid Progress Stroke */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -42,12 +52,14 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
+          className="transition-[stroke-dashoffset,stroke] duration-500 ease-out-expo"
           stroke={isComplete ? "hsl(var(--success))" : "hsl(var(--primary))"}
         />
       </svg>
 
-      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
+      <div className="absolute inset-0 z-20 flex items-center justify-center select-none">
+        {children}
+      </div>
     </div>
   );
 }

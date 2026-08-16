@@ -93,16 +93,16 @@ export function ReaderSheet({
         tabIndex={-1}
         className={cn(
           "safe-bottom absolute inset-x-0 bottom-0 max-h-[78%] overflow-hidden rounded-t-3xl",
-          "border-t border-border bg-background shadow-xl animate-slide-up outline-none",
+          "border-t border-border bg-background shadow-lg animate-slide-up outline-none",
         )}
       >
         {/* Matched to the reader's own text column, so a sheet does not sprawl
             across a desktop-width drawer. */}
-        <div className="mx-auto flex max-w-2xl items-start justify-between gap-3 border-b border-border/60 px-5 pb-3.5 pt-4">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 border-b border-border/60 px-5 py-3.5">
           <div className="min-w-0">
             <h2 className="font-display text-base font-semibold leading-tight">{title}</h2>
             {description && (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                 {description}
               </p>
             )}
@@ -110,7 +110,7 @@ export function ReaderSheet({
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1.5 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
             aria-label={`Close ${title.toLowerCase()}`}
           >
             <X className="h-4 w-4" aria-hidden="true" />

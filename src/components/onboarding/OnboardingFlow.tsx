@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Moon, Sparkles, Sun } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { readingLists } from "@/lib/readingPlan";
 import { useSettings } from "@/hooks/useSettings";
@@ -60,138 +61,149 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       </div>
 
       {/* Main Slide Content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-        {step === 0 && (
-          <div className="w-full max-w-sm animate-rise">
-            <InteractiveHaloArt
-              selectedIndex={selectedTrackIndex}
-              onSelect={setSelectedTrackIndex}
-            />
-            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
-              Ten chapters a day.
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Professor Grant Horner’s reading system takes you through the whole Bible across ten simultaneous tracks, cycling at independent speeds.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-foreground">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{
-                  backgroundColor: `hsl(var(${readingLists[selectedTrackIndex].colorVar}))`,
-                }}
-              />
-              <span>
-                Track {selectedTrackIndex + 1}: {readingLists[selectedTrackIndex].name} ({readingLists[selectedTrackIndex].totalChapters} ch)
-              </span>
-            </div>
-          </div>
-        )}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(4px)" }}
+            transition={{ type: "spring", stiffness: 400, damping: 35 }}
+            className="w-full max-w-sm flex flex-col items-center"
+          >
+            {step === 0 && (
+              <>
+                <InteractiveHaloArt
+                  selectedIndex={selectedTrackIndex}
+                  onSelect={setSelectedTrackIndex}
+                />
+                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
+                  Ten chapters a day.
+                </h1>
+                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
+                  Professor Grant Horner’s reading system takes you through the whole Bible across ten simultaneous tracks, cycling at independent speeds.
+                </p>
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-secondary/80 px-4 py-2 text-xs font-semibold text-foreground shadow-sm">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shadow-sm"
+                    style={{
+                      backgroundColor: `hsl(var(${readingLists[selectedTrackIndex].colorVar}))`,
+                    }}
+                  />
+                  <span>
+                    Track {selectedTrackIndex + 1}: {readingLists[selectedTrackIndex].name} ({readingLists[selectedTrackIndex].totalChapters} ch)
+                  </span>
+                </div>
+              </>
+            )}
 
-        {step === 1 && (
-          <div className="w-full max-w-sm animate-rise">
-            <InteractiveListsArt />
-            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
-              Pairings that never repeat.
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Because lists range from 28 chapters (Acts) to 250 chapters (Prophets), the exact combination of ten chapters you read today won’t repeat for years.
-            </p>
-          </div>
-        )}
+            {step === 1 && (
+              <>
+                <InteractiveListsArt />
+                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
+                  Pairings that never repeat.
+                </h1>
+                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
+                  Because lists range from 28 chapters (Acts) to 250 chapters (Prophets), the exact combination of ten chapters you read today won’t repeat for years.
+                </p>
+              </>
+            )}
 
-        {step === 2 && (
-          <div className="w-full max-w-sm animate-rise">
-            <InteractivePaceArt
-              simulatedDay={simulatedDay}
-              onToggleDay={() => setSimulatedDay((d) => (d === 1 ? 5 : 1))}
-            />
-            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
-              No guilt. No backlog.
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your bookmarks are remembered per list, never by the calendar date. If you miss a day or a week, you pick up exactly where you left off.
-            </p>
-          </div>
-        )}
+            {step === 2 && (
+              <>
+                <InteractivePaceArt
+                  simulatedDay={simulatedDay}
+                  onToggleDay={() => setSimulatedDay((d) => (d === 1 ? 5 : 1))}
+                />
+                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
+                  No guilt. No backlog.
+                </h1>
+                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
+                  Your bookmarks are remembered per list, never by the calendar date. If you miss a day or a week, you pick up exactly where you left off.
+                </p>
+              </>
+            )}
 
-        {step === 3 && (
-          <div className="w-full max-w-sm animate-rise text-left">
-            <div className="mb-4 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Sparkles className="h-6 w-6" aria-hidden="true" />
-              </div>
-              <h1 className="font-display text-2xl font-bold tracking-tight">
-                Personalize Your Setup
-              </h1>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Set your preferred translation and theme before starting.
-              </p>
-            </div>
+            {step === 3 && (
+              <div className="w-full text-left">
+                <div className="mb-6 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-primary/10 text-primary">
+                    <Sparkles className="h-8 w-8" aria-hidden="true" />
+                  </div>
+                  <h1 className="font-display text-[2rem] font-bold tracking-tight leading-none">
+                    Personalize Setup
+                  </h1>
+                  <p className="mt-2 text-[1.05rem] text-muted-foreground font-medium">
+                    Set your preferred translation and theme before starting.
+                  </p>
+                </div>
 
-            <div className="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
-              {/* Translation Selection */}
-              <div>
-                <label className="mb-1.5 block text-2xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Default Translation
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {(["ESV", "NIV", "NLT", "KJV"] as TranslationId[]).map((code) => {
-                    const isSelected = settings.translation === code;
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        onClick={() => updateSettings({ translation: code })}
-                        className={cn(
-                          "flex flex-col items-center justify-center rounded-xl border py-2 text-xs font-bold transition-all focus-ring",
-                          isSelected
-                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                            : "border-border/60 bg-secondary/40 text-foreground hover:bg-secondary",
-                        )}
-                      >
-                        <span>{code}</span>
-                      </button>
-                    );
-                  })}
+                <div className="space-y-5 rounded-[2rem] border border-border/40 bg-card p-6 shadow-md">
+                  {/* Translation Selection */}
+                  <div>
+                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      Default Translation
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(["ESV", "NIV", "NLT", "KJV"] as TranslationId[]).map((code) => {
+                        const isSelected = settings.translation === code;
+                        return (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => updateSettings({ translation: code })}
+                            className={cn(
+                              "flex flex-col items-center justify-center rounded-2xl border py-3 text-sm font-bold transition-all focus-ring active:scale-95",
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground shadow-md"
+                                : "border-border/40 bg-secondary/30 text-foreground hover:bg-secondary",
+                            )}
+                          >
+                            <span>{code}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Theme Selection */}
+                  <div>
+                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      Reading Theme
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { id: "light", label: "Ivory", icon: Sun },
+                        { id: "dark", label: "OLED", icon: Moon },
+                        { id: "sepia", label: "Sepia", icon: BookOpen },
+                        { id: "midnight", label: "AMOLED", icon: Sparkles },
+                      ].map((t) => {
+                        const isSelected = settings.theme === t.id;
+                        const Icon = t.icon;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => updateSettings({ theme: t.id as ThemePreference })}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-3 text-xs font-semibold transition-all focus-ring active:scale-95",
+                              isSelected
+                                ? "border-primary bg-primary/[0.08] text-primary shadow-sm"
+                                : "border-border/40 bg-secondary/30 text-muted-foreground hover:bg-secondary",
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span className="text-[10px] font-bold">{t.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Theme Selection */}
-              <div>
-                <label className="mb-1.5 block text-2xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Reading Theme
-                </label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[
-                    { id: "light", label: "Ivory", icon: Sun },
-                    { id: "dark", label: "OLED", icon: Moon },
-                    { id: "sepia", label: "Sepia", icon: BookOpen },
-                    { id: "midnight", label: "AMOLED", icon: Sparkles },
-                  ].map((t) => {
-                    const isSelected = settings.theme === t.id;
-                    const Icon = t.icon;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => updateSettings({ theme: t.id as ThemePreference })}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-1 rounded-xl border py-2 text-xs font-semibold transition-all focus-ring",
-                          isSelected
-                            ? "border-primary bg-primary/[0.08] text-primary shadow-sm"
-                            : "border-border/60 bg-secondary/40 text-muted-foreground hover:bg-secondary",
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span className="text-3xs font-bold">{t.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Navigation Footer */}

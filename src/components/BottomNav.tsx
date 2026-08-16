@@ -1,6 +1,7 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookMarked, CalendarClock, Home, Settings, Users } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { communityKeys, fetchFriends, fetchIncomingRequests } from "@/lib/community";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const location = useLocation();
 
   const incomingQuery = useQuery({
     queryKey: user?.id ? communityKeys.incoming(user.id) : ["community", "incoming", "none"],
@@ -40,70 +42,71 @@ export function BottomNav() {
   };
 
   return (
-    <nav
-      className="glass safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-border/50"
-      aria-label="Main"
-    >
-      <ul className="mx-auto flex h-[66px] max-w-lg items-stretch justify-around px-1">
-        {NAV_ITEMS.map((item) => {
-          const isCommunity = item.to === "/community";
-          const hasBadge = isCommunity && incomingCount > 0;
+    <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center px-6 pointer-events-none safe-bottom">
+      <nav
+        className="glass pointer-events-auto flex h-[68px] w-full max-w-[400px] items-center rounded-full border border-border/40 px-2 shadow-lg ring-1 ring-black/5 dark:ring-white/5"
+        aria-label="Main"
+      >
+        <ul className="flex w-full items-center justify-around h-full">
+          {NAV_ITEMS.map((item) => {
+            const isCommunity = item.to === "/community";
+            const hasBadge = isCommunity && incomingCount > 0;
+            // Handle active state accurately for nested routes
+            const isActive = item.end
+              ? location.pathname === item.to
+              : location.pathname.startsWith(item.to);
 
-          return (
-            <li key={item.to} className="flex flex-1">
-              <NavLink
-                to={item.to}
-                end={item.end}
-                onPointerEnter={() => handlePrefetch(item.to)}
-                onFocus={() => handlePrefetch(item.to)}
-                className={({ isActive }) =>
-                  cn(
-                    "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 focus-ring",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {/* A filled pill behind the active icon rather than a top
-                        rule — it survives the glass blur, which a 3px line
-                        visually does not. */}
-                    {isActive && (
+            return (
+              <li key={item.to} className="relative flex flex-1 h-full py-1.5">
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  onPointerEnter={() => handlePrefetch(item.to)}
+                  onFocus={() => handlePrefetch(item.to)}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center w-full h-full gap-1 rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {/* Sliding active pill indicator */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="bottom-nav-active"
+                      className="absolute inset-0 rounded-full bg-primary/10"
+                      transition={{ type: "spring", stiffness: 500, damping: 35, mass: 1 }}
+                      aria-hidden="true"
+                    />
+                  )}
+
+                  <div className="relative z-10">
+                    <item.icon
+                      className="h-5 w-5 transition-transform duration-300 ease-spring"
+                      strokeWidth={isActive ? 2.5 : 2}
+                      aria-hidden="true"
+                    />
+                    {hasBadge && (
                       <span
-                        className="absolute inset-x-3 inset-y-1.5 rounded-xl bg-primary/10"
-                        aria-hidden="true"
-                      />
+                        className="absolute -right-2 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground shadow-sm ring-2 ring-background"
+                        aria-label={`${incomingCount} pending requests`}
+                      >
+                        {incomingCount}
+                      </span>
                     )}
-                    <div className="relative">
-                      <item.icon
-                        className="relative h-[21px] w-[21px] transition-transform duration-200 ease-spring"
-                        strokeWidth={isActive ? 2.4 : 1.9}
-                        aria-hidden="true"
-                      />
-                      {hasBadge && (
-                        <span
-                          className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-track-orange px-1 text-3xs font-bold text-white shadow-sm"
-                          aria-label={`${incomingCount} pending requests`}
-                        >
-                          {incomingCount}
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        "relative text-[10px] leading-none tracking-wide",
-                        isActive ? "font-bold" : "font-semibold",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                  </>
-                )}
-              </NavLink>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+                  </div>
+                  <span
+                    className={cn(
+                      "relative z-10 text-[10px] leading-none tracking-wide transition-all duration-200",
+                      isActive ? "font-bold opacity-100" : "font-medium opacity-80"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </div>
   );
 }

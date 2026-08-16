@@ -19,11 +19,11 @@ function intensityOf(completed: number): 0 | 1 | 2 | 3 | 4 {
 }
 
 const INTENSITY_CLASS: Record<number, string> = {
-  0: "bg-secondary/50 text-muted-foreground",
+  0: "bg-secondary/40 text-muted-foreground/50 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.05)] dark:shadow-[inset_1px_1px_3px_rgba(0,0,0,0.2)]",
   1: "bg-primary/20 text-foreground",
   2: "bg-primary/45 text-foreground",
-  3: "bg-primary/70 text-primary-foreground font-semibold",
-  4: "bg-primary text-primary-foreground font-bold shadow-sm",
+  3: "bg-primary/70 text-primary-foreground font-semibold shadow-[0_0_8px_rgba(var(--primary),0.3)]",
+  4: "bg-primary text-primary-foreground font-bold shadow-[0_0_12px_rgba(var(--primary),0.5)] dark:shadow-[0_0_16px_rgba(var(--primary),0.7)]",
 };
 
 export function CalendarView({ getCompletedForDay, isDayComplete }: CalendarViewProps) {
@@ -76,36 +76,34 @@ export function CalendarView({ getCompletedForDay, isDayComplete }: CalendarView
   });
 
   return (
-    <div className="surface p-5">
-      <div className="mb-5 flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-[2rem] border-[0.5px] border-border/40 bg-card p-6 shadow-xl transition-shadow hover:shadow-2xl">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="font-display text-base font-semibold tracking-tight">
-            {monthLabel} <span className="text-muted-foreground">{year}</span>
+          <h3 className="font-display text-[1.25rem] font-bold tracking-tight">
+            {monthLabel} <span className="text-muted-foreground/60">{year}</span>
           </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-1 text-[0.7rem] font-bold uppercase tracking-widest text-muted-foreground/80">
             {monthTotal.toLocaleString()} {pluralize(monthTotal, "chapter")}
           </p>
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => shiftMonth(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-secondary/30 text-muted-foreground transition-all hover:bg-secondary hover:text-foreground focus-ring"
             aria-label="Previous month"
           >
-            <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
           <button
             type="button"
             onClick={() => shiftMonth(1)}
-            // Nothing exists past the current month, and paging endlessly into
-            // empty future months reads as broken.
             disabled={isCurrentMonth}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-25 disabled:hover:bg-transparent focus-ring"
+            className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-secondary/30 text-muted-foreground transition-all hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:hover:bg-secondary/30 focus-ring"
             aria-label="Next month"
           >
-            <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -132,11 +130,12 @@ export function CalendarView({ getCompletedForDay, isDayComplete }: CalendarView
               disabled={day.isFuture}
               onClick={() => setSelected((current) => (current === day.date ? null : day.date))}
               className={cn(
-                "flex aspect-square w-full items-center justify-center rounded-[10px] text-xs tabular-nums transition-all duration-200 focus-ring",
+                "flex aspect-square w-full items-center justify-center rounded-[0.65rem] text-[0.7rem] font-bold tabular-nums transition-all duration-300 focus-ring",
                 day.isFuture
-                  ? "text-muted-foreground/25"
-                  : cn(INTENSITY_CLASS[day.intensity], "hover:scale-110"),
-                day.isToday && "ring-2 ring-primary ring-offset-2 ring-offset-card",
+                  ? "text-muted-foreground/20"
+                  : cn(INTENSITY_CLASS[day.intensity], "hover:scale-[1.15] hover:z-10"),
+                day.isToday && "ring-[1.5px] ring-primary ring-offset-2 ring-offset-card scale-[1.05]",
+                selected === day.date && "ring-2 ring-foreground ring-offset-2 ring-offset-card scale-[1.1] z-10",
               )}
               aria-label={`${monthLabel} ${day.dayOfMonth}: ${day.completed} of ${CHAPTERS_PER_DAY} chapters`}
               aria-pressed={selected === day.date}
@@ -156,11 +155,11 @@ export function CalendarView({ getCompletedForDay, isDayComplete }: CalendarView
         ))}
       </div>
 
-      <div className="mt-5 flex items-center justify-end gap-1.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+      <div className="mt-8 flex items-center justify-end gap-2 text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground/70">
         <span>Less</span>
-        <div className="flex gap-1" aria-hidden="true">
+        <div className="flex gap-1.5" aria-hidden="true">
           {[0, 1, 2, 3, 4].map((level) => (
-            <span key={level} className={cn("h-3 w-3 rounded", INTENSITY_CLASS[level])} />
+            <span key={level} className={cn("h-3 w-3 rounded-[3px]", INTENSITY_CLASS[level])} />
           ))}
         </div>
         <span>More</span>

@@ -9,7 +9,6 @@ import {
   Languages,
   MessageSquare,
   RefreshCw,
-  Sparkles,
   Type,
   WifiOff,
   X,
@@ -490,42 +489,42 @@ export function Reader({
 
         <header
           className={cn(
-            "glass relative z-20 shrink-0 border-b border-border/50 transition-transform duration-300 ease-out-expo",
-            isImmersive && "-translate-y-full",
+            "glass relative z-20 shrink-0 border-b border-border/50 transition-transform duration-500 ease-out-expo",
+            settings.immersiveReader && isImmersive && "-translate-y-full",
           )}
         >
-          <div className="mx-auto flex h-16 max-w-2xl items-center gap-1 px-2.5">
+          <div className="mx-auto flex h-14 max-w-2xl items-center justify-between gap-1.5 px-3">
+            {/* Close Button */}
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
               aria-label="Close reader"
             >
-              <X className="h-[18px] w-[18px]" aria-hidden="true" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
 
-            {/* Reference stepper. The label is a button because paging one
-                chapter at a time cannot answer "take me back to Genesis 1". */}
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-0.5">
+            {/* Reference stepper with optical vertical balance */}
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
               <button
                 type="button"
                 onClick={() => goTo(position - 1)}
-                className="flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
                 aria-label={`Previous chapter, ${previous.book} ${previous.chapter}`}
               >
-                <ChevronLeft className="h-4.5 w-4.5" aria-hidden="true" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSheet("chapters")}
-                className="min-w-0 rounded-lg px-1.5 py-1 text-center transition-colors hover:bg-secondary focus-ring"
+                className="min-w-0 rounded-xl px-2.5 py-1 text-center transition-colors hover:bg-secondary focus-ring cursor-pointer"
                 aria-haspopup="dialog"
               >
-                <span className="block truncate font-display text-base font-semibold leading-tight tracking-tight">
+                <span className="block truncate font-display text-[0.95rem] font-bold leading-tight tracking-tight">
                   {reference}
                 </span>
-                <span className="mt-0.5 block truncate text-2xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                <span className="mt-0.5 block truncate text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                   {isOnTodaysChapter ? listName : `${listName} · browsing`}
                 </span>
               </button>
@@ -533,43 +532,46 @@ export function Reader({
               <button
                 type="button"
                 onClick={() => goTo(position + 1)}
-                className="flex h-9 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
                 aria-label={`Next chapter, ${next.book} ${next.chapter}`}
               >
-                <ChevronRight className="h-4.5 w-4.5" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Reading timer badge */}
-            {timer.seconds >= 8 && (
-              <span className="hidden sm:flex items-center gap-1 rounded-lg bg-secondary/70 px-2 py-1 text-2xs font-semibold text-muted-foreground tabular-nums">
-                <Clock className="h-3 w-3" aria-hidden="true" />
-                {timer.formatted}
-              </span>
-            )}
+            {/* Right Tools: Reading timer + Translation + Typography */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Reading timer badge */}
+              {timer.seconds >= 8 && (
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-secondary px-2 py-1 text-[0.65rem] font-semibold text-muted-foreground tabular-nums">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  {timer.formatted}
+                </span>
+              )}
 
-            {/* Translation, promoted to the header. It shows the current choice
-                at a glance, which the old typography-menu placement did not. */}
-            <button
-              type="button"
-              onClick={() => setActiveSheet("translation")}
-              className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-secondary/80 px-2.5 text-xs font-bold tracking-tight transition-colors hover:bg-secondary focus-ring"
-              aria-haspopup="dialog"
-              aria-label={`Translation: ${translationMeta.name}. Change translation`}
-            >
-              <Languages className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              {translation}
-            </button>
+              {/* Translation Picker Button */}
+              <button
+                type="button"
+                onClick={() => setActiveSheet("translation")}
+                className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-secondary px-2.5 text-xs font-bold tracking-tight transition-colors hover:bg-secondary/80 focus-ring cursor-pointer"
+                aria-haspopup="dialog"
+                aria-label={`Translation: ${translationMeta.name}. Change translation`}
+              >
+                <Languages className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                <span>{translation}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveSheet("typography")}
-              className="flex h-10 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
-              aria-haspopup="dialog"
-              aria-label="Text appearance and chapter actions"
-            >
-              <Type className="h-[18px] w-[18px]" aria-hidden="true" />
-            </button>
+              {/* Typography / Formatting Button */}
+              <button
+                type="button"
+                onClick={() => setActiveSheet("typography")}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
+                aria-haspopup="dialog"
+                aria-label="Text appearance and chapter actions"
+              >
+                <Type className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -655,12 +657,13 @@ export function Reader({
 
                 <article
                   className={cn(
-                    "text-pretty selection:bg-primary/20",
+                    "text-pretty selection:bg-primary/20 prose prose-neutral dark:prose-invert max-w-none",
                     typography.fontFamily === "serif" ? "font-serif" : "font-sans",
                   )}
                   style={{
                     fontSize: `${typography.fontSize}px`,
                     lineHeight: typography.lineHeight,
+                    letterSpacing: typography.fontFamily === "sans" ? "-0.01em" : "0",
                   }}
                 >
                   {verses.map((verse) => {
@@ -752,8 +755,8 @@ export function Reader({
 
         {/* Verse actions popover menu */}
         {selected && current && (
-          <div className="absolute inset-x-0 bottom-0 z-30 mb-[4.75rem] px-4 animate-slide-up">
-            <div className="mx-auto max-w-md">
+          <div className="absolute inset-x-0 bottom-6 z-40 px-4 pointer-events-none flex justify-center animate-in slide-in-from-bottom-10 fade-in duration-300 ease-out-expo">
+            <div className="w-full max-w-[320px] pointer-events-auto">
               <VerseHighlightMenu
                 book={current.book}
                 chapter={current.chapter}
@@ -772,14 +775,14 @@ export function Reader({
         )}
 
         <footer className="glass safe-bottom absolute inset-x-0 bottom-0 z-20 border-t border-border/50">
-          <div className="mx-auto max-w-2xl p-4">
+          <div className="mx-auto max-w-2xl p-3.5 sm:p-4">
             {!isOnTodaysChapter ? (
               // Browsing away from today's chapter: offer the way back rather
               // than a Mark button that would credit the wrong chapter.
               <Button
                 variant="outline"
                 onClick={() => goTo(homePosition ?? 1)}
-                className="h-13 w-full rounded-2xl text-base font-semibold"
+                className="h-12 w-full rounded-xl text-sm font-semibold"
               >
                 Back to today's chapter
               </Button>
@@ -790,24 +793,24 @@ export function Reader({
                 <Button
                   variant="secondary"
                   onClick={handleMarkRead}
-                  className="h-13 shrink-0 gap-2 rounded-2xl px-4 font-semibold"
+                  className="h-12 shrink-0 gap-1.5 rounded-xl px-3.5 font-semibold"
                   aria-label="Undo mark as read"
                 >
-                  <Check className="h-5 w-5 text-success" aria-hidden="true" />
+                  <Check className="h-4.5 w-4.5 text-success" aria-hidden="true" />
                 </Button>
                 <Button
                   onClick={() => onAdvance(nextUp.listId)}
-                  className="h-13 min-w-0 flex-1 justify-between gap-2 rounded-2xl px-4 text-left shadow-md"
+                  className="h-12 min-w-0 flex-1 justify-between gap-2 rounded-xl px-4 text-left"
                 >
                   <span className="min-w-0">
-                    <span className="block text-2xs font-bold uppercase tracking-[0.08em] opacity-75">
+                    <span className="block text-[0.62rem] font-bold uppercase tracking-[0.08em] opacity-80">
                       Next · {nextUp.listName}
                     </span>
                     <span className="block truncate font-display text-sm font-semibold">
                       {nextUp.book} {nextUp.chapter}
                     </span>
                   </span>
-                  <ArrowRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <ArrowRight className="h-4.5 w-4.5 shrink-0" aria-hidden="true" />
                 </Button>
               </div>
             ) : (
@@ -815,18 +818,20 @@ export function Reader({
                 onClick={handleMarkRead}
                 variant={isCompleted ? "secondary" : "default"}
                 className={cn(
-                  "h-13 w-full gap-2 rounded-2xl text-base font-bold transition-transform active:scale-[0.98]",
-                  !isCompleted && "shadow-md",
+                  "h-12 w-full gap-2 rounded-xl text-sm sm:text-base font-bold transition-opacity",
+                  !isCompleted
+                    ? "bg-foreground text-background dark:bg-primary dark:text-primary-foreground hover:opacity-90 active:opacity-100"
+                    : "bg-secondary text-foreground hover:bg-secondary/80",
                 )}
               >
                 {isCompleted ? (
                   <>
-                    <Check className="h-5 w-5 text-success" aria-hidden="true" />
+                    <Check className="h-4.5 w-4.5 text-success" aria-hidden="true" />
                     Marked as read
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" aria-hidden="true" />
+                    <Check className="h-4.5 w-4.5" aria-hidden="true" />
                     Mark as read
                   </>
                 )}

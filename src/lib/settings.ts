@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hapticFeedback: true,
   soundEffects: true,
   reduceMotion: false,
+  immersiveReader: false,
   translation: DEFAULT_TRANSLATION,
   typography: { fontSize: 18, fontFamily: "serif", lineHeight: 1.75, margin: "normal" },
 };
@@ -68,6 +69,7 @@ export function parseSettings(input: unknown): Settings | null {
     hapticFeedback: typeof raw.hapticFeedback === "boolean" ? raw.hapticFeedback : true,
     soundEffects: typeof raw.soundEffects === "boolean" ? raw.soundEffects : true,
     reduceMotion: typeof raw.reduceMotion === "boolean" ? raw.reduceMotion : false,
+    immersiveReader: typeof raw.immersiveReader === "boolean" ? raw.immersiveReader : false,
     translation: VALID_TRANSLATIONS.has(raw.translation as string)
       ? (raw.translation as TranslationId)
       : DEFAULT_TRANSLATION,

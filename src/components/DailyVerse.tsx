@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Copy, Check, Quote, Share2, Sparkles } from "lucide-react";
+import { Check, Copy, Share2 } from "lucide-react";
 import { getDailyVerse, type DailyVerseItem } from "@/lib/dailyVerses";
 import { toast } from "sonner";
 
@@ -43,31 +43,21 @@ export function DailyVerse({ readingDay }: DailyVerseProps) {
 
   return (
     <section
-      aria-label="Daily Scripture Inspiration"
-      className="surface relative mb-6 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] via-card to-card p-5 transition-all hover:border-primary/30"
+      aria-label="Daily Scripture"
+      className="surface mb-6 p-4 sm:p-5"
     >
-      {/* Soft warm background aura */}
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-2xl"
-        aria-hidden="true"
-      />
-
-      <div className="relative flex items-center justify-between gap-2 mb-2.5">
-        <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/15 text-primary">
-            <Sparkles className="h-3 w-3" aria-hidden="true" />
-          </span>
-          <span className="text-2xs font-bold uppercase tracking-[0.09em] text-primary">
-            Daily Scripture · {verse.theme}
-          </span>
-        </div>
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <span className="text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          Daily Scripture · {verse.theme}
+        </span>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={handleCopy}
+            title={copied ? "Copied" : "Copy verse"}
             aria-label="Copy verse"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
           >
             {copied ? (
               <Check className="h-3.5 w-3.5 text-success" aria-hidden="true" />
@@ -78,26 +68,23 @@ export function DailyVerse({ readingDay }: DailyVerseProps) {
           <button
             type="button"
             onClick={handleShare}
+            title="Share verse"
             aria-label="Share verse"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
           >
             <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      <div className="relative pl-1">
-        <Quote
-          className="pointer-events-none absolute -left-2 -top-1 h-6 w-6 text-primary/15"
-          aria-hidden="true"
-        />
-        <blockquote className="font-serif text-[0.9375rem] font-medium italic leading-relaxed text-foreground/90 sm:text-base">
-          "{verse.text}"
-        </blockquote>
-        <p className="mt-2 text-xs font-bold tracking-wide text-primary">
-          — {verse.reference}
-        </p>
-      </div>
+      <blockquote className="font-serif text-[1.05rem] sm:text-[1.12rem] italic leading-relaxed text-foreground/90">
+        “{verse.text}”
+      </blockquote>
+
+      <p className="mt-2 text-xs font-semibold text-muted-foreground">
+        — {verse.reference}
+      </p>
     </section>
   );
 }
+

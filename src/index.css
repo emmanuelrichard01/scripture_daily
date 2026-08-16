@@ -17,27 +17,27 @@
  */
 @layer base {
   :root {
-    --background: 36 33% 97%;
-    --foreground: 232 28% 12%;
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
     /* Cards sit slightly *above* the page, hence lighter than the background. */
-    --card: 40 40% 99.5%;
-    --card-foreground: 232 28% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
 
-    --popover: 40 40% 99.5%;
-    --popover-foreground: 232 28% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
 
     --primary: 236 60% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 36 22% 93%;
-    --secondary-foreground: 232 20% 26%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 4% 30%;
 
-    --muted: 36 18% 93%;
-    --muted-foreground: 232 9% 44%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
 
-    --accent: 36 20% 90%;
-    --accent-foreground: 232 20% 26%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 4% 30%;
 
     --success: 154 52% 34%;
     --success-foreground: 0 0% 100%;
@@ -45,25 +45,22 @@
     --destructive: 4 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 36 16% 88%;
-    --input: 36 16% 88%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 236 60% 48%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
     /* ── Elevation ──
-       Two-layer shadows: a tight contact shadow plus a wider ambient one. A
-       single blurred shadow reads as fog; the pair reads as a lifted surface.
-       Tinted toward the foreground hue rather than neutral grey so shadows sit
-       in the same colour family as the page. */
-    --shadow-xs: 0 1px 2px -1px hsl(232 28% 12% / 0.06);
-    --shadow-sm: 0 1px 2px -1px hsl(232 28% 12% / 0.08), 0 2px 6px -2px hsl(232 28% 12% / 0.05);
-    --shadow-md: 0 2px 4px -2px hsl(232 28% 12% / 0.08), 0 6px 16px -4px hsl(232 28% 12% / 0.08);
-    --shadow-lg: 0 4px 8px -4px hsl(232 28% 12% / 0.1), 0 16px 32px -8px hsl(232 28% 12% / 0.12);
-    --shadow-xl: 0 8px 16px -8px hsl(232 28% 12% / 0.12), 0 32px 64px -16px hsl(232 28% 12% / 0.16);
+       Ultra-soft, diffuse shadows for a premium layered feel. */
+    --shadow-xs: 0 2px 4px rgba(0,0,0,0.02);
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.02);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02);
+    --shadow-lg: 0 16px 32px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.03);
+    --shadow-xl: 0 24px 48px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.04);
 
     /* Glass surfaces for sticky chrome. */
-    --glass: 36 33% 97% / 0.72;
+    --glass: 0 0% 98% / 0.75;
 
     /* Motion. The spring curve overshoots slightly, which reads as physical;
        the standard curve decelerates without overshoot for layout changes. */
@@ -72,26 +69,26 @@
   }
 
   .dark {
-    --background: 234 24% 8%;
-    --foreground: 40 22% 93%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
 
-    --card: 234 20% 12%;
-    --card-foreground: 40 22% 93%;
+    --card: 240 4% 11%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 234 20% 13%;
-    --popover-foreground: 40 22% 93%;
+    --popover: 240 4% 11%;
+    --popover-foreground: 0 0% 98%;
 
     --primary: 236 85% 72%;
     --primary-foreground: 234 30% 10%;
 
-    --secondary: 234 16% 18%;
-    --secondary-foreground: 40 16% 88%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 234 16% 18%;
-    --muted-foreground: 236 10% 62%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 234 16% 21%;
-    --accent-foreground: 40 16% 88%;
+    --accent: 240 4% 16%;
+    --accent-foreground: 0 0% 98%;
 
     --success: 154 55% 52%;
     --success-foreground: 234 30% 10%;
@@ -99,54 +96,54 @@
     --destructive: 4 75% 64%;
     --destructive-foreground: 234 30% 10%;
 
-    --border: 234 14% 21%;
-    --input: 234 14% 21%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
     --ring: 236 85% 72%;
 
     /* Shadows barely register on a dark ground, so elevation is carried mostly
        by the lighter card surface. These stay for depth under overlays. */
-    --shadow-xs: 0 1px 2px -1px hsl(0 0% 0% / 0.3);
-    --shadow-sm: 0 1px 2px -1px hsl(0 0% 0% / 0.4), 0 2px 6px -2px hsl(0 0% 0% / 0.3);
-    --shadow-md: 0 2px 4px -2px hsl(0 0% 0% / 0.4), 0 6px 16px -4px hsl(0 0% 0% / 0.35);
-    --shadow-lg: 0 4px 8px -4px hsl(0 0% 0% / 0.5), 0 16px 32px -8px hsl(0 0% 0% / 0.45);
-    --shadow-xl: 0 8px 16px -8px hsl(0 0% 0% / 0.55), 0 32px 64px -16px hsl(0 0% 0% / 0.5);
+    --shadow-xs: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-sm: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.4);
+    --shadow-lg: 0 16px 32px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4);
+    --shadow-xl: 0 24px 48px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5);
 
-    --glass: 234 24% 8% / 0.72;
+    --glass: 0 0% 0% / 0.75;
   }
 
   .sepia {
-    --background: 35 38% 92%;
-    --foreground: 28 35% 18%;
+    --background: 40 25% 92%;
+    --foreground: 30 25% 25%;
 
-    --card: 37 42% 96%;
-    --card-foreground: 28 35% 18%;
+    --card: 40 30% 96%;
+    --card-foreground: 30 25% 25%;
 
-    --popover: 37 42% 96%;
-    --popover-foreground: 28 35% 18%;
+    --popover: 40 30% 96%;
+    --popover-foreground: 30 25% 25%;
 
-    --primary: 28 65% 38%;
-    --primary-foreground: 37 42% 96%;
+    --primary: 20 40% 42%;
+    --primary-foreground: 40 30% 96%;
 
-    --secondary: 35 25% 86%;
-    --secondary-foreground: 28 30% 24%;
+    --secondary: 40 20% 86%;
+    --secondary-foreground: 30 25% 30%;
 
-    --muted: 35 22% 86%;
-    --muted-foreground: 28 15% 42%;
+    --muted: 40 20% 86%;
+    --muted-foreground: 30 15% 45%;
 
-    --accent: 35 24% 84%;
-    --accent-foreground: 28 30% 24%;
+    --accent: 40 22% 84%;
+    --accent-foreground: 30 25% 30%;
 
-    --success: 154 50% 32%;
+    --success: 154 40% 36%;
     --success-foreground: 0 0% 100%;
 
-    --destructive: 4 65% 48%;
+    --destructive: 4 55% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 35 20% 80%;
-    --input: 35 20% 80%;
-    --ring: 28 65% 38%;
+    --border: 40 15% 82%;
+    --input: 40 15% 82%;
+    --ring: 20 40% 42%;
 
-    --glass: 35 38% 92% / 0.75;
+    --glass: 40 25% 92% / 0.85;
   }
 
   .midnight {
@@ -281,12 +278,12 @@
 
   /* The standard content container: a lifted surface, not a hairline box. */
   .surface {
-    @apply rounded-2xl border border-border/60 bg-card;
+    @apply rounded-3xl border border-border/40 bg-card;
     box-shadow: var(--shadow-sm);
   }
 
   .surface-raised {
-    @apply rounded-2xl border border-border/50 bg-card;
+    @apply rounded-3xl border border-border/30 bg-card;
     box-shadow: var(--shadow-md);
   }
 
@@ -308,8 +305,8 @@
   /* Sticky chrome. `saturate` keeps colour behind the blur from going muddy. */
   .glass {
     background-color: hsl(var(--glass));
-    backdrop-filter: blur(24px) saturate(190%);
-    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    backdrop-filter: blur(32px) saturate(200%);
+    -webkit-backdrop-filter: blur(32px) saturate(200%);
   }
 
   .glass-elevated {
@@ -339,7 +336,7 @@
 
   /* Inset grouped cards (Apple Settings & Sheets style) */
   .inset-group {
-    @apply overflow-hidden rounded-2xl border border-border/60 bg-card divide-y divide-border/50;
+    @apply overflow-hidden rounded-[1.75rem] border border-border/40 bg-card divide-y divide-border/40;
     box-shadow: var(--shadow-sm);
   }
 
