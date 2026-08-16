@@ -401,6 +401,21 @@ export default function Settings() {
             }
           />
           <SettingsRow
+            label="Replay walkthrough"
+            description="Review the 10-Track Horner System guide"
+            action={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsReplayingWalkthrough(true)}
+                className="h-11 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Replay walkthrough"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            }
+          />
+          <SettingsRow
             label="Reset everything"
             description="Permanently delete all progress"
             action={
@@ -505,6 +520,12 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {isReplayingWalkthrough && (
+        <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+          <OnboardingFlow onComplete={() => setIsReplayingWalkthrough(false)} />
+        </div>
+      )}
     </PageLayout>
   );
 }

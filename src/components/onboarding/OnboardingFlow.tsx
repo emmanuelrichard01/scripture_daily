@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, BookOpen, Moon, Sparkles, Sun } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Moon, Sparkles, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { readingLists } from "@/lib/readingPlan";
 import { useSettings } from "@/hooks/useSettings";
-import { type ThemePreference, type TranslationId } from "@/contexts/SettingsContext";
+import { TRANSLATIONS, type ThemePreference, type TranslationId } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
 interface OnboardingFlowProps {
@@ -13,17 +13,17 @@ interface OnboardingFlowProps {
 }
 
 /**
- * Premium 4-step interactive onboarding & setup walkthrough.
+ * Clean & elevated 4-step interactive onboarding & setup walkthrough.
  *
- * Step 1: The 10-List Halo (Interactive list exploration)
- * Step 2: The 10 Genre Tracks (Why Horner's system is balanced)
- * Step 3: Position Over Date (Interactive demo showing zero-guilt bookmarking)
- * Step 4: Your Personal Setup (Directly select Translation, Theme, and Reminder)
+ * Step 0: Ten Streams (The 10-Track Halo)
+ * Step 1: Dynamic Pairings (Asynchronous Velocities)
+ * Step 2: Position Over Calendar (Zero-Guilt Bookmarks)
+ * Step 3: Personalize Setup (Translation & Theme)
  */
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
-  const [simulatedDay, setSimulatedDay] = useState(1);
+  const [simulatedDay, setSimulatedDay] = useState<"steady" | "missed">("steady");
   const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
 
@@ -34,132 +34,174 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     if (destination) navigate(destination);
   };
 
+  const selectedList = readingLists[selectedTrackIndex];
+
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      {/* Top Bar */}
-      <div className="safe-top flex h-14 items-center justify-between px-6">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground selection:bg-primary/20">
+      {/* ── Top Bar ── */}
+      <header className="safe-top flex h-14 items-center justify-between px-5 sm:px-6">
         <div className="flex items-center gap-2">
           <img
             src="/icon-192.png"
-            alt="Scripture Daily"
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded-lg shadow-sm"
+            alt="Scripture Daily logo"
+            width={24}
+            height={24}
+            className="h-6 w-6 rounded-md object-contain"
           />
-          <span className="font-display text-sm font-bold tracking-tight">Scripture Daily</span>
+          <span className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Scripture Daily
+          </span>
         </div>
 
-        {!isLast && (
+        {!isLast ? (
           <button
             type="button"
             onClick={() => finish()}
-            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring cursor-pointer"
           >
             Skip
           </button>
+        ) : (
+          <span className="text-xs font-semibold text-muted-foreground">Step 4 of 4</span>
         )}
-      </div>
+      </header>
 
-      {/* Main Slide Content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center w-full">
+      {/* ── Main Step Content ── */}
+      <main className="flex flex-1 flex-col items-center justify-center px-5 sm:px-6 py-4 text-center w-full max-w-md mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(4px)" }}
-            transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            className="w-full max-w-sm flex flex-col items-center"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-full flex flex-col items-center"
           >
+            {/* Step 0: The 10-Track Halo */}
             {step === 0 && (
               <>
                 <InteractiveHaloArt
                   selectedIndex={selectedTrackIndex}
                   onSelect={setSelectedTrackIndex}
                 />
-                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
-                  Ten chapters a day.
+                <h1 className="mt-8 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
+                  Ten chapters. Ten streams.
                 </h1>
-                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
-                  Professor Grant Horner’s reading system takes you through the whole Bible across ten simultaneous tracks, cycling at independent speeds.
+                <p className="mt-2 text-sm sm:text-base leading-relaxed text-muted-foreground max-w-xs">
+                  Professor Horner’s system reads across ten biblical genres every single day, each advancing at its own pace.
                 </p>
-                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-secondary/80 px-4 py-2 text-xs font-semibold text-foreground shadow-sm">
+
+                <div className="mt-5 flex items-center gap-2 rounded-xl border border-border/80 bg-secondary/50 px-3.5 py-2 text-xs font-semibold">
                   <span
-                    className="h-2.5 w-2.5 rounded-full shadow-sm"
+                    className="h-2 w-2 rounded-full shrink-0"
                     style={{
-                      backgroundColor: `hsl(var(${readingLists[selectedTrackIndex].colorVar}))`,
+                      backgroundColor: `hsl(var(${selectedList.colorVar}))`,
                     }}
+                    aria-hidden="true"
                   />
-                  <span>
-                    Track {selectedTrackIndex + 1}: {readingLists[selectedTrackIndex].name} ({readingLists[selectedTrackIndex].totalChapters} ch)
+                  <span className="text-foreground">
+                    List {selectedList.id}: {selectedList.name}
                   </span>
+                  <span className="text-muted-foreground">· {selectedList.totalChapters} ch</span>
                 </div>
               </>
             )}
 
+            {/* Step 1: Asynchronous Velocities */}
             {step === 1 && (
               <>
-                <InteractiveListsArt />
-                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
+                <InteractiveVelocityArt />
+                <h1 className="mt-8 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
                   Pairings that never repeat.
                 </h1>
-                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
-                  Because lists range from 28 chapters (Acts) to 250 chapters (Prophets), the exact combination of ten chapters you read today won’t repeat for years.
+                <p className="mt-2 text-sm sm:text-base leading-relaxed text-muted-foreground max-w-xs">
+                  Because lists differ in length (from 28 to 250 chapters), your daily 10-chapter combination will never repeat for years.
                 </p>
+                <div className="mt-5 grid grid-cols-3 gap-2 w-full text-center">
+                  <div className="surface p-2.5">
+                    <p className="font-display text-base font-bold">28 ch</p>
+                    <p className="text-[0.62rem] font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
+                      Acts · 13×/yr
+                    </p>
+                  </div>
+                  <div className="surface p-2.5">
+                    <p className="font-display text-base font-bold">89 ch</p>
+                    <p className="text-[0.62rem] font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
+                      Gospels · 4×/yr
+                    </p>
+                  </div>
+                  <div className="surface p-2.5">
+                    <p className="font-display text-base font-bold">250 ch</p>
+                    <p className="text-[0.62rem] font-semibold uppercase tracking-wider text-muted-foreground mt-0.5">
+                      Prophets · 1.5×/yr
+                    </p>
+                  </div>
+                </div>
               </>
             )}
 
+            {/* Step 2: Zero-Guilt Bookmarks */}
             {step === 2 && (
               <>
-                <InteractivePaceArt
-                  simulatedDay={simulatedDay}
-                  onToggleDay={() => setSimulatedDay((d) => (d === 1 ? 5 : 1))}
+                <InteractiveBookmarkArt
+                  mode={simulatedDay}
+                  onToggle={() => setSimulatedDay((m) => (m === "steady" ? "missed" : "steady"))}
                 />
-                <h1 className="mt-10 font-display text-[2rem] font-bold leading-none tracking-tight">
-                  No guilt. No backlog.
+                <h1 className="mt-8 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
+                  Zero guilt. Zero backlog.
                 </h1>
-                <p className="mt-3 text-[1.05rem] leading-relaxed text-muted-foreground font-medium">
-                  Your bookmarks are remembered per list, never by the calendar date. If you miss a day or a week, you pick up exactly where you left off.
+                <p className="mt-2 text-sm sm:text-base leading-relaxed text-muted-foreground max-w-xs">
+                  Your place is kept per list, never by the calendar date. If life gets busy, you pick up right where you left off.
                 </p>
               </>
             )}
 
+            {/* Step 3: Setup Preferences */}
             {step === 3 && (
               <div className="w-full text-left">
-                <div className="mb-6 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-primary/10 text-primary">
-                    <Sparkles className="h-8 w-8" aria-hidden="true" />
-                  </div>
-                  <h1 className="font-display text-[2rem] font-bold tracking-tight leading-none">
+                <div className="mb-5 text-center">
+                  <span className="flex h-10 w-10 mx-auto items-center justify-center rounded-xl bg-secondary text-primary font-bold text-sm mb-3">
+                    <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight leading-tight">
                     Personalize Setup
                   </h1>
-                  <p className="mt-2 text-[1.05rem] text-muted-foreground font-medium">
-                    Set your preferred translation and theme before starting.
+                  <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                    Choose your default translation and reading theme.
                   </p>
                 </div>
 
-                <div className="space-y-5 rounded-[2rem] border border-border/40 bg-card p-6 shadow-md">
+                <div className="space-y-4 surface p-4 sm:p-5">
                   {/* Translation Selection */}
                   <div>
-                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
-                      Default Translation
+                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                      Bible Translation
                     </label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-1.5">
                       {(["ESV", "NIV", "NLT", "KJV"] as TranslationId[]).map((code) => {
                         const isSelected = settings.translation === code;
+                        const meta = TRANSLATIONS.find((t) => t.id === code);
                         return (
                           <button
                             key={code}
                             type="button"
                             onClick={() => updateSettings({ translation: code })}
                             className={cn(
-                              "flex flex-col items-center justify-center rounded-2xl border py-3 text-sm font-bold transition-all focus-ring active:scale-95",
+                              "flex flex-col items-center justify-center rounded-xl border py-2.5 text-xs font-bold transition-all focus-ring cursor-pointer",
                               isSelected
-                                ? "border-primary bg-primary text-primary-foreground shadow-md"
-                                : "border-border/40 bg-secondary/30 text-foreground hover:bg-secondary",
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border/60 bg-secondary/40 text-foreground hover:bg-secondary",
                             )}
                           >
                             <span>{code}</span>
+                            <span
+                              className={cn(
+                                "text-[0.6rem] font-normal mt-0.5",
+                                isSelected ? "text-primary-foreground/80" : "text-muted-foreground",
+                              )}
+                            >
+                              {meta?.style.split(",")[0]}
+                            </span>
                           </button>
                         );
                       })}
@@ -168,15 +210,15 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
                   {/* Theme Selection */}
                   <div>
-                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
+                    <label className="mb-2 block text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                       Reading Theme
                     </label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-1.5">
                       {[
                         { id: "light", label: "Ivory", icon: Sun },
-                        { id: "dark", label: "OLED", icon: Moon },
+                        { id: "dark", label: "Dark", icon: Moon },
                         { id: "sepia", label: "Sepia", icon: BookOpen },
-                        { id: "midnight", label: "AMOLED", icon: Sparkles },
+                        { id: "midnight", label: "OLED", icon: Sparkles },
                       ].map((t) => {
                         const isSelected = settings.theme === t.id;
                         const Icon = t.icon;
@@ -186,14 +228,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                             type="button"
                             onClick={() => updateSettings({ theme: t.id as ThemePreference })}
                             className={cn(
-                              "flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-3 text-xs font-semibold transition-all focus-ring active:scale-95",
+                              "flex flex-col items-center justify-center gap-1 rounded-xl border py-2.5 text-xs font-semibold transition-all focus-ring cursor-pointer",
                               isSelected
-                                ? "border-primary bg-primary/[0.08] text-primary shadow-sm"
-                                : "border-border/40 bg-secondary/30 text-muted-foreground hover:bg-secondary",
+                                ? "border-primary bg-primary/10 text-primary font-bold"
+                                : "border-border/60 bg-secondary/40 text-muted-foreground hover:bg-secondary hover:text-foreground",
                             )}
                           >
-                            <Icon className="h-4 w-4" />
-                            <span className="text-[10px] font-bold">{t.label}</span>
+                            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span className="text-[0.68rem]">{t.label}</span>
                           </button>
                         );
                       })}
@@ -204,12 +246,12 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
+      </main>
 
-      {/* Navigation Footer */}
-      <div className="safe-bottom flex flex-col items-center gap-5 px-6 pb-8 pt-4">
+      {/* ── Navigation Footer ── */}
+      <footer className="safe-bottom flex flex-col items-center gap-4 px-5 sm:px-6 pb-6 pt-2 max-w-md mx-auto w-full">
         {/* Step Indicator Pills */}
-        <div className="flex gap-2" role="tablist" aria-label="Walkthrough steps">
+        <div className="flex items-center gap-1.5" role="tablist" aria-label="Walkthrough steps">
           {[0, 1, 2, 3].map((index) => (
             <button
               key={index}
@@ -219,39 +261,39 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               aria-label={`Step ${index + 1}`}
               onClick={() => setStep(index)}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300 ease-out-expo focus-ring",
-                index === step ? "w-8 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/40",
+                "h-1.5 rounded-full transition-all duration-300 focus-ring cursor-pointer",
+                index === step ? "w-6 bg-primary" : "w-1.5 bg-primary/20 hover:bg-primary/40",
               )}
             />
           ))}
         </div>
 
         {isLast ? (
-          <div className="w-full max-w-sm space-y-2">
+          <div className="w-full space-y-2">
             <Button
               onClick={() => finish()}
-              className="h-13 w-full rounded-2xl text-base font-bold shadow-lg"
+              className="h-12 w-full rounded-xl text-sm font-bold bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
             >
               Start Reading Today
             </Button>
             <Button
               variant="ghost"
               onClick={() => finish("/auth")}
-              className="h-11 w-full rounded-2xl text-xs font-semibold text-muted-foreground"
+              className="h-10 w-full rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
             >
-              Sign in to enable cloud sync
+              Sign in to sync across devices
             </Button>
           </div>
         ) : (
           <Button
             onClick={() => setStep((value) => value + 1)}
-            className="h-13 w-full max-w-sm gap-2 rounded-2xl text-base font-bold shadow-lg"
+            className="h-12 w-full gap-2 rounded-xl text-sm font-bold bg-foreground text-background hover:opacity-90 cursor-pointer"
           >
-            Continue
+            <span>Continue</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
-      </div>
+      </footer>
     </div>
   );
 }
@@ -265,43 +307,43 @@ function InteractiveHaloArt({
   selectedIndex: number;
   onSelect: (index: number) => void;
 }) {
-  const RADIUS = 78;
+  const RADIUS = 72;
 
   return (
-    <div className="relative mx-auto flex h-[180px] w-[180px] items-center justify-center">
+    <div className="relative mx-auto flex h-[170px] w-[170px] items-center justify-center">
       <svg
         className="absolute inset-0"
-        width="180"
-        height="180"
-        viewBox="0 0 180 180"
+        width="170"
+        height="170"
+        viewBox="0 0 170 170"
         fill="none"
         aria-hidden="true"
       >
-        <circle cx="90" cy="90" r={RADIUS} stroke="hsl(var(--border) / 0.6)" strokeWidth="1.5" strokeDasharray="3 3" />
+        <circle cx="85" cy="85" r={RADIUS} stroke="hsl(var(--border))" strokeWidth="1.5" strokeDasharray="3 3" />
         {readingLists.map((list, index) => {
           const angle = (index / readingLists.length) * Math.PI * 2 - Math.PI / 2;
           const isSelected = index === selectedIndex;
-          const cx = 90 + Math.cos(angle) * RADIUS;
-          const cy = 90 + Math.sin(angle) * RADIUS;
+          const cx = 85 + Math.cos(angle) * RADIUS;
+          const cy = 85 + Math.sin(angle) * RADIUS;
 
           return (
             <g
               key={list.id}
               onClick={() => onSelect(index)}
-              className="cursor-pointer transition-transform duration-200 hover:scale-125"
+              className="cursor-pointer"
             >
               <circle
                 cx={cx}
                 cy={cy}
-                r={isSelected ? 10 : 6}
+                r={isSelected ? 9 : 5.5}
                 fill={`hsl(var(${list.colorVar}))`}
-                className="transition-all duration-300"
+                className="transition-all duration-200"
               />
               {isSelected && (
                 <circle
                   cx={cx}
                   cy={cy}
-                  r="13"
+                  r="12"
                   stroke={`hsl(var(${list.colorVar}))`}
                   strokeWidth="2"
                   fill="none"
@@ -312,91 +354,97 @@ function InteractiveHaloArt({
         })}
       </svg>
 
-      <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/20 bg-card p-3 shadow-md">
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-card p-2">
         <img
           src="/icon-192.png"
           alt="Scripture Daily"
-          width={56}
-          height={56}
-          className="h-14 w-14 rounded-xl"
+          width={44}
+          height={44}
+          className="h-11 w-11 rounded-lg object-contain"
         />
       </div>
     </div>
   );
 }
 
-function InteractiveListsArt() {
+function InteractiveVelocityArt() {
   const longest = Math.max(...readingLists.map((list) => list.totalChapters));
 
   return (
-    <div className="mx-auto rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-      <svg width="240" height="150" viewBox="0 0 240 150" fill="none" className="mx-auto" aria-hidden="true">
-        {readingLists.map((list, index) => {
-          const width = 28 + (list.totalChapters / longest) * 190;
+    <div className="mx-auto w-full max-w-[260px] rounded-2xl border border-border bg-card p-4">
+      <div className="space-y-1.5">
+        {readingLists.map((list) => {
+          const pct = (list.totalChapters / longest) * 100;
           return (
-            <g key={list.id}>
-              <rect
-                x="8"
-                y={6 + index * 14}
-                width={width}
-                height="8"
-                rx="4"
-                fill={`hsl(var(${list.colorVar}))`}
-                opacity={0.85}
-              />
-              <circle cx="12" cy={10 + index * 14} r="2.5" fill="hsl(var(--card))" />
-            </g>
+            <div key={list.id} className="flex items-center gap-2">
+              <span className="w-4 text-right text-[0.62rem] font-bold text-muted-foreground tabular-nums">
+                {list.id}
+              </span>
+              <div className="h-2 flex-1 rounded-full bg-secondary/80 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.max(12, pct)}%`,
+                    backgroundColor: `hsl(var(${list.colorVar}))`,
+                  }}
+                />
+              </div>
+              <span className="w-8 text-right text-[0.6rem] font-semibold text-muted-foreground tabular-nums">
+                {list.totalChapters}c
+              </span>
+            </div>
           );
         })}
-      </svg>
-    </div>
-  );
-}
-
-function InteractivePaceArt({
-  simulatedDay,
-  onToggleDay,
-}: {
-  simulatedDay: number;
-  onToggleDay: () => void;
-}) {
-  return (
-    <div className="mx-auto rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
-      <svg width="240" height="110" viewBox="0 0 240 110" fill="none" className="mx-auto" aria-hidden="true">
-        <path
-          d="M20 70c26 0 26-40 52-40s26 40 52 40 26-40 52-40 26 40 44 40"
-          stroke="hsl(var(--border))"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-        {[20, 72, 124, 176, 220].map((x, index) => {
-          const isSkipped = index === 2 && simulatedDay === 1;
-          return (
-            <circle
-              key={x}
-              cx={x}
-              cy={index % 2 === 0 ? 70 : 30}
-              r={isSkipped ? 6 : 9}
-              fill={isSkipped ? "hsl(var(--background))" : "hsl(var(--primary))"}
-              stroke={isSkipped ? "hsl(var(--destructive))" : "none"}
-              strokeWidth="2.5"
-              strokeDasharray={isSkipped ? "3 3" : undefined}
-            />
-          );
-        })}
-      </svg>
-
-      <div className="mt-3 flex items-center justify-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onToggleDay}
-          className="h-8 rounded-xl text-3xs font-bold"
-        >
-          {simulatedDay === 1 ? "Simulate: Missed a day" : "Simulate: Regular pace"}
-        </Button>
       </div>
     </div>
   );
 }
+
+function InteractiveBookmarkArt({
+  mode,
+  onToggle,
+}: {
+  mode: "steady" | "missed";
+  onToggle: () => void;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[260px] rounded-2xl border border-border bg-card p-4 text-left">
+      <div className="space-y-2 mb-3">
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <span className="text-muted-foreground">List 1 · Gospels</span>
+          <span className="font-bold text-foreground">Matthew 4</span>
+        </div>
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <span className="text-muted-foreground">List 2 · Pentateuch</span>
+          <span className="font-bold text-foreground">Genesis 4</span>
+        </div>
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <span className="text-muted-foreground">List 3 · Romans</span>
+          <span className="font-bold text-foreground">Romans 4</span>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-secondary/70 p-2.5 text-center text-xs">
+        {mode === "steady" ? (
+          <p className="text-muted-foreground text-[0.72rem]">
+            Every reading session advances your 10 bookmarks by 1 chapter.
+          </p>
+        ) : (
+          <p className="text-success font-semibold text-[0.72rem] flex items-center justify-center gap-1">
+            <Check className="h-3 w-3" aria-hidden="true" />
+            No missed days or guilt. Resume right at chapter 4.
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mt-2.5 w-full rounded-lg border border-border bg-background py-1.5 text-center text-[0.68rem] font-bold text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-ring"
+      >
+        {mode === "steady" ? "Tap to test: missed 3 days?" : "Tap to reset: regular pace"}
+      </button>
+    </div>
+  );
+}
+
