@@ -248,14 +248,14 @@ export default function BibleMap() {
                   <p className="mb-2 text-2xs font-bold uppercase tracking-wider text-muted-foreground">
                     Chapter Grid ({chaptersCompleted}/{book.chapters} read)
                   </p>
-                  <div className="grid grid-cols-10 gap-1.5">
+                  <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5">
                     {Array.from({ length: book.chapters }, (_, i) => i + 1).map((chNum) => {
                       const isDone = chNum <= chaptersCompleted;
                       return (
                         <div
                           key={chNum}
                           className={cn(
-                            "flex aspect-square items-center justify-center rounded-lg text-[10px] font-bold tabular-nums transition-colors",
+                            "flex aspect-square min-h-[28px] items-center justify-center rounded-lg text-[10px] font-bold tabular-nums transition-colors",
                             isDone
                               ? "text-white shadow-xs"
                               : "bg-secondary/60 text-muted-foreground/50",

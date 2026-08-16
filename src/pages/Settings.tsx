@@ -25,6 +25,7 @@ import { SettingsSection, SettingsRow } from "@/components/SettingsSection";
 import { StartDatePicker } from "@/components/StartDatePicker";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { UserProfile } from "@/components/UserProfile";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -74,6 +75,7 @@ export default function Settings() {
   const push = usePushNotifications();
 
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isReplayingWalkthrough, setIsReplayingWalkthrough] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const totalCycles = listPositions.reduce((sum, p) => sum + p.completedCycles, 0);
@@ -133,6 +135,17 @@ export default function Settings() {
       toast.error(result.error);
     }
   };
+
+  if (isReplayingWalkthrough) {
+    return (
+      <OnboardingFlow
+        onComplete={() => {
+          setIsReplayingWalkthrough(false);
+          toast.success("Walkthrough completed");
+        }}
+      />
+    );
+  }
 
   return (
     <PageLayout title="Settings">
@@ -319,8 +332,11 @@ export default function Settings() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={restartOnboarding}
-                className="h-11 gap-1.5 text-muted-foreground"
+                onClick={() => {
+                  restartOnboarding();
+                  setIsReplayingWalkthrough(true);
+                }}
+                className="h-11 gap-1.5 text-muted-foreground hover:text-foreground focus-ring"
                 aria-label="Replay introduction"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
