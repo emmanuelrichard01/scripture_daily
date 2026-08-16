@@ -5,7 +5,7 @@ self.addEventListener('push', function(event) {
       const options = {
         body: data.body || 'You have a new message.',
         icon: '/apple-touch-icon.png',
-        badge: '/favicon.png',
+        badge: '/favicon-96.png',
         vibrate: [100, 50, 100],
         data: {
           url: data.url || '/'

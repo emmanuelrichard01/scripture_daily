@@ -3,15 +3,18 @@ import { Link } from "react-router-dom";
 import {
   Bell,
   BellOff,
+  BookOpen,
   ChevronRight,
   Cloud,
   Download,
+  Highlighter,
   Languages,
   LogIn,
   LogOut,
   Monitor,
   Moon,
   RotateCcw,
+  Sparkles,
   Sun,
   Trash2,
   Trophy,
@@ -53,6 +56,8 @@ import { toast } from "sonner";
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: Sun },
   { value: "dark", label: "Dark", icon: Moon },
+  { value: "sepia", label: "Sepia", icon: BookOpen },
+  { value: "midnight", label: "Midnight", icon: Sparkles },
   { value: "system", label: "System", icon: Monitor },
 ] as const satisfies readonly { value: ThemePreference; label: string; icon: unknown }[];
 
@@ -287,6 +292,18 @@ export default function Settings() {
         </SettingsSection>
 
         <SettingsSection title="Your reading">
+          <SettingsRow
+            label="Highlights & Notes"
+            description="View your saved verses and reflections"
+            action={
+              <Button asChild variant="ghost" size="sm" className="h-11 gap-1.5">
+                <Link to="/highlights" aria-label="View highlights & notes">
+                  <Highlighter className="h-4 w-4" aria-hidden="true" />
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            }
+          />
           <SettingsRow
             label="Milestones"
             description={`${totalCycles} ${totalCycles === 1 ? "cycle" : "cycles"} completed`}

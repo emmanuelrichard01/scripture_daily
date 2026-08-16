@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "node:path";
 import { VitePWA } from "vite-plugin-pwa";
-import { bibleDevServer } from "./src/dev/bibleDevServer";
+import { bibleDevServer } from "./src/dev/bibleDevServer.ts";
 
 export default defineConfig(({ mode }) => ({
   server: { host: "::", port: 8080 },

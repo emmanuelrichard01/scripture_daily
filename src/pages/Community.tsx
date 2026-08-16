@@ -163,8 +163,15 @@ export default function Community() {
   useEffect(() => {
     const channel = supabase
       .channel(`community:${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "friendships" }, () =>
-        queryClient.invalidateQueries({ queryKey: ["community"] }),
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "friendships" },
+        () => void queryClient.invalidateQueries({ queryKey: ["community"] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reading_progress" },
+        () => void queryClient.invalidateQueries({ queryKey: communityKeys.friends(userId) }),
       )
       .subscribe();
 

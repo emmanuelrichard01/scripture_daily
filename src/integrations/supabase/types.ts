@@ -160,6 +160,50 @@ export type Database = {
           }
         ]
       }
+      highlights: {
+        Row: {
+          id: string
+          user_id: string
+          book: string
+          chapter: number
+          verse: number
+          color: string
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          book: string
+          chapter: number
+          verse: number
+          color: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          book?: string
+          chapter?: number
+          verse?: number
+          color?: string
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "highlights_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       reading_progress: {
         Row: {
           completed_readings: string[]

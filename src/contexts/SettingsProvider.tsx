@@ -52,8 +52,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const userRef = useRef(user);
   userRef.current = user;
 
-  const resolvedTheme: "light" | "dark" =
-    settings.theme === "system" ? (systemDark ? "dark" : "light") : settings.theme;
+  const resolvedTheme: "light" | "dark" | "sepia" | "midnight" =
+    settings.theme === "system"
+      ? (systemDark ? "dark" : "light")
+      : settings.theme;
 
   // ── Track the OS preference so "system" stays live ──
   useEffect(() => {
@@ -65,18 +67,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Apply the theme to the document ──
-  //
-  // Also updates `theme-color`, so the mobile browser chrome and the PWA status
-  // bar match the app instead of staying stuck on the light value from the
-  // static meta tag.
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle("dark", resolvedTheme === "dark");
-    root.style.colorScheme = resolvedTheme;
+    root.classList.toggle("dark", resolvedTheme === "dark" || resolvedTheme === "midnight");
+    root.classList.toggle("sepia", resolvedTheme === "sepia");
+    root.classList.toggle("midnight", resolvedTheme === "midnight");
+
+    root.style.colorScheme =
+      resolvedTheme === "light" || resolvedTheme === "sepia" ? "light" : "dark";
 
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (meta) {
-      meta.content = resolvedTheme === "dark" ? "#0f1019" : "#faf8f5";
+      meta.content =
+        resolvedTheme === "midnight"
+          ? "#000000"
+          : resolvedTheme === "dark"
+            ? "#0f1019"
+            : resolvedTheme === "sepia"
+              ? "#f4eee4"
+              : "#faf8f5";
     }
   }, [resolvedTheme]);
 

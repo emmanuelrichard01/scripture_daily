@@ -96,6 +96,7 @@ export const StorageKeys = {
   onboarding: "scripture-daily-onboarding-complete",
   legacyOnboarding: "horner-onboarding-complete",
   typography: "scripture-daily-reader-typography",
+  highlights: "scripture-daily-highlights-v1",
   outbox: "scripture-daily-sync-outbox-v1",
   installPromptDismissed: "scripture-daily-install-dismissed",
 } as const;

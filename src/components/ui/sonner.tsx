@@ -12,10 +12,12 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
  */
 export function Toaster(props: ToasterProps) {
   const { resolvedTheme } = useSettings();
+  const sonnerTheme =
+    resolvedTheme === "sepia" || resolvedTheme === "light" ? "light" : "dark";
 
   return (
     <Sonner
-      theme={resolvedTheme}
+      theme={sonnerTheme}
       position="top-center"
       // Above the bottom nav, and clear of the iOS home indicator.
       offset={16}

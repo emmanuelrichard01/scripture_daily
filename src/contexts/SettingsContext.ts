@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-export type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = "light" | "dark" | "sepia" | "midnight" | "system";
 
 /**
  * Available Bible translations, keyed by the Bolls API's version id.
@@ -102,7 +102,7 @@ export interface SettingsContextValue {
   readonly updateTypography: (updates: Partial<ReaderTypography>) => void;
   readonly resetSettings: () => void;
   /** The theme actually applied right now, after resolving `"system"`. */
-  readonly resolvedTheme: "light" | "dark";
+  readonly resolvedTheme: "light" | "dark" | "sepia" | "midnight";
 }
 
 export const SettingsContext = createContext<SettingsContextValue | null>(null);

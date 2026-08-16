@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight } from "lucide-react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { useProgress } from "@/hooks/useProgress";
 import { getList, TOTAL_PLAN_CHAPTERS } from "@/lib/readingPlan";
@@ -64,6 +64,25 @@ export default function Progress() {
           </div>
         </div>
       </section>
+
+      {/* ── Bible Coverage Map Link Card ── */}
+      <Link
+        to="/bible-map"
+        className="surface-interactive mt-4 flex items-center justify-between gap-3 p-4 focus-ring"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <BookOpen className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold leading-tight">66-Book Bible Map</h3>
+            <p className="text-xs text-muted-foreground">
+              Visual coverage matrix across all 1,189 chapters
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>
 
       {/* ── By list ── */}
       <div className="mb-3 mt-8 flex items-baseline justify-between">

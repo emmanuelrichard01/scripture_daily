@@ -56,18 +56,29 @@ export default function Profile() {
 
   const save = useMutation({
     mutationFn: async () => {
+      const trimmedName = displayName.trim() || null;
       const { error } = await supabase.from("profiles").upsert(
         {
           user_id: userId!,
-          display_name: displayName.trim() || null,
+          display_name: trimmedName,
           avatar_url: avatarUrl,
         },
         { onConflict: "user_id" },
       );
       if (error) throw new Error(error.message);
+
+      // Synchronize auth user_metadata so greetings, headers, and UserProfile reflect updates immediately
+      await supabase.auth.updateUser({
+        data: {
+          display_name: trimmedName,
+          full_name: trimmedName,
+          avatar_url: avatarUrl,
+        },
+      });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["profile", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["community"] });
       toast.success("Profile saved");
       navigate("/settings");
     },

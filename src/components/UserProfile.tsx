@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,6 +30,17 @@ export function UserProfile({
   linkToProfile = false,
 }: UserProfileProps) {
   const { user } = useAuth();
+  const [imageError, setImageError] = useState(false);
+
+  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
+  const avatarUrl =
+    (typeof metadata?.avatar_url === "string" && metadata.avatar_url) ||
+    (typeof metadata?.picture === "string" && metadata.picture) ||
+    null;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
 
   if (!user) {
     return (
@@ -50,14 +62,9 @@ export function UserProfile({
     );
   }
 
-  const metadata = user.user_metadata as Record<string, unknown>;
-  const avatarUrl =
-    (typeof metadata.avatar_url === "string" && metadata.avatar_url) ||
-    (typeof metadata.picture === "string" && metadata.picture) ||
-    null;
   const name =
-    (typeof metadata.full_name === "string" && metadata.full_name) ||
-    (typeof metadata.display_name === "string" && metadata.display_name) ||
+    (typeof metadata?.full_name === "string" && metadata.full_name) ||
+    (typeof metadata?.display_name === "string" && metadata.display_name) ||
     user.email?.split("@")[0] ||
     "Reader";
 
@@ -69,13 +76,14 @@ export function UserProfile({
           "flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-gradient-to-br from-primary/20 to-primary/5",
         )}
       >
-        {avatarUrl ? (
+        {avatarUrl && !imageError ? (
           <img
             src={avatarUrl}
             alt=""
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
             loading="lazy"
+            onError={() => setImageError(true)}
           />
         ) : (
           <span className="text-sm font-bold text-primary" aria-hidden="true">

@@ -232,9 +232,15 @@ export async function respondToRequest(
   friendshipId: string,
   status: "accepted" | "rejected",
 ): Promise<void> {
+  if (status === "rejected") {
+    const { error } = await supabase.from("friendships").delete().eq("id", friendshipId);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
   const { error } = await supabase
     .from("friendships")
-    .update({ status })
+    .update({ status: "accepted" })
     .eq("id", friendshipId);
 
   if (error) throw new Error(error.message);

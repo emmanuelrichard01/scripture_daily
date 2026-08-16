@@ -20,6 +20,8 @@ const Lists = lazy(() => import("@/pages/Lists"));
 const Progress = lazy(() => import("@/pages/Progress"));
 const History = lazy(() => import("@/pages/History"));
 const Milestones = lazy(() => import("@/pages/Milestones"));
+const BibleMap = lazy(() => import("@/pages/BibleMap"));
+const Highlights = lazy(() => import("@/pages/Highlights"));
 const Community = lazy(() => import("@/pages/Community"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Profile = lazy(() => import("@/pages/Profile"));
@@ -62,6 +64,8 @@ export default function App() {
                       <Route path="/progress" element={<Progress />} />
                       <Route path="/history" element={<History />} />
                       <Route path="/milestones" element={<Milestones />} />
+                      <Route path="/bible-map" element={<BibleMap />} />
+                      <Route path="/highlights" element={<Highlights />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/auth/callback" element={<AuthCallback />} />

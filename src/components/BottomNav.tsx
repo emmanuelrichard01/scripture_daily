@@ -1,5 +1,8 @@
 import { NavLink } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { BookMarked, CalendarClock, Home, Settings, Users } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { communityKeys, fetchFriends, fetchIncomingRequests } from "@/lib/community";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -11,6 +14,22 @@ const NAV_ITEMS = [
 ] as const;
 
 export function BottomNav() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const handlePrefetch = (path: string) => {
+    if (path === "/community" && user?.id) {
+      void queryClient.prefetchQuery({
+        queryKey: communityKeys.friends(user.id),
+        queryFn: () => fetchFriends(user.id),
+      });
+      void queryClient.prefetchQuery({
+        queryKey: communityKeys.incoming(user.id),
+        queryFn: () => fetchIncomingRequests(user.id),
+      });
+    }
+  };
+
   return (
     <nav
       className="glass safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-border/50"
@@ -22,6 +41,8 @@ export function BottomNav() {
             <NavLink
               to={item.to}
               end={item.end}
+              onPointerEnter={() => handlePrefetch(item.to)}
+              onFocus={() => handlePrefetch(item.to)}
               className={({ isActive }) =>
                 cn(
                   "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 focus-ring",

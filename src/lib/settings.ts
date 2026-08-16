@@ -15,7 +15,7 @@ import {
 } from "@/contexts/SettingsContext";
 
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6] as const;
-const VALID_THEMES = new Set<ThemePreference>(["light", "dark", "system"]);
+const VALID_THEMES = new Set<ThemePreference>(["light", "dark", "sepia", "midnight", "system"]);
 const VALID_TRANSLATIONS = new Set<string>(TRANSLATIONS.map((option) => option.id));
 
 /** `HH:MM`, 24-hour. */

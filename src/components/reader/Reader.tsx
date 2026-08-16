@@ -5,10 +5,10 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Copy,
+  Clock,
   Languages,
+  MessageSquare,
   RefreshCw,
-  Share2,
   Sparkles,
   Type,
   WifiOff,
@@ -20,8 +20,11 @@ import { ReaderSheet } from "@/components/reader/ReaderSheet";
 import { ReaderSettingsPanel } from "@/components/reader/ReaderSettingsPanel";
 import { TranslationPicker } from "@/components/reader/TranslationPicker";
 import { ChapterPicker } from "@/components/reader/ChapterPicker";
+import { VerseHighlightMenu } from "@/components/reader/VerseHighlightMenu";
+import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
 import { useFeedback } from "@/hooks/useFeedback";
+import { useReadingTimer } from "@/hooks/useReadingTimer";
 import { translationInfo } from "@/contexts/SettingsContext";
 import {
   chapterAtPosition,
@@ -30,6 +33,16 @@ import {
   type ChapterRef,
 } from "@/lib/readingPlan";
 import { BibleApiError, chapterQueryKey, fetchChapter, type Verse } from "@/lib/bible";
+import {
+  loadLocalHighlights,
+  saveLocalHighlights,
+  syncHighlightToCloud,
+  deleteHighlightFromCloud,
+  verseKey,
+  HIGHLIGHT_PALETTE,
+  type HighlightColor,
+  type VerseHighlight,
+} from "@/lib/highlights";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -105,11 +118,15 @@ export function Reader({
     [list, book, chapter],
   );
 
+  const { user } = useAuth();
+  const timer = useReadingTimer(isOpen);
+
   const [position, setPosition] = useState(homePosition ?? 1);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isImmersive, setIsImmersive] = useState(false);
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
+  const [highlights, setHighlights] = useState<VerseHighlight[]>(loadLocalHighlights);
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastScrollTop = useRef(0);
@@ -128,9 +145,111 @@ export function Reader({
     if (isOpen && homePosition !== null) setPosition(homePosition);
   }, [isOpen, homePosition]);
 
+  // Keep local storage in sync whenever highlights change
+  useEffect(() => {
+    saveLocalHighlights(highlights);
+  }, [highlights]);
+
   const current: ChapterRef | null = useMemo(
     () => (list ? chapterAtPosition(list, position) : null),
     [list, position],
+  );
+
+  const highlightsMap = useMemo(() => {
+    const map = new Map<string, VerseHighlight>();
+    for (const h of highlights) {
+      map.set(verseKey(h.book, h.chapter, h.verse), h);
+    }
+    return map;
+  }, [highlights]);
+
+  const handleSetHighlight = useCallback(
+    (color: HighlightColor) => {
+      if (!current || selectedVerse === null) return;
+      const now = new Date().toISOString();
+      const key = verseKey(current.book, current.chapter, selectedVerse);
+      const existing = highlightsMap.get(key);
+      const updated: VerseHighlight = {
+        id: existing?.id ?? crypto.randomUUID(),
+        book: current.book,
+        chapter: current.chapter,
+        verse: selectedVerse,
+        color,
+        note: existing?.note ?? null,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+
+      setHighlights((prev) =>
+        prev
+          .filter(
+            (h) =>
+              verseKey(h.book, h.chapter, h.verse) !==
+              verseKey(current.book, current.chapter, selectedVerse),
+          )
+          .concat(updated),
+      );
+
+      if (user?.id) void syncHighlightToCloud(user.id, updated);
+      setSelectedVerse(null);
+    },
+    [current, selectedVerse, highlightsMap, user],
+  );
+
+  const handleRemoveHighlight = useCallback(() => {
+    if (!current || selectedVerse === null) return;
+    setHighlights((prev) =>
+      prev.filter(
+        (h) =>
+          verseKey(h.book, h.chapter, h.verse) !==
+          verseKey(current.book, current.chapter, selectedVerse),
+      ),
+    );
+    if (user?.id) {
+      void deleteHighlightFromCloud(
+        user.id,
+        current.book,
+        current.chapter,
+        selectedVerse,
+      );
+    }
+    setSelectedVerse(null);
+  }, [current, selectedVerse, user]);
+
+  const handleSaveNote = useCallback(
+    (note: string | null) => {
+      if (!current || selectedVerse === null) return;
+      const now = new Date().toISOString();
+      const key = verseKey(current.book, current.chapter, selectedVerse);
+      const existing = highlightsMap.get(key);
+
+      if (!existing && !note) return;
+
+      const updated: VerseHighlight = {
+        id: existing?.id ?? crypto.randomUUID(),
+        book: current.book,
+        chapter: current.chapter,
+        verse: selectedVerse,
+        color: existing?.color ?? "yellow",
+        note,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
+
+      setHighlights((prev) =>
+        prev
+          .filter(
+            (h) =>
+              verseKey(h.book, h.chapter, h.verse) !==
+              verseKey(current.book, current.chapter, selectedVerse),
+          )
+          .concat(updated),
+      );
+
+      if (user?.id) void syncHighlightToCloud(user.id, updated);
+      setSelectedVerse(null);
+    },
+    [current, selectedVerse, highlightsMap, user],
   );
 
   const isOnTodaysChapter = position === homePosition;
@@ -297,16 +416,17 @@ export function Reader({
   };
 
   const handleMarkRead = () => {
-    if (!isCompleted) feedback.chapterComplete();
+    if (!isCompleted) {
+      feedback.chapterComplete();
+      if (timer.seconds >= 10) {
+        toast.success(`Chapter finished in ${timer.formatted}`);
+      }
+    }
     onToggleComplete();
   };
 
   const reference = current ? `${current.book} ${current.chapter}` : "";
   const translationMeta = translationInfo(translation);
-
-  /** Formats a verse for the clipboard or the share sheet. */
-  const citationFor = (verseNumber: number, html: string) =>
-    `"${stripTags(html)}" — ${reference}:${verseNumber} (${translation})`;
 
   /** The whole chapter as plain text, verse numbers inline. */
   const chapterText = (source: readonly Verse[]) =>
@@ -420,6 +540,14 @@ export function Reader({
               </button>
             </div>
 
+            {/* Reading timer badge */}
+            {timer.seconds >= 8 && (
+              <span className="hidden sm:flex items-center gap-1 rounded-lg bg-secondary/70 px-2 py-1 text-2xs font-semibold text-muted-foreground tabular-nums">
+                <Clock className="h-3 w-3" aria-hidden="true" />
+                {timer.formatted}
+              </span>
+            )}
+
             {/* Translation, promoted to the header. It shows the current choice
                 at a glance, which the old typography-menu placement did not. */}
             <button
@@ -458,25 +586,34 @@ export function Reader({
             {isPending && (
               <div className="space-y-3.5" aria-hidden="true">
                 {[97, 91, 99, 86, 94, 100, 88, 96, 92, 79].map((width, index) => (
-                  <div key={index} className="skeleton h-5" style={{ width: `${width}%` }} />
+                  <div
+                    key={index}
+                    className="skeleton h-5 rounded"
+                    style={{ width: `${width}%` }}
+                  />
                 ))}
-                <span className="sr-only">Loading chapter</span>
               </div>
             )}
 
-            {errorMessage && (
-              <div className="flex flex-col items-center gap-4 py-20 text-center">
+            {error && (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
                 <div
-                  className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
                   aria-hidden="true"
                 >
-                  {isOffline ? <WifiOff className="h-6 w-6" /> : <RefreshCw className="h-6 w-6" />}
+                  {isOffline ? (
+                    <WifiOff className="h-6 w-6" />
+                  ) : (
+                    <RefreshCw className="h-6 w-6" />
+                  )}
                 </div>
-                <p className="max-w-xs text-sm font-medium text-muted-foreground">
-                  {errorMessage}
-                </p>
-
-                <div className="flex flex-wrap items-center justify-center gap-2">
+                <div className="space-y-1">
+                  <p className="font-display text-base font-semibold text-foreground">
+                    {isOffline ? "You're offline" : "Couldn't load scripture"}
+                  </p>
+                  <p className="max-w-xs text-xs text-muted-foreground">{errorMessage}</p>
+                </div>
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -490,9 +627,6 @@ export function Reader({
                     />
                     Try again
                   </Button>
-
-                  {/* Not every translation carries every book, and the message
-                      says so — so offer the fix rather than only naming it. */}
                   {!isOffline && (
                     <Button
                       variant="ghost"
@@ -531,33 +665,37 @@ export function Reader({
                 >
                   {verses.map((verse) => {
                     const isSelected = selectedVerse === verse.verse;
+                    const isFocusable = isSelected || (selectedVerse === null && verse.verse === 1);
+                    const hlKey = verseKey(current.book, current.chapter, verse.verse);
+                    const hl = highlightsMap.get(hlKey);
+                    const hlPalette = hl ? HIGHLIGHT_PALETTE[hl.color] : null;
 
                     return (
                       <span
                         key={verse.verse}
                         role="button"
-                        tabIndex={0}
+                        tabIndex={isFocusable ? 0 : -1}
                         onClick={() => {
                           // A drag to select text ends in a click on the last
                           // verse touched. Honouring it would wipe the
-                          // selection the reader just made, which is why
-                          // selecting a phrase used to be impossible here.
+                          // selection the reader just made.
                           if (!wasTap() || hasTextSelection()) return;
                           setSelectedVerse(isSelected ? null : verse.verse);
                         }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            // Keyboard activation is never a drag.
                             pressStart.current = null;
                             setSelectedVerse(isSelected ? null : verse.verse);
                           }
                         }}
                         className={cn(
-                          "rounded-[3px] transition-colors duration-200",
+                          "relative rounded-[4px] px-0.5 transition-colors duration-200",
                           isSelected
-                            ? "bg-primary/15"
-                            : "hover:bg-primary/[0.06] focus-visible:bg-primary/[0.08]",
+                            ? "bg-primary/20 ring-2 ring-primary/40 ring-offset-1 ring-offset-background"
+                            : hlPalette
+                              ? cn(hlPalette.bgClass, hlPalette.borderClass)
+                              : "hover:bg-primary/[0.06] focus-visible:bg-primary/[0.08]",
                         )}
                         aria-label={`Verse ${verse.verse}`}
                         aria-pressed={isSelected}
@@ -566,14 +704,21 @@ export function Reader({
                           {verse.verse}
                         </sup>
                         {/* Sanitised in fetchChapter: text plus <i>/<b>/<br>. */}
-                        <span dangerouslySetInnerHTML={{ __html: verse.text }} />{" "}
+                        <span dangerouslySetInnerHTML={{ __html: verse.text }} />
+                        {hl?.note && (
+                          <span
+                            className="ml-1 inline-flex items-center align-middle text-primary"
+                            title={`Note: ${hl.note}`}
+                          >
+                            <MessageSquare className="h-3 w-3 inline opacity-80" aria-hidden="true" />
+                          </span>
+                        )}{" "}
                       </span>
                     );
                   })}
                 </article>
 
-                {/* End-of-chapter paging, so finishing offers the obvious next
-                    move without scrolling back up to the header. */}
+                {/* End-of-chapter paging */}
                 <nav
                   className="mt-12 flex items-center justify-between gap-3 border-t border-border/60 pt-5"
                   aria-label="Chapter navigation"
@@ -605,41 +750,23 @@ export function Reader({
           </div>
         </div>
 
-        {/* Verse actions, as a bar rather than inline buttons. Injecting
-            controls between verses reflowed the paragraph and shifted the text
-            out from under the reader's finger. */}
-        {selected && (
+        {/* Verse actions popover menu */}
+        {selected && current && (
           <div className="absolute inset-x-0 bottom-0 z-30 mb-[4.75rem] px-4 animate-slide-up">
-            <div className="mx-auto flex max-w-2xl items-center gap-2 rounded-2xl border border-border/60 bg-popover p-2 shadow-lg">
-              <span className="ml-1.5 shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
-                v{selected.verse}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  void copyText(citationFor(selected.verse, selected.text), "Verse copied")
+            <div className="mx-auto max-w-md">
+              <VerseHighlightMenu
+                book={current.book}
+                chapter={current.chapter}
+                verse={selected.verse}
+                verseText={stripTags(selected.text)}
+                currentHighlight={
+                  highlightsMap.get(verseKey(current.book, current.chapter, selected.verse)) ?? null
                 }
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-accent focus-ring"
-              >
-                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                Copy
-              </button>
-              <button
-                type="button"
-                onClick={() => void shareText(citationFor(selected.verse, selected.text))}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs font-semibold transition-colors hover:bg-accent focus-ring"
-              >
-                <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                Share
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedVerse(null)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary focus-ring"
-                aria-label="Dismiss verse actions"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+                onSetColor={handleSetHighlight}
+                onRemoveHighlight={handleRemoveHighlight}
+                onSaveNote={handleSaveNote}
+                onClose={() => setSelectedVerse(null)}
+              />
             </div>
           </div>
         )}

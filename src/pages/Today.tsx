@@ -10,6 +10,9 @@ import { UserProfile } from "@/components/UserProfile";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { FullPageSpinner } from "@/components/layout/FullPageSpinner";
 import { ProgressRing } from "@/components/ProgressRing";
+import { Confetti } from "@/components/Confetti";
+import { DailyVerse } from "@/components/DailyVerse";
+import { StreakVisualization } from "@/components/StreakVisualization";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useProgress } from "@/hooks/useProgress";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +27,7 @@ export default function Today() {
   const feedback = useFeedback();
   const { shouldShow: showOnboarding, isChecking, complete } = useOnboarding();
   const [openListId, setOpenListId] = useState<number | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const {
     todaysReadings,
@@ -31,6 +35,8 @@ export default function Today() {
     completedToday,
     isTodayComplete,
     streakCount,
+    bestStreak,
+    history,
     totalChaptersRead,
     averagePerDay,
     readingDay,
@@ -94,8 +100,12 @@ export default function Today() {
     // Only celebrate on the way up. Chiming when someone corrects a mistap
     // rewards the wrong action.
     if (!wasComplete) {
-      if (completedToday === CHAPTERS_PER_DAY - 1) feedback.dayComplete();
-      else feedback.chapterComplete();
+      if (completedToday === CHAPTERS_PER_DAY - 1) {
+        feedback.dayComplete();
+        setShowConfetti(true);
+      } else {
+        feedback.chapterComplete();
+      }
     }
 
     toggleReading(today, listId);
@@ -108,6 +118,8 @@ export default function Today() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
+      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
+
       <header className="glass safe-top sticky top-0 z-40 border-b border-border/50">
         <div className="mx-auto flex h-14 max-w-md items-center justify-between px-5">
           <UserProfile size="sm" showName={false} linkToProfile={isAuthenticated} />
@@ -122,7 +134,7 @@ export default function Today() {
 
       <main className="mx-auto max-w-md px-5 pb-28 pt-7">
         {/* ── Greeting ── */}
-        <div className="mb-6">
+        <div className="mb-5">
           <p className="text-2xs font-bold uppercase tracking-[0.1em] text-muted-foreground">
             {formatLongDate(today)} · Day {readingDay.toLocaleString()}
           </p>
@@ -130,6 +142,9 @@ export default function Today() {
             {greetingFor()}, {firstName}
           </h1>
         </div>
+
+        {/* ── Daily Inspiration ── */}
+        <DailyVerse readingDay={readingDay} />
 
         {/* ── Hero ──
             The single most important thing on the page: how far through today
@@ -262,6 +277,13 @@ export default function Today() {
             ))}
           </ul>
         </section>
+
+        {/* ── 30-Day Activity Strip ── */}
+        <StreakVisualization
+          history={history}
+          streakCount={streakCount}
+          bestStreak={bestStreak}
+        />
 
         {/* ── Activity ── */}
         <section aria-labelledby="activity-history" className="mt-8">

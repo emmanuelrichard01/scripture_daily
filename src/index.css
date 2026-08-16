@@ -114,6 +114,76 @@
     --glass: 234 24% 8% / 0.72;
   }
 
+  .sepia {
+    --background: 35 38% 92%;
+    --foreground: 28 35% 18%;
+
+    --card: 37 42% 96%;
+    --card-foreground: 28 35% 18%;
+
+    --popover: 37 42% 96%;
+    --popover-foreground: 28 35% 18%;
+
+    --primary: 28 65% 38%;
+    --primary-foreground: 37 42% 96%;
+
+    --secondary: 35 25% 86%;
+    --secondary-foreground: 28 30% 24%;
+
+    --muted: 35 22% 86%;
+    --muted-foreground: 28 15% 42%;
+
+    --accent: 35 24% 84%;
+    --accent-foreground: 28 30% 24%;
+
+    --success: 154 50% 32%;
+    --success-foreground: 0 0% 100%;
+
+    --destructive: 4 65% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 35 20% 80%;
+    --input: 35 20% 80%;
+    --ring: 28 65% 38%;
+
+    --glass: 35 38% 92% / 0.75;
+  }
+
+  .midnight {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 93%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 93%;
+
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 215 100% 65%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 85%;
+
+    --success: 154 60% 50%;
+    --success-foreground: 0 0% 0%;
+
+    --destructive: 4 80% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 215 100% 65%;
+
+    --glass: 0 0% 0% / 0.85;
+  }
+
   /*
    * List accents.
    *
