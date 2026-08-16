@@ -308,8 +308,43 @@
   /* Sticky chrome. `saturate` keeps colour behind the blur from going muddy. */
   .glass {
     background-color: hsl(var(--glass));
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+  }
+
+  .glass-elevated {
+    background-color: hsl(var(--card) / 0.82);
+    backdrop-filter: blur(28px) saturate(200%);
+    -webkit-backdrop-filter: blur(28px) saturate(200%);
+    box-shadow: 0 4px 20px -2px hsl(var(--foreground) / 0.07), 0 0 0 1px hsl(var(--border) / 0.5);
+  }
+
+  /* Apple-style segmented control container */
+  .segmented-control {
+    @apply flex items-center rounded-2xl bg-secondary/70 p-1 backdrop-blur-md;
+    box-shadow: inset 0 1px 2px hsl(var(--foreground) / 0.04);
+  }
+
+  .segmented-item {
+    @apply relative flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-all duration-200;
+  }
+
+  .segmented-item-active {
+    @apply bg-card text-foreground shadow-sm;
+  }
+
+  .segmented-item-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-card/40;
+  }
+
+  /* Inset grouped cards (Apple Settings & Sheets style) */
+  .inset-group {
+    @apply overflow-hidden rounded-2xl border border-border/60 bg-card divide-y divide-border/50;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .inset-row {
+    @apply flex items-center justify-between p-4 transition-colors hover:bg-secondary/30;
   }
 
   /* Hero numerals — the one place the display face earns its weight. */
@@ -365,6 +400,28 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  .ambient-glow {
+    position: relative;
+  }
+
+  .ambient-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary) / 0.35),
+      transparent 60%,
+      hsl(var(--accent) / 0.2)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
 }
 
 @keyframes shimmer {
@@ -384,9 +441,37 @@
   }
 }
 
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes floatSubtle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
 /* Staggered entrance for lists. The delay is set inline per item. */
 .animate-rise {
   animation: rise 400ms var(--ease-out) both;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: floatSubtle 3s ease-in-out infinite;
 }
 
 /*

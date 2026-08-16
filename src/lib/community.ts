@@ -12,8 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { daysBetween, todayISO, type ISODate } from "@/lib/date";
 import { isUserId, type CommunityProfile, type FriendSummary, type PendingRequest } from "@/lib/friends";
 
-export type { CommunityProfile, FriendSummary, PendingRequest } from "@/lib/friends";
+export type { CommunityProfile, EncouragementQuote, FriendSummary, PendingRequest } from "@/lib/friends";
 export {
+  ENCOURAGEMENT_QUOTES,
   activityLabel,
   couldUseEncouragement,
   firstNameOf,
@@ -23,6 +24,45 @@ export {
   nameOf,
   recentWindow,
 } from "@/lib/friends";
+
+/**
+ * Sends a friend an encouragement push.
+ *
+ * Goes through the app's own API rather than straight to Supabase: delivering a
+ * push needs the VAPID private key and the recipient's subscription rows, and
+ * neither may ever reach the browser. The endpoint re-checks the friendship
+ * server-side, so a caller cannot notify a stranger by editing the id.
+ */
+export async function sendNudge(
+  friendId: string,
+  options?: {
+    message?: string;
+    scriptureQuote?: { reference: string; text: string };
+  },
+): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Sign in again to send encouragement.");
+
+  const response = await fetch("/api/nudge", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      friendId,
+      message: options?.message,
+      scriptureQuote: options?.scriptureQuote,
+    }),
+  });
+
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error ?? "Couldn't send that right now.");
+  }
+}
 
 /** Query keys, centralised so invalidation cannot drift from the queries. */
 export const communityKeys = {
@@ -250,33 +290,4 @@ export async function respondToRequest(
 export async function removeFriendship(friendshipId: string): Promise<void> {
   const { error } = await supabase.from("friendships").delete().eq("id", friendshipId);
   if (error) throw new Error(error.message);
-}
-
-/**
- * Sends a friend an encouragement push.
- *
- * Goes through the app's own API rather than straight to Supabase: delivering a
- * push needs the VAPID private key and the recipient's subscription rows, and
- * neither may ever reach the browser. The endpoint re-checks the friendship
- * server-side, so a caller cannot notify a stranger by editing the id.
- */
-export async function sendNudge(friendId: string): Promise<void> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Sign in again to send encouragement.");
-
-  const response = await fetch("/api/nudge", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ friendId }),
-  });
-
-  const body = (await response.json().catch(() => null)) as { error?: string } | null;
-
-  if (!response.ok) {
-    throw new Error(body?.error ?? "Couldn't send that right now.");
-  }
 }

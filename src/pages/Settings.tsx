@@ -28,13 +28,6 @@ import { UserProfile } from "@/components/UserProfile";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -51,6 +44,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { translationInfo, type ThemePreference } from "@/contexts/SettingsContext";
 import { todayISO } from "@/lib/date";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const THEME_OPTIONS = [
@@ -84,8 +78,6 @@ export default function Settings() {
 
   const totalCycles = listPositions.reduce((sum, p) => sum + p.completedCycles, 0);
   const translation = translationInfo(settings.translation);
-  const ThemeIcon =
-    THEME_OPTIONS.find((option) => option.value === settings.theme)?.icon ?? Monitor;
 
   const handleExport = () => {
     // A self-describing envelope, so a backup taken today can still be
@@ -233,29 +225,33 @@ export default function Settings() {
         </SettingsSection>
 
         <SettingsSection title="Appearance">
-          <SettingsRow
-            label="Theme"
-            action={
-              <Select
-                value={settings.theme}
-                onValueChange={(value) =>
-                  updateSettings({ theme: value as ThemePreference })
-                }
-              >
-                <SelectTrigger className="h-11 w-32 gap-2" aria-label="Theme">
-                  <ThemeIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {THEME_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            }
-          />
+          <div className="p-4 space-y-3">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Theme Palette
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {THEME_OPTIONS.map((option) => {
+                const isSelected = settings.theme === option.value;
+                const Icon = option.icon as React.ElementType;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateSettings({ theme: option.value as ThemePreference })}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1.5 rounded-2xl border p-2.5 transition-all focus-ring",
+                      isSelected
+                        ? "border-primary bg-primary/[0.08] shadow-sm text-primary font-bold"
+                        : "border-border/60 bg-secondary/30 text-muted-foreground hover:bg-secondary/60",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-3xs font-semibold">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <SettingsRow
             label="Sound"
             description="A soft tone when you mark a chapter"

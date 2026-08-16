@@ -102,3 +102,49 @@ export function couldUseEncouragement(friend: FriendSummary): boolean {
 export function recentWindow(today: ISODate = todayISO()): ISODate[] {
   return Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
 }
+
+export interface EncouragementQuote {
+  readonly id: string;
+  readonly reference: string;
+  readonly text: string;
+  readonly theme: string;
+}
+
+export const ENCOURAGEMENT_QUOTES: readonly EncouragementQuote[] = [
+  {
+    id: "1thess-5-11",
+    reference: "1 Thessalonians 5:11",
+    text: "Therefore encourage one another and build one another up, just as you are doing.",
+    theme: "Fellowship",
+  },
+  {
+    id: "gal-6-9",
+    reference: "Galatians 6:9",
+    text: "And let us not grow weary of doing good, for in due season we will reap, if we do not give up.",
+    theme: "Perseverance",
+  },
+  {
+    id: "heb-10-24",
+    reference: "Hebrews 10:24–25",
+    text: "Let us consider how to stir up one another to love and good works.",
+    theme: "Community",
+  },
+  {
+    id: "josh-1-9",
+    reference: "Joshua 1:9",
+    text: "Be strong and courageous. For the Lord your God is with you wherever you go.",
+    theme: "Courage",
+  },
+  {
+    id: "ps-119-105",
+    reference: "Psalm 119:105",
+    text: "Your word is a lamp to my feet and a light to my path.",
+    theme: "Word of God",
+  },
+  {
+    id: "col-3-16",
+    reference: "Colossians 3:16",
+    text: "Let the word of Christ dwell in you richly in all wisdom.",
+    theme: "Devotion",
+  },
+];

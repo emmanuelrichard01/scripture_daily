@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookMarked, CalendarClock, Home, Settings, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { communityKeys, fetchFriends, fetchIncomingRequests } from "@/lib/community";
@@ -16,6 +16,15 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  const incomingQuery = useQuery({
+    queryKey: user?.id ? communityKeys.incoming(user.id) : ["community", "incoming", "none"],
+    queryFn: () => (user?.id ? fetchIncomingRequests(user.id) : Promise.resolve([])),
+    enabled: Boolean(user?.id),
+    staleTime: 30_000,
+  });
+
+  const incomingCount = incomingQuery.data?.length ?? 0;
 
   const handlePrefetch = (path: string) => {
     if (path === "/community" && user?.id) {
@@ -36,49 +45,64 @@ export function BottomNav() {
       aria-label="Main"
     >
       <ul className="mx-auto flex h-[66px] max-w-lg items-stretch justify-around px-1">
-        {NAV_ITEMS.map((item) => (
-          <li key={item.to} className="flex flex-1">
-            <NavLink
-              to={item.to}
-              end={item.end}
-              onPointerEnter={() => handlePrefetch(item.to)}
-              onFocus={() => handlePrefetch(item.to)}
-              className={({ isActive }) =>
-                cn(
-                  "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 focus-ring",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {/* A filled pill behind the active icon rather than a top
-                      rule — it survives the glass blur, which a 3px line
-                      visually does not. */}
-                  {isActive && (
-                    <span
-                      className="absolute inset-x-3 inset-y-1.5 rounded-xl bg-primary/10"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <item.icon
-                    className="relative h-[21px] w-[21px] transition-transform duration-200 ease-spring"
-                    strokeWidth={isActive ? 2.4 : 1.9}
-                    aria-hidden="true"
-                  />
-                  <span
-                    className={cn(
-                      "relative text-[10px] leading-none tracking-wide",
-                      isActive ? "font-bold" : "font-semibold",
+        {NAV_ITEMS.map((item) => {
+          const isCommunity = item.to === "/community";
+          const hasBadge = isCommunity && incomingCount > 0;
+
+          return (
+            <li key={item.to} className="flex flex-1">
+              <NavLink
+                to={item.to}
+                end={item.end}
+                onPointerEnter={() => handlePrefetch(item.to)}
+                onFocus={() => handlePrefetch(item.to)}
+                className={({ isActive }) =>
+                  cn(
+                    "relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 focus-ring",
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {/* A filled pill behind the active icon rather than a top
+                        rule — it survives the glass blur, which a 3px line
+                        visually does not. */}
+                    {isActive && (
+                      <span
+                        className="absolute inset-x-3 inset-y-1.5 rounded-xl bg-primary/10"
+                        aria-hidden="true"
+                      />
                     )}
-                  >
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          </li>
-        ))}
+                    <div className="relative">
+                      <item.icon
+                        className="relative h-[21px] w-[21px] transition-transform duration-200 ease-spring"
+                        strokeWidth={isActive ? 2.4 : 1.9}
+                        aria-hidden="true"
+                      />
+                      {hasBadge && (
+                        <span
+                          className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-track-orange px-1 text-3xs font-bold text-white shadow-sm"
+                          aria-label={`${incomingCount} pending requests`}
+                        >
+                          {incomingCount}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "relative text-[10px] leading-none tracking-wide",
+                        isActive ? "font-bold" : "font-semibold",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

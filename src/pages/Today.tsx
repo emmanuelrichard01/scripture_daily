@@ -20,7 +20,7 @@ import { useFeedback } from "@/hooks/useFeedback";
 import { useMilestoneToasts } from "@/hooks/useMilestoneToasts";
 import { formatLongDate, greetingFor, todayISO } from "@/lib/date";
 import { CHAPTERS_PER_DAY } from "@/lib/readingPlan";
-import { pluralize } from "@/lib/utils";
+import { cn, pluralize } from "@/lib/utils";
 
 export default function Today() {
   const { user } = useAuth();
@@ -111,6 +111,14 @@ export default function Today() {
     toggleReading(today, listId);
   };
 
+  const [filterMode, setFilterMode] = useState<"all" | "remaining" | "completed">("all");
+
+  const filteredReadings = useMemo(() => {
+    if (filterMode === "remaining") return todaysReadings.filter((r) => !r.completed);
+    if (filterMode === "completed") return todaysReadings.filter((r) => r.completed);
+    return todaysReadings;
+  }, [todaysReadings, filterMode]);
+
   if (isChecking) return <FullPageSpinner label="Starting Scripture Daily" />;
   if (showOnboarding) return <OnboardingFlow onComplete={complete} />;
 
@@ -155,11 +163,11 @@ export default function Today() {
         >
           {/* A soft accent wash behind the ring, warming on completion. */}
           <div
-            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl transition-colors duration-700"
+            className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl transition-colors duration-700 animate-pulse-glow"
             style={{
               backgroundColor: isTodayComplete
-                ? "hsl(var(--success) / 0.16)"
-                : "hsl(var(--primary) / 0.1)",
+                ? "hsl(var(--success) / 0.2)"
+                : "hsl(var(--primary) / 0.14)",
             }}
             aria-hidden="true"
           />
@@ -187,7 +195,7 @@ export default function Today() {
 
             <div className="min-w-0 flex-1">
               <h2 className="font-display text-lg font-semibold leading-snug">
-                {isTodayComplete ? "Today is complete" : "Today's reading"}
+                {isTodayComplete ? "Today is complete! 🎉" : "Today's reading"}
               </h2>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 {isTodayComplete
@@ -219,7 +227,7 @@ export default function Today() {
               className="relative mt-5 flex w-full items-center justify-between gap-3 rounded-2xl bg-primary px-4 py-3.5 text-primary-foreground shadow-md transition-transform duration-200 hover:brightness-110 active:scale-[0.985] focus-ring"
             >
               <span className="min-w-0 text-left">
-                <span className="block text-2xs font-bold uppercase tracking-[0.08em] opacity-75">
+                <span className="block text-2xs font-bold uppercase tracking-[0.08em] opacity-80">
                   {completedToday === 0 ? "Start with" : "Continue with"}
                 </span>
                 <span className="mt-0.5 block truncate font-display text-base font-semibold">
@@ -250,23 +258,44 @@ export default function Today() {
           ))}
         </section>
 
-        {/* ── The ten ── */}
+        {/* ── The ten with quick filter chips ── */}
         <section aria-labelledby="todays-chapters" className="mt-8">
-          <div className="mb-3 flex items-baseline justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <h2 id="todays-chapters" className="section-label">
               Today's chapters
             </h2>
-            <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-              {completedToday}/{CHAPTERS_PER_DAY}
-            </span>
+            <div className="flex items-center gap-1 rounded-xl bg-secondary/50 p-0.5">
+              {(["all", "remaining", "completed"] as const).map((mode) => {
+                const isSelected = filterMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setFilterMode(mode)}
+                    className={cn(
+                      "rounded-lg px-2 py-1 text-3xs font-bold uppercase tracking-wider transition-all",
+                      isSelected
+                        ? "bg-card text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {mode === "all"
+                      ? "All 10"
+                      : mode === "remaining"
+                        ? `${CHAPTERS_PER_DAY - completedToday} Left`
+                        : `${completedToday} Done`}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <ul className="space-y-2">
-            {todaysReadings.map((reading, index) => (
+            {filteredReadings.map((reading, index) => (
               <li
                 key={reading.listId}
                 className="animate-rise"
-                style={{ animationDelay: `${index * 35}ms` }}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
                 <ReadingCard
                   reading={reading}

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen, Moon, Sparkles, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { readingLists } from "@/lib/readingPlan";
+import { useSettings } from "@/hooks/useSettings";
+import { type ThemePreference, type TranslationId } from "@/contexts/SettingsContext";
 import { cn } from "@/lib/utils";
 
 interface OnboardingFlowProps {
@@ -10,48 +12,21 @@ interface OnboardingFlowProps {
 }
 
 /**
- * First-run walkthrough.
+ * Premium 4-step interactive onboarding & setup walkthrough.
  *
- * Each step carries a purpose-built illustration rather than a generic icon,
- * because the thing that needs explaining — ten independent lists advancing at
- * different rates — is genuinely spatial and hard to convey in a sentence.
- *
- * A plain step index rather than a carousel library: four static panels do not
- * justify Embla's bundle cost or its imperative API.
+ * Step 1: The 10-List Halo (Interactive list exploration)
+ * Step 2: The 10 Genre Tracks (Why Horner's system is balanced)
+ * Step 3: Position Over Date (Interactive demo showing zero-guilt bookmarking)
+ * Step 4: Your Personal Setup (Directly select Translation, Theme, and Reminder)
  */
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
+  const [simulatedDay, setSimulatedDay] = useState(1);
+  const { settings, updateSettings } = useSettings();
   const navigate = useNavigate();
 
-  const steps = [
-    {
-      id: "welcome",
-      art: <WelcomeArt />,
-      title: "Ten chapters a day",
-      body: "Professor Grant Horner's reading system takes you through the whole Bible, again and again, without ever losing your place.",
-    },
-    {
-      id: "lists",
-      art: <ListsArt />,
-      title: "Ten lists, one chapter each",
-      body: "Scripture is split across ten lists — Gospels, Pentateuch, Psalms, Proverbs and more. Each day you read one chapter from every list.",
-    },
-    {
-      id: "combinations",
-      art: <CombinationsArt />,
-      title: "The pairings never repeat",
-      body: "The lists run from 28 to 250 chapters, so they cycle at different rates. The particular ten chapters you read today won't recur for years.",
-    },
-    {
-      id: "pace",
-      art: <PaceArt />,
-      title: "Miss a day? Just carry on",
-      body: "Your place is remembered per list, never by the calendar. There's nothing to catch up on and no streak to repair — you pick up exactly where you stopped.",
-    },
-  ] as const;
-
-  const isLast = step === steps.length - 1;
-  const current = steps[step];
+  const isLast = step === 3;
 
   const finish = (destination?: string) => {
     onComplete();
@@ -59,80 +34,206 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <div className="safe-top flex h-14 items-center justify-end px-5">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      {/* Top Bar */}
+      <div className="safe-top flex h-14 items-center justify-between px-6">
+        <div className="flex items-center gap-2">
+          <img
+            src="/icon-192.png"
+            alt="Scripture Daily"
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-lg shadow-sm"
+          />
+          <span className="font-display text-sm font-bold tracking-tight">Scripture Daily</span>
+        </div>
+
         {!isLast && (
           <button
             type="button"
             onClick={() => finish()}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
+            className="rounded-xl px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring"
           >
             Skip
           </button>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-        {/* Keyed so the illustration re-mounts and re-animates per step. */}
-        <div key={current.id} className="animate-rise mb-10">
-          {current.art}
-        </div>
+      {/* Main Slide Content */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+        {step === 0 && (
+          <div className="w-full max-w-sm animate-rise">
+            <InteractiveHaloArt
+              selectedIndex={selectedTrackIndex}
+              onSelect={setSelectedTrackIndex}
+            />
+            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
+              Ten chapters a day.
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Professor Grant Horner’s reading system takes you through the whole Bible across ten simultaneous tracks, cycling at independent speeds.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-foreground">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{
+                  backgroundColor: `hsl(var(${readingLists[selectedTrackIndex].colorVar}))`,
+                }}
+              />
+              <span>
+                Track {selectedTrackIndex + 1}: {readingLists[selectedTrackIndex].name} ({readingLists[selectedTrackIndex].totalChapters} ch)
+              </span>
+            </div>
+          </div>
+        )}
 
-        <h1
-          key={`${current.id}-title`}
-          className="animate-rise mb-3 max-w-sm text-balance font-display text-[1.75rem] font-semibold leading-tight tracking-tight"
-          style={{ animationDelay: "60ms" }}
-        >
-          {current.title}
-        </h1>
+        {step === 1 && (
+          <div className="w-full max-w-sm animate-rise">
+            <InteractiveListsArt />
+            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
+              Pairings that never repeat.
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Because lists range from 28 chapters (Acts) to 250 chapters (Prophets), the exact combination of ten chapters you read today won’t repeat for years.
+            </p>
+          </div>
+        )}
 
-        <p
-          key={`${current.id}-body`}
-          className="animate-rise max-w-sm text-pretty leading-relaxed text-muted-foreground"
-          style={{ animationDelay: "120ms" }}
-        >
-          {current.body}
-        </p>
+        {step === 2 && (
+          <div className="w-full max-w-sm animate-rise">
+            <InteractivePaceArt
+              simulatedDay={simulatedDay}
+              onToggleDay={() => setSimulatedDay((d) => (d === 1 ? 5 : 1))}
+            />
+            <h1 className="mt-8 font-display text-2xl font-bold leading-tight tracking-tight">
+              No guilt. No backlog.
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Your bookmarks are remembered per list, never by the calendar date. If you miss a day or a week, you pick up exactly where you left off.
+            </p>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="w-full max-w-sm animate-rise text-left">
+            <div className="mb-4 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Sparkles className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <h1 className="font-display text-2xl font-bold tracking-tight">
+                Personalize Your Setup
+              </h1>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set your preferred translation and theme before starting.
+              </p>
+            </div>
+
+            <div className="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+              {/* Translation Selection */}
+              <div>
+                <label className="mb-1.5 block text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Default Translation
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(["ESV", "NIV", "NLT", "KJV"] as TranslationId[]).map((code) => {
+                    const isSelected = settings.translation === code;
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => updateSettings({ translation: code })}
+                        className={cn(
+                          "flex flex-col items-center justify-center rounded-xl border py-2 text-xs font-bold transition-all focus-ring",
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border/60 bg-secondary/40 text-foreground hover:bg-secondary",
+                        )}
+                      >
+                        <span>{code}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Theme Selection */}
+              <div>
+                <label className="mb-1.5 block text-2xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Reading Theme
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[
+                    { id: "light", label: "Ivory", icon: Sun },
+                    { id: "dark", label: "OLED", icon: Moon },
+                    { id: "sepia", label: "Sepia", icon: BookOpen },
+                    { id: "midnight", label: "AMOLED", icon: Sparkles },
+                  ].map((t) => {
+                    const isSelected = settings.theme === t.id;
+                    const Icon = t.icon;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => updateSettings({ theme: t.id as ThemePreference })}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-1 rounded-xl border py-2 text-xs font-semibold transition-all focus-ring",
+                          isSelected
+                            ? "border-primary bg-primary/[0.08] text-primary shadow-sm"
+                            : "border-border/60 bg-secondary/40 text-muted-foreground hover:bg-secondary",
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="text-3xs font-bold">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="safe-bottom flex flex-col items-center gap-6 px-8 pb-10 pt-8">
+      {/* Navigation Footer */}
+      <div className="safe-bottom flex flex-col items-center gap-5 px-6 pb-8 pt-4">
+        {/* Step Indicator Pills */}
         <div className="flex gap-2" role="tablist" aria-label="Walkthrough steps">
-          {steps.map((item, index) => (
+          {[0, 1, 2, 3].map((index) => (
             <button
-              key={item.id}
+              key={index}
               type="button"
               role="tab"
               aria-selected={index === step}
-              aria-label={`Step ${index + 1}: ${item.title}`}
+              aria-label={`Step ${index + 1}`}
               onClick={() => setStep(index)}
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300 ease-out-expo focus-ring",
-                index === step ? "w-7 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/40",
+                index === step ? "w-8 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/40",
               )}
             />
           ))}
         </div>
 
         {isLast ? (
-          <div className="w-full max-w-xs space-y-2.5">
+          <div className="w-full max-w-sm space-y-2">
             <Button
               onClick={() => finish()}
-              className="h-13 w-full rounded-2xl text-base font-bold shadow-md"
+              className="h-13 w-full rounded-2xl text-base font-bold shadow-lg"
             >
-              Start reading
+              Start Reading Today
             </Button>
             <Button
               variant="ghost"
               onClick={() => finish("/auth")}
-              className="h-11 w-full rounded-2xl text-sm font-medium text-muted-foreground"
+              className="h-11 w-full rounded-2xl text-xs font-semibold text-muted-foreground"
             >
-              Create an account to sync
+              Sign in to enable cloud sync
             </Button>
           </div>
         ) : (
           <Button
             onClick={() => setStep((value) => value + 1)}
-            className="h-13 w-full max-w-xs gap-2 rounded-2xl text-base font-bold shadow-md"
+            className="h-13 w-full max-w-sm gap-2 rounded-2xl text-base font-bold shadow-lg"
           >
             Continue
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -143,158 +244,147 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   );
 }
 
-/* ────────────────────────────── Illustrations ──────────────────────────────
- *
- * Inline SVG rather than image assets: they inherit theme colours through
- * `currentColor` and the CSS custom properties, stay crisp at any density, and
- * add nothing to the network payload.
- */
+/* ────────────────────────────── Interactive Visuals ────────────────────────────── */
 
-/**
- * The app mark itself, haloed by the ten list colours.
- *
- * The opening step is where the product introduces itself, so it leads with the
- * icon the user will see on their home screen rather than an abstract drawing —
- * it ties the walkthrough to the thing they just installed.
- */
-function WelcomeArt() {
-  const RADIUS = 74;
+function InteractiveHaloArt({
+  selectedIndex,
+  onSelect,
+}: {
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const RADIUS = 78;
 
   return (
-    <div className="relative flex h-[168px] w-[168px] items-center justify-center">
-      {/* Ten dots on a ring, one per list, in list order. */}
+    <div className="relative mx-auto flex h-[180px] w-[180px] items-center justify-center">
       <svg
         className="absolute inset-0"
-        width="168"
-        height="168"
-        viewBox="0 0 168 168"
+        width="180"
+        height="180"
+        viewBox="0 0 180 180"
         fill="none"
         aria-hidden="true"
       >
+        <circle cx="90" cy="90" r={RADIUS} stroke="hsl(var(--border) / 0.6)" strokeWidth="1.5" strokeDasharray="3 3" />
         {readingLists.map((list, index) => {
-          // Start at 12 o'clock and step clockwise.
           const angle = (index / readingLists.length) * Math.PI * 2 - Math.PI / 2;
+          const isSelected = index === selectedIndex;
+          const cx = 90 + Math.cos(angle) * RADIUS;
+          const cy = 90 + Math.sin(angle) * RADIUS;
+
+          return (
+            <g
+              key={list.id}
+              onClick={() => onSelect(index)}
+              className="cursor-pointer transition-transform duration-200 hover:scale-125"
+            >
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isSelected ? 10 : 6}
+                fill={`hsl(var(${list.colorVar}))`}
+                className="transition-all duration-300"
+              />
+              {isSelected && (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="13"
+                  stroke={`hsl(var(${list.colorVar}))`}
+                  strokeWidth="2"
+                  fill="none"
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/20 bg-card p-3 shadow-md">
+        <img
+          src="/icon-192.png"
+          alt="Scripture Daily"
+          width={56}
+          height={56}
+          className="h-14 w-14 rounded-xl"
+        />
+      </div>
+    </div>
+  );
+}
+
+function InteractiveListsArt() {
+  const longest = Math.max(...readingLists.map((list) => list.totalChapters));
+
+  return (
+    <div className="mx-auto rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+      <svg width="240" height="150" viewBox="0 0 240 150" fill="none" className="mx-auto" aria-hidden="true">
+        {readingLists.map((list, index) => {
+          const width = 28 + (list.totalChapters / longest) * 190;
+          return (
+            <g key={list.id}>
+              <rect
+                x="8"
+                y={6 + index * 14}
+                width={width}
+                height="8"
+                rx="4"
+                fill={`hsl(var(${list.colorVar}))`}
+                opacity={0.85}
+              />
+              <circle cx="12" cy={10 + index * 14} r="2.5" fill="hsl(var(--card))" />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function InteractivePaceArt({
+  simulatedDay,
+  onToggleDay,
+}: {
+  simulatedDay: number;
+  onToggleDay: () => void;
+}) {
+  return (
+    <div className="mx-auto rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+      <svg width="240" height="110" viewBox="0 0 240 110" fill="none" className="mx-auto" aria-hidden="true">
+        <path
+          d="M20 70c26 0 26-40 52-40s26 40 52 40 26-40 52-40 26 40 44 40"
+          stroke="hsl(var(--border))"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+        />
+        {[20, 72, 124, 176, 220].map((x, index) => {
+          const isSkipped = index === 2 && simulatedDay === 1;
           return (
             <circle
-              key={list.id}
-              cx={84 + Math.cos(angle) * RADIUS}
-              cy={84 + Math.sin(angle) * RADIUS}
-              r="6"
-              fill={`hsl(var(${list.colorVar}))`}
+              key={x}
+              cx={x}
+              cy={index % 2 === 0 ? 70 : 30}
+              r={isSkipped ? 6 : 9}
+              fill={isSkipped ? "hsl(var(--background))" : "hsl(var(--primary))"}
+              stroke={isSkipped ? "hsl(var(--destructive))" : "none"}
+              strokeWidth="2.5"
+              strokeDasharray={isSkipped ? "3 3" : undefined}
             />
           );
         })}
       </svg>
 
-      <img
-        src="/icon-192.png"
-        alt=""
-        width={96}
-        height={96}
-        className="h-24 w-24 rounded-[1.4rem] shadow-lg"
-      />
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onToggleDay}
+          className="h-8 rounded-xl text-3xs font-bold"
+        >
+          {simulatedDay === 1 ? "Simulate: Missed a day" : "Simulate: Regular pace"}
+        </Button>
+      </div>
     </div>
-  );
-}
-
-/** Ten stacked bars at proportional lengths — the lists and their sizes. */
-function ListsArt() {
-  const longest = Math.max(...readingLists.map((list) => list.totalChapters));
-
-  return (
-    <svg width="200" height="140" viewBox="0 0 200 140" fill="none" aria-hidden="true">
-      {readingLists.map((list, index) => {
-        const width = 24 + (list.totalChapters / longest) * 152;
-        return (
-          <g key={list.id}>
-            <rect
-              x="12"
-              y={8 + index * 13}
-              width={width}
-              height="8"
-              rx="4"
-              fill={`hsl(var(${list.colorVar}))`}
-            />
-            {/* The chapter you read today: the leading edge of every list. */}
-            <circle cx="16" cy={12 + index * 13} r="2.5" fill="hsl(var(--card))" />
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-/** Offset markers drifting apart — why combinations don't repeat. */
-function CombinationsArt() {
-  const rows = [0, 1, 2, 3, 4];
-
-  return (
-    <svg width="200" height="140" viewBox="0 0 200 140" fill="none" aria-hidden="true">
-      {rows.map((row) => (
-        <g key={row}>
-          <line
-            x1="12"
-            y1={22 + row * 24}
-            x2="188"
-            y2={22 + row * 24}
-            stroke="hsl(var(--border))"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          {[0, 1, 2, 3].map((tick) => (
-            <circle
-              key={tick}
-              // Each list advances at its own rate, so the markers fan out.
-              // Spacing is bounded so the widest row still lands inside the
-              // line rather than clipping at the viewBox edge.
-              cx={22 + tick * 42 + row * 8}
-              cy={22 + row * 24}
-              r="5"
-              fill={`hsl(var(${readingLists[row * 2].colorVar}))`}
-              opacity={tick === 0 ? 1 : 0.75 - tick * 0.15}
-            />
-          ))}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/** A path with a gap that simply continues — missing a day costs nothing. */
-function PaceArt() {
-  return (
-    <svg width="200" height="130" viewBox="0 0 200 130" fill="none" aria-hidden="true">
-      <path
-        d="M16 88c22 0 22-46 44-46s22 46 44 46 22-46 44-46 22 46 36 46"
-        stroke="hsl(var(--border))"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      {[16, 60, 104, 148, 184].map((x, index) => {
-        const skipped = index === 2;
-        return (
-          <circle
-            key={x}
-            cx={x}
-            cy={index % 2 === 0 ? 88 : 42}
-            r={skipped ? 6 : 8}
-            fill={skipped ? "hsl(var(--background))" : "hsl(var(--primary))"}
-            stroke={skipped ? "hsl(var(--border))" : "none"}
-            strokeWidth="2.5"
-            strokeDasharray={skipped ? "3 3" : undefined}
-          />
-        );
-      })}
-      <text
-        x="104"
-        y="122"
-        textAnchor="middle"
-        className="fill-muted-foreground"
-        fontSize="11"
-        fontWeight="600"
-      >
-        a missed day, and the path continues
-      </text>
-    </svg>
   );
 }

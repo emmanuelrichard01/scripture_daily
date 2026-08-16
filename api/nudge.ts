@@ -84,8 +84,30 @@ export default async function handler(
   if (!token) return send(response, 401, { error: "Sign in to send encouragement." });
 
   let friendId: unknown;
+  let customMessage: string | undefined;
+  let scriptureQuote: { reference?: string; text?: string } | undefined;
   try {
-    ({ friendId } = JSON.parse(await readBody(request)) as { friendId?: unknown });
+    const parsed = JSON.parse(await readBody(request)) as {
+      friendId?: unknown;
+      message?: unknown;
+      scriptureQuote?: unknown;
+    };
+    friendId = parsed.friendId;
+    if (typeof parsed.message === "string") {
+      customMessage = parsed.message.trim().slice(0, 140);
+    }
+    if (
+      parsed.scriptureQuote &&
+      typeof parsed.scriptureQuote === "object" &&
+      "reference" in parsed.scriptureQuote &&
+      "text" in parsed.scriptureQuote
+    ) {
+      const quote = parsed.scriptureQuote as { reference: string; text: string };
+      scriptureQuote = {
+        reference: String(quote.reference).slice(0, 60),
+        text: String(quote.text).slice(0, 180),
+      };
+    }
   } catch {
     return send(response, 400, { error: "Malformed request" });
   }
@@ -180,9 +202,16 @@ export default async function handler(
       (typeof metadata?.full_name === "string" && metadata.full_name) ||
       "A friend";
 
+    let notificationBody = "Your ten chapters are waiting.";
+    if (scriptureQuote) {
+      notificationBody = `"${scriptureQuote.text}" — ${scriptureQuote.reference}`;
+    } else if (customMessage) {
+      notificationBody = customMessage;
+    }
+
     const payload = JSON.stringify({
-      title: `${senderName} is cheering you on`,
-      body: "Your ten chapters are waiting.",
+      title: `${senderName} sent you encouragement`,
+      body: notificationBody,
       url: "/",
     });
 
