@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, QrCode, Share2, Sparkles } from "lucide-react";
+import { Check, Copy, QrCode, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,10 +18,7 @@ interface QRCodeModalProps {
 }
 
 /**
- * QR Code & Share modal for in-person friend adding.
- *
- * Uses an interactive visual share card with high-density QR code rendering,
- * copyable link, and native Web Share integration.
+ * Clean QR Code & Share modal for in-person friend adding.
  */
 export function QRCodeModal({
   isOpen,
@@ -59,41 +56,38 @@ export function QRCodeModal({
     }
   };
 
-  // Encodes the URL into a high-contrast dynamic QR image using a fast, reliable QR endpoint with SVG rendering fallback
   const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
     inviteUrl,
-  )}&bgcolor=ffffff&color=1e1b4b&margin=1&format=svg`;
+  )}&bgcolor=ffffff&color=18181b&margin=1&format=svg`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm overflow-hidden rounded-3xl border border-border/60 bg-card p-6 shadow-xl">
+      <DialogContent className="max-w-sm overflow-hidden rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xl">
         <DialogHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <QrCode className="h-6 w-6" aria-hidden="true" />
+          <div className="mx-auto mb-2.5 flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary">
+            <QrCode className="h-5 w-5" aria-hidden="true" />
           </div>
-          <DialogTitle className="font-display text-xl font-bold">
+          <DialogTitle className="font-display text-lg font-bold">
             Connect in Person
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Have a friend scan this code with their phone camera to start reading together instantly.
+            Have a friend scan this code with their camera to join your reading circle.
           </DialogDescription>
         </DialogHeader>
 
         <div className="my-3 flex flex-col items-center">
-          {/* Card Frame with Ambient Glow */}
-          <div className="relative rounded-2xl border border-border/80 bg-white p-4 shadow-md">
+          <div className="rounded-xl border border-border bg-white p-3.5">
             <img
               src={qrImageSrc}
               alt={`QR Code to add ${userName} on Scripture Daily`}
-              width={200}
-              height={200}
-              className="h-48 w-48 rounded-lg"
+              width={192}
+              height={192}
+              className="h-44 w-44 rounded-md"
               loading="lazy"
             />
-            <div className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs font-semibold text-slate-800">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
-              <span>{userName}'s Scripture Circle</span>
-            </div>
+            <p className="mt-2 text-center text-xs font-semibold text-zinc-800">
+              {userName}'s Circle
+            </p>
           </div>
         </div>
 
@@ -103,12 +97,12 @@ export function QRCodeModal({
               type="button"
               onClick={handleCopy}
               variant="outline"
-              className="h-11 flex-1 gap-2 rounded-xl text-xs font-semibold"
+              className="h-11 flex-1 gap-2 rounded-xl text-xs font-semibold cursor-pointer"
             >
               {copied ? (
                 <>
                   <Check className="h-4 w-4 text-success" aria-hidden="true" />
-                  Copied!
+                  Copied
                 </>
               ) : (
                 <>
@@ -120,7 +114,7 @@ export function QRCodeModal({
             <Button
               type="button"
               onClick={handleNativeShare}
-              className="h-11 flex-1 gap-2 rounded-xl text-xs font-semibold shadow-sm"
+              className="h-11 flex-1 gap-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
             >
               <Share2 className="h-4 w-4" aria-hidden="true" />
               Share Link
@@ -131,7 +125,7 @@ export function QRCodeModal({
             type="button"
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="h-10 w-full rounded-xl text-xs text-muted-foreground"
+            className="h-10 w-full rounded-xl text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           >
             Close
           </Button>

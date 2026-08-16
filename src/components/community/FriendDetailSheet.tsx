@@ -42,9 +42,9 @@ export function FriendDetailSheet({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md overflow-hidden rounded-3xl border border-border/60 bg-card p-6 shadow-2xl">
-        <DialogHeader className="flex flex-row items-center justify-between pb-2">
-          <DialogTitle className="text-base font-bold text-muted-foreground">
+      <DialogContent className="max-w-sm overflow-hidden rounded-2xl border border-border/70 bg-card p-5 sm:p-6 shadow-xl">
+        <DialogHeader className="flex flex-row items-center justify-between pb-1">
+          <DialogTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Reader Profile
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -53,30 +53,30 @@ export function FriendDetailSheet({
         </DialogHeader>
 
         {/* Profile Card Header */}
-        <div className="flex items-center gap-4 rounded-2xl bg-secondary/30 p-4">
+        <div className="flex items-center gap-3.5 rounded-xl border border-border/60 bg-secondary/30 p-3.5 mt-1">
           <div className="relative">
-            <Avatar className="h-16 w-16 border-2 border-card shadow-sm">
+            <Avatar className="h-14 w-14 border border-card shadow-xs">
               <AvatarImage src={friend.profile.avatarUrl ?? undefined} alt="" />
-              <AvatarFallback className="text-lg font-bold">
+              <AvatarFallback className="text-base font-bold">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {friend.readToday && (
               <span
-                className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-card bg-success"
+                className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-success"
                 aria-label="Read today"
               />
             )}
           </div>
 
           <div className="min-w-0 flex-1">
-            <h3 className="truncate font-display text-lg font-bold text-foreground">
+            <h3 className="truncate font-display text-base font-bold text-foreground">
               {displayName}
             </h3>
             <p
               className={cn(
-                "mt-0.5 text-xs font-semibold",
-                friend.readToday ? "text-success" : "text-muted-foreground",
+                "mt-0.5 text-xs font-medium",
+                friend.readToday ? "text-success font-semibold" : "text-muted-foreground",
               )}
             >
               {activityLabel(friend)}
@@ -85,32 +85,32 @@ export function FriendDetailSheet({
         </div>
 
         {/* Stats Grid */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card p-4 text-center">
-            <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <BookOpen className="h-4 w-4" aria-hidden="true" />
+        <div className="mt-3 grid grid-cols-2 gap-2.5">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary/20 p-3.5 text-center">
+            <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
             </div>
-            <p className="stat-display text-2xl font-bold">{friend.chapters.toLocaleString()}</p>
-            <p className="text-3xs font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="font-display text-xl font-bold">{friend.chapters.toLocaleString()}</p>
+            <p className="text-[0.62rem] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
               Total Chapters
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card p-4 text-center">
-            <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-xl bg-track-orange/10 text-track-orange">
-              <Flame className="h-4 w-4" aria-hidden="true" />
+          <div className="flex flex-col items-center justify-center rounded-xl border border-border/60 bg-secondary/20 p-3.5 text-center">
+            <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg bg-track-orange/10 text-track-orange">
+              <Flame className="h-3.5 w-3.5" aria-hidden="true" />
             </div>
-            <p className="stat-display text-2xl font-bold text-track-orange">
+            <p className="font-display text-xl font-bold text-track-orange">
               {friend.streak}
             </p>
-            <p className="text-3xs font-bold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[0.62rem] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
               Day Streak
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-5 space-y-2">
+        <div className="mt-4 space-y-2">
           {canEncourage ? (
             <Button
               type="button"
@@ -118,7 +118,7 @@ export function FriendDetailSheet({
                 onOpenChange(false);
                 onEncourage(friend);
               }}
-              className="h-12 w-full gap-2 rounded-2xl font-bold shadow-md"
+              className="h-11 w-full gap-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 cursor-pointer"
             >
               <Hand className="h-4 w-4" aria-hidden="true" />
               Send Scripture Encouragement
@@ -131,7 +131,7 @@ export function FriendDetailSheet({
                 onEncourage(friend);
               }}
               variant="outline"
-              className="h-12 w-full gap-2 rounded-2xl font-semibold"
+              className="h-11 w-full gap-2 rounded-xl text-xs font-semibold cursor-pointer"
             >
               <Hand className="h-4 w-4" aria-hidden="true" />
               Cheer on {firstName}
@@ -145,7 +145,7 @@ export function FriendDetailSheet({
               onOpenChange(false);
               onRemove(friend);
             }}
-            className="h-11 w-full gap-2 rounded-2xl text-xs font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="h-10 w-full gap-2 rounded-xl text-xs font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive cursor-pointer"
           >
             <UserMinus className="h-4 w-4" aria-hidden="true" />
             Remove Connection
